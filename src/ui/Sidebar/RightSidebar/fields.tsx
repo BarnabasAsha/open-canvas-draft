@@ -3,6 +3,7 @@ import { NumberField as BaseNumberField } from "@base-ui/react/number-field";
 import { Select as BaseSelect } from "@base-ui/react/select";
 import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { ColorPicker } from "./ColorPicker";
 
 export function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -86,15 +87,7 @@ export function ColorField({ label, value, onFocus, onChange, onCommit }: ColorF
         </Checkbox.Root>
         {label}
       </label>
-      <input
-        type="color"
-        className="color-swatch-trigger"
-        value={value ?? DEFAULT_COLOR}
-        disabled={!enabled}
-        onFocus={onFocus}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onCommit}
-      />
+      <ColorPicker value={value ?? DEFAULT_COLOR} disabled={!enabled} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
     </div>
   );
 }
