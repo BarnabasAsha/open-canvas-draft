@@ -1,20 +1,28 @@
 import type { NodeId, SceneGraph, SceneNode } from "../types/scene";
 import type { Command } from "./Command";
 
-export function createMoveNodeCommand(
-  before: ReadonlyMap<NodeId, SceneNode>,
-  after: ReadonlyMap<NodeId, SceneNode>,
-): Command {
+// A plain node-value swap (like Phase 4's original version) isn't enough
+// once a move can also reparent a node: reparenting can add/remove an id
+// from graph.rootIds, which lives on the graph itself, not on any node —
+// so rootIds has to be captured and restored alongside the node values or
+// undo would revert a node's parentId without putting it back in rootIds,
+// silently dropping it from every traversal.
+export interface MoveSnapshot {
+  nodes: ReadonlyMap<NodeId, SceneNode>;
+  rootIds: readonly NodeId[];
+}
+
+export function createMoveNodeCommand(before: MoveSnapshot, after: MoveSnapshot): Command {
   return {
-    apply: (graph) => setNodes(graph, after),
-    invert: (graph) => setNodes(graph, before),
+    apply: (graph) => applySnapshot(graph, after),
+    invert: (graph) => applySnapshot(graph, before),
   };
 }
 
-function setNodes(graph: SceneGraph, states: ReadonlyMap<NodeId, SceneNode>): SceneGraph {
+function applySnapshot(graph: SceneGraph, snapshot: MoveSnapshot): SceneGraph {
   const nodes = { ...graph.nodes };
-  for (const [id, node] of states) {
+  for (const [id, node] of snapshot.nodes) {
     if (nodes[id]) nodes[id] = node;
   }
-  return { ...graph, nodes };
+  return { nodes, rootIds: [...snapshot.rootIds] };
 }

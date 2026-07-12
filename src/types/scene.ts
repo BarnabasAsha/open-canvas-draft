@@ -104,6 +104,11 @@ export type SceneNode =
   | FrameNode
   | SectionNode;
 
+// The two node types that can hold children — resize/hit-test/reparent
+// logic that needs to walk into children checks against this, not against
+// FrameNode/SectionNode individually.
+export type ContainerNode = FrameNode | SectionNode;
+
 export interface SceneGraph {
   nodes: Record<NodeId, SceneNode>;
   rootIds: NodeId[];

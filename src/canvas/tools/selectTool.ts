@@ -1,10 +1,13 @@
 import { createMoveNodeCommand } from "../../commands/MoveNodeCommand";
+import type { MoveSnapshot } from "../../commands/MoveNodeCommand";
 import { createResizeNodeCommand } from "../../commands/ResizeNodeCommand";
+import { getParentOrigin } from "../../store/graphMutations";
 import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
 import { selectionStore } from "../../store/selectionStore";
-import type { NodeId, SceneNode } from "../../types/scene";
+import type { ArrowNode, LineNode, NodeId, SceneGraph, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
+import { findContainerAt } from "./containment";
 import { hitTestScene } from "./hitTest";
 import { getResizeCursor } from "./resizeCursor";
 import { getHandles, hitTestHandles } from "./resizeHandles";
@@ -16,6 +19,12 @@ interface MoveDrag {
   kind: "move";
   startPoint: Point;
   snapshots: Map<NodeId, SceneNode>;
+  startRootIds: NodeId[];
+  // Containers whose children changed at some point during this gesture
+  // (a node may pass through several frames before the drag ends), captured
+  // pre-change so the undo command can restore them too. Mutated in place
+  // by reparentDraggedNodes as the drag progresses.
+  touchedContainers: Map<NodeId, SceneNode>;
 }
 
 interface ResizeDrag {
@@ -75,9 +84,23 @@ function onPointerMove({ scenePoint }: ToolPointerEvent): void {
   }
 }
 
-function onPointerUp(): void {
+function onPointerUp({ scenePoint }: ToolPointerEvent): void {
+  // A pointermove doesn't always fire for the exact pixel a drag ends on
+  // (e.g. the button is released without the pointer moving again first) —
+  // resolve position/containment for that final position before committing,
+  // but only if the pointer actually moved from where the drag started, or
+  // a plain click would wrongly pick up a reference-changed "diff" from a
+  // drag that never happened and get recorded as a no-op undo step.
+  if (dragState?.kind === "move" && didMove(dragState, scenePoint)) {
+    applyMove(dragState, scenePoint);
+  }
+
   if (dragState) commitDrag(dragState);
   dragState = null;
+}
+
+function didMove(drag: MoveDrag, scenePoint: Point): boolean {
+  return scenePoint.x !== drag.startPoint.x || scenePoint.y !== drag.startPoint.y;
 }
 
 // The commit point: pointermove already wrote every intermediate frame of
@@ -94,21 +117,40 @@ function commitDrag(drag: DragState): void {
 }
 
 function commitMove(drag: MoveDrag): void {
-  const { nodes } = sceneStore.getState();
-  const after = new Map<NodeId, SceneNode>();
-  let changed = false;
+  // Containment/reparenting already happened live, per pointermove (see
+  // reparentDraggedNodes) — this just gathers everything that changed
+  // across the whole gesture (the moved nodes plus any container whose
+  // children list changed at some point) into one undo command.
+  const affectedBefore = new Map<NodeId, SceneNode>(drag.snapshots);
+  for (const [id, node] of drag.touchedContainers) {
+    if (!affectedBefore.has(id)) affectedBefore.set(id, node);
+  }
 
-  for (const [id, before] of drag.snapshots) {
-    const current = nodes[id];
+  const finalScene = sceneStore.getState();
+  const after = new Map<NodeId, SceneNode>();
+  let changed = drag.startRootIds !== finalScene.rootIds;
+
+  for (const [id, before] of affectedBefore) {
+    const current = finalScene.nodes[id];
     if (!current) continue;
     after.set(id, current);
     if (current !== before) changed = true;
   }
 
-  // A plain click (pointerdown then pointerup, no pointermove in between)
-  // never touches sceneStore, so "current" is still the exact snapshot
-  // reference — skip recording a no-op undo step for it.
-  if (changed) historyManager.execute(createMoveNodeCommand(drag.snapshots, after));
+  // A plain click (pointerdown then pointerup, no movement, no reparent)
+  // never touches sceneStore, so nothing here differs from the snapshot —
+  // skip recording a no-op undo step for it.
+  if (!changed) return;
+
+  const before: MoveSnapshot = { nodes: affectedBefore, rootIds: drag.startRootIds };
+  const afterSnapshot: MoveSnapshot = { nodes: after, rootIds: finalScene.rootIds };
+  historyManager.execute(createMoveNodeCommand(before, afterSnapshot));
+}
+
+function captureIfMissing(map: Map<NodeId, SceneNode>, scene: SceneGraph, id: NodeId | null): void {
+  if (!id || map.has(id)) return;
+  const node = scene.nodes[id];
+  if (node) map.set(id, node);
 }
 
 function commitResize(drag: ResizeDrag): void {
@@ -152,7 +194,7 @@ function toggleId(ids: Set<NodeId>, id: NodeId): Set<NodeId> {
 }
 
 function startMoveDrag(scenePoint: Point): void {
-  const { nodes } = sceneStore.getState();
+  const { nodes, rootIds } = sceneStore.getState();
   const { selectedIds } = selectionStore.getState();
 
   const snapshots = new Map<NodeId, SceneNode>();
@@ -161,32 +203,75 @@ function startMoveDrag(scenePoint: Point): void {
     if (node && !node.locked) snapshots.set(id, node);
   }
 
-  dragState = { kind: "move", startPoint: scenePoint, snapshots };
+  dragState = { kind: "move", startPoint: scenePoint, snapshots, startRootIds: rootIds, touchedContainers: new Map() };
 }
 
 function applyMove(drag: MoveDrag, scenePoint: Point): void {
   const dx = scenePoint.x - drag.startPoint.x;
   const dy = scenePoint.y - drag.startPoint.y;
-  const snapshots = drag.snapshots;
 
   sceneStore.update((scene) => {
     const nodes = { ...scene.nodes };
-    for (const [id, start] of snapshots) {
-      if (!nodes[id]) continue;
-      nodes[id] = translateNode(start, dx, dy);
+    for (const [id, start] of drag.snapshots) {
+      const current = nodes[id];
+      if (!current) continue;
+      nodes[id] = translateNode(scene, start, current, dx, dy);
     }
     return { ...scene, nodes };
   });
+
+  reparentDraggedNodes(drag);
 }
 
-// x/y is every node's position, but line/arrow also carry an independent
-// x2/y2 endpoint — both must shift together or the shape shears instead of
-// translating.
-function translateNode(node: SceneNode, dx: number, dy: number): SceneNode {
-  if (node.type === "line" || node.type === "arrow") {
-    return { ...node, x: node.x + dx, y: node.y + dy, x2: node.x2 + dx, y2: node.y2 + dy };
+// A dragged node is reparented as soon as it crosses a frame/section
+// boundary — not deferred to pointerup — because the renderer clips based
+// on tree structure (what's actually listed in a frame's children), not on
+// where a node happens to be drawn. Deferring this made a node visibly
+// vanish for the whole drag the instant it left its old frame's clip
+// bounds, since it was still structurally that frame's child until commit.
+function reparentDraggedNodes(drag: MoveDrag): void {
+  for (const id of drag.snapshots.keys()) {
+    const scene = sceneStore.getState();
+    const node = scene.nodes[id];
+    if (!node) continue;
+
+    const targetParentId = findContainerAt(id, scene);
+    if (targetParentId === node.parentId) continue;
+
+    captureIfMissing(drag.touchedContainers, scene, node.parentId);
+    captureIfMissing(drag.touchedContainers, scene, targetParentId);
+    sceneStore.reparentNode(id, targetParentId);
   }
-  return { ...node, x: node.x + dx, y: node.y + dy };
+}
+
+// x/y (and line/arrow's x2/y2) are relative to the node's parent, which can
+// change mid-drag now that reparenting happens live — so position can't
+// just be "drag-start value + total delta" (that assumes a parent that
+// never changes). Instead: recover the node's absolute scene position at
+// drag start (start's local position + its start-time parent's origin),
+// add the total delta, then re-express that in whatever parent the node is
+// CURRENTLY in. Translation-only, same assumption as reparentNodeInGraph's
+// own position fix (no rotated containers exist yet).
+function translateNode(scene: SceneGraph, start: SceneNode, current: SceneNode, dx: number, dy: number): SceneNode {
+  const startOrigin = getParentOrigin(scene, start.parentId);
+  const currentOrigin = getParentOrigin(scene, current.parentId);
+  const shiftX = startOrigin.x - currentOrigin.x + dx;
+  const shiftY = startOrigin.y - currentOrigin.y + dy;
+
+  if (current.type === "line" || current.type === "arrow") {
+    // start and current are the same node at different points in the same
+    // gesture, so they always share a type — this cast just tells
+    // TypeScript what the runtime already guarantees.
+    const startEndpoint = start as LineNode | ArrowNode;
+    return {
+      ...current,
+      x: start.x + shiftX,
+      y: start.y + shiftY,
+      x2: startEndpoint.x2 + shiftX,
+      y2: startEndpoint.y2 + shiftY,
+    };
+  }
+  return { ...current, x: start.x + shiftX, y: start.y + shiftY };
 }
 
 function startResizeDrag(nodeId: NodeId, handleId: HandleId): void {

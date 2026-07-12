@@ -1,6 +1,6 @@
 import type { NodeId, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
-import { getWorldMatrix } from "../selectionBounds";
+import { getWorldMatrix } from "../../utils/worldTransform";
 
 export type BBoxHandleId = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 export type EndpointHandleId = "start" | "end";

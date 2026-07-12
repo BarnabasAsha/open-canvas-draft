@@ -1,6 +1,6 @@
 import type { ArrowNode, LineNode, NodeId, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
-import { getWorldMatrix } from "../selectionBounds";
+import { getWorldMatrix } from "../../utils/worldTransform";
 import type { BBoxHandleId, EndpointHandleId } from "./resizeHandles";
 
 const MIN_SIZE = 1;

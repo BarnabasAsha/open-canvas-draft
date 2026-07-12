@@ -1,5 +1,6 @@
 import type { ArrowNode, LineNode, NodeId, SceneNode } from "../types/scene";
 import type { Point } from "../utils/coordinates";
+import { getWorldMatrix } from "../utils/worldTransform";
 
 export function getSceneCorners(
   nodeId: NodeId,
@@ -54,29 +55,4 @@ function getEndpointBoxCorners(
     const transformed = ancestorMatrix.transformPoint(new DOMPoint(corner.x, corner.y));
     return { x: transformed.x, y: transformed.y };
   }) as [Point, Point, Point, Point];
-}
-
-export function getWorldMatrix(nodeId: NodeId, nodes: Record<NodeId, SceneNode>): DOMMatrix {
-  const ancestorChain: SceneNode[] = [];
-  let currentId: NodeId | null = nodeId;
-
-  while (currentId) {
-    const node: SceneNode | undefined = nodes[currentId];
-    if (!node) break;
-    ancestorChain.push(node);
-    currentId = node.parentId;
-  }
-  ancestorChain.reverse(); // root-most ancestor first
-
-  let matrix = new DOMMatrix();
-  for (const node of ancestorChain) {
-    matrix = matrix.translate(node.x, node.y);
-    if (node.rotation !== 0) {
-      const pivotX = node.width / 2;
-      const pivotY = node.height / 2;
-      matrix = matrix.translate(pivotX, pivotY).rotate(node.rotation).translate(-pivotX, -pivotY);
-    }
-  }
-
-  return matrix;
 }
