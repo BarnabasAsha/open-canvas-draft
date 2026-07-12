@@ -1,3 +1,6 @@
+import { createMoveNodeCommand } from "../../commands/MoveNodeCommand";
+import { createResizeNodeCommand } from "../../commands/ResizeNodeCommand";
+import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
 import { selectionStore } from "../../store/selectionStore";
 import type { NodeId, SceneNode } from "../../types/scene";
@@ -73,7 +76,46 @@ function onPointerMove({ scenePoint }: ToolPointerEvent): void {
 }
 
 function onPointerUp(): void {
+  if (dragState) commitDrag(dragState);
   dragState = null;
+}
+
+// The commit point: pointermove already wrote every intermediate frame of
+// the drag straight to sceneStore for live feedback, so by pointerup the
+// "after" state is just whatever's currently there. Bundling the whole
+// gesture into one command here — instead of one per pointermove — is what
+// makes a single Cmd+Z undo an entire drag, not one pixel of it.
+function commitDrag(drag: DragState): void {
+  if (drag.kind === "move") {
+    commitMove(drag);
+  } else {
+    commitResize(drag);
+  }
+}
+
+function commitMove(drag: MoveDrag): void {
+  const { nodes } = sceneStore.getState();
+  const after = new Map<NodeId, SceneNode>();
+  let changed = false;
+
+  for (const [id, before] of drag.snapshots) {
+    const current = nodes[id];
+    if (!current) continue;
+    after.set(id, current);
+    if (current !== before) changed = true;
+  }
+
+  // A plain click (pointerdown then pointerup, no pointermove in between)
+  // never touches sceneStore, so "current" is still the exact snapshot
+  // reference — skip recording a no-op undo step for it.
+  if (changed) historyManager.execute(createMoveNodeCommand(drag.snapshots, after));
+}
+
+function commitResize(drag: ResizeDrag): void {
+  const current = sceneStore.getState().nodes[drag.nodeId];
+  if (!current || current === drag.startNode) return;
+
+  historyManager.execute(createResizeNodeCommand(drag.nodeId, drag.startNode, current));
 }
 
 function updateHoverState(scenePoint: Point): void {
