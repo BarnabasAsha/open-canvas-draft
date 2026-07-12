@@ -1,6 +1,6 @@
 import { createMoveNodeCommand } from "../../commands/MoveNodeCommand";
 import type { MoveSnapshot } from "../../commands/MoveNodeCommand";
-import { createResizeNodeCommand } from "../../commands/ResizeNodeCommand";
+import { createSetNodeCommand } from "../../commands/SetNodeCommand";
 import { getParentOrigin } from "../../store/graphMutations";
 import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
@@ -13,6 +13,7 @@ import { getResizeCursor } from "./resizeCursor";
 import { getHandles, hitTestHandles } from "./resizeHandles";
 import type { BBoxHandleId, EndpointHandleId, HandleId } from "./resizeHandles";
 import { getAncestorLocalPoint, getBBoxLocalPoint, resizeBBoxNode, resizeEndpointNode } from "./resizeMath";
+import { enterTextEdit } from "./textEdit";
 import type { Tool, ToolPointerEvent } from "./toolTypes";
 
 interface MoveDrag {
@@ -69,6 +70,21 @@ function onPointerDown({ scenePoint, shiftKey }: ToolPointerEvent): void {
   }
 
   startMoveDrag(scenePoint);
+}
+
+// PointerEvent.detail isn't reliable for click-counting (unlike
+// MouseEvent's, it's commonly 0 regardless of click count) — Canvas.tsx
+// wires this to the native "dblclick" event instead, which the browser
+// already resolves correctly.
+function onDoubleClick({ scenePoint }: ToolPointerEvent): void {
+  const scene = sceneStore.getState();
+  const hitId = hitTestScene(scenePoint, scene);
+  if (!hitId) return;
+
+  const node = scene.nodes[hitId];
+  if (node && node.type === "text" && !node.locked) {
+    enterTextEdit(node, false);
+  }
 }
 
 function onPointerMove({ scenePoint }: ToolPointerEvent): void {
@@ -157,7 +173,7 @@ function commitResize(drag: ResizeDrag): void {
   const current = sceneStore.getState().nodes[drag.nodeId];
   if (!current || current === drag.startNode) return;
 
-  historyManager.execute(createResizeNodeCommand(drag.nodeId, drag.startNode, current));
+  historyManager.execute(createSetNodeCommand(drag.nodeId, drag.startNode, current));
 }
 
 function updateHoverState(scenePoint: Point): void {
@@ -300,4 +316,4 @@ function applyResize(drag: ResizeDrag, scenePoint: Point): void {
   sceneStore.update((scene) => ({ ...scene, nodes: { ...scene.nodes, [nodeId]: resized } }));
 }
 
-export const selectTool: Tool = { onPointerDown, onPointerMove, onPointerUp, getCursor };
+export const selectTool: Tool = { onPointerDown, onPointerMove, onPointerUp, getCursor, onDoubleClick };

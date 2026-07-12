@@ -66,6 +66,14 @@ export function ArrowIcon() {
   );
 }
 
+export function TextIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" {...STROKE_PROPS}>
+      <path d="M4 4.5h10M9 4.5v9" />
+    </svg>
+  );
+}
+
 export function ImageIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" {...STROKE_PROPS}>

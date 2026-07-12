@@ -5,6 +5,13 @@ import { toolManager } from "./tools/toolManager";
 export function useKeyboardShortcuts(): void {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
+      // This listener is on window, so every keystroke reaches it —
+      // including ones typed into the text-edit overlay's textarea. Without
+      // this guard, typing "r"/"v"/"o"/etc. while editing text would also
+      // switch tools, and Cmd+Z would hijack the textarea's own native undo
+      // instead of letting it work normally.
+      if (isTextInput(e.target)) return;
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) {
@@ -20,8 +27,8 @@ export function useKeyboardShortcuts(): void {
 
       // The toolbar covers most of these too now — mnemonics match Figma's
       // own (V select, F frame, Shift+S section, R rectangle, O ellipse,
-      // L line, A arrow). No dedicated shortcut for image — placing one
-      // needs a file picker anyway, so the toolbar button is enough.
+      // L line, A arrow, T text). No dedicated shortcut for image — placing
+      // one needs a file picker anyway, so the toolbar button is enough.
       switch (e.key.toLowerCase()) {
         case "v":
           toolManager.setActiveTool("select");
@@ -44,10 +51,18 @@ export function useKeyboardShortcuts(): void {
         case "a":
           toolManager.setActiveTool("arrow");
           break;
+        case "t":
+          toolManager.setActiveTool("text");
+          break;
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+}
+
+function isTextInput(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable;
 }

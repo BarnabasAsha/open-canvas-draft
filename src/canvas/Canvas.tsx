@@ -1,4 +1,4 @@
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useRef } from "react";
 import { sceneStore } from "../store/sceneStore";
 import { viewportStore } from "../store/viewportStore";
@@ -8,6 +8,14 @@ import { drawScene } from "./renderer/drawScene";
 import { subscribeImageLoad } from "./renderer/imageCache";
 import { toolManager } from "./tools/toolManager";
 import type { ToolPointerEvent } from "./tools/toolTypes";
+
+// What toToolEvent actually needs from either React event type — just
+// enough to share one conversion function between pointer events and the
+// native "dblclick" event (a plain MouseEvent, not a PointerEvent).
+interface PositionedEvent {
+  nativeEvent: { offsetX: number; offsetY: number };
+  shiftKey: boolean;
+}
 
 export function Canvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -52,6 +60,14 @@ export function Canvas() {
     applyCursor(e.currentTarget);
   };
 
+  // A separate native "dblclick" handler rather than reading .detail off
+  // pointerdown — PointerEvent.detail isn't reliable for click-counting
+  // the way MouseEvent's is, but dblclick is the browser's own correctly-
+  // resolved double-click signal.
+  const handleDoubleClick = (e: ReactMouseEvent<HTMLCanvasElement>) => {
+    toolManager.onDoubleClick(toToolEvent(e));
+  };
+
   return (
     <canvas
       ref={canvasRef}
@@ -59,6 +75,7 @@ export function Canvas() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onDoubleClick={handleDoubleClick}
     />
   );
 }
@@ -67,7 +84,7 @@ function applyCursor(canvas: HTMLCanvasElement): void {
   canvas.style.cursor = toolManager.getCursor();
 }
 
-function toToolEvent(e: ReactPointerEvent<HTMLCanvasElement>): ToolPointerEvent {
+function toToolEvent(e: PositionedEvent): ToolPointerEvent {
   const screenPoint = { x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY };
   return {
     scenePoint: screenToScene(screenPoint, viewportStore.getState()),

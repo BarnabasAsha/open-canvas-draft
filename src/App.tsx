@@ -1,6 +1,7 @@
 import { Canvas } from "./canvas/Canvas";
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./canvas/canvasSize";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
+import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import { toolManager } from "./canvas/tools/toolManager";
 import { useActiveTool } from "./canvas/useActiveTool";
 import { useKeyboardShortcuts } from "./canvas/useKeyboardShortcuts";
@@ -23,6 +24,7 @@ export default function App() {
     <div style={{ position: "relative", width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
       <Canvas />
       <SelectionOverlay />
+      <TextEditOverlay />
       <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
       <PropertiesPanel node={soleSelectedNode} selectionCount={selectedIdList.length} />
     </div>

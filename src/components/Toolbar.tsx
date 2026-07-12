@@ -9,6 +9,7 @@ import {
   RectangleIcon,
   SectionIcon,
   SelectIcon,
+  TextIcon,
 } from "./ToolIcons";
 
 interface ToolbarProps {
@@ -30,6 +31,7 @@ const TOOLS: ToolDefinition[] = [
   { id: "ellipse", label: "Ellipse (O)", icon: <EllipseIcon /> },
   { id: "line", label: "Line (L)", icon: <LineIcon /> },
   { id: "arrow", label: "Arrow (A)", icon: <ArrowIcon /> },
+  { id: "text", label: "Text (T)", icon: <TextIcon /> },
   { id: "image", label: "Image", icon: <ImageIcon /> },
 ];
 

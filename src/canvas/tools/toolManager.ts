@@ -7,9 +7,19 @@ import { lineTool } from "./lineTool";
 import { rectangleTool } from "./rectangleTool";
 import { sectionTool } from "./sectionTool";
 import { selectTool } from "./selectTool";
+import { textTool } from "./textTool";
 import type { Tool, ToolPointerEvent } from "./toolTypes";
 
-export type ToolId = "select" | "frame" | "section" | "rectangle" | "ellipse" | "line" | "arrow" | "image";
+export type ToolId =
+  | "select"
+  | "frame"
+  | "section"
+  | "rectangle"
+  | "ellipse"
+  | "line"
+  | "arrow"
+  | "text"
+  | "image";
 
 const tools: Record<ToolId, Tool> = {
   select: selectTool,
@@ -19,6 +29,7 @@ const tools: Record<ToolId, Tool> = {
   ellipse: ellipseTool,
   line: lineTool,
   arrow: arrowTool,
+  text: textTool,
   image: imageTool,
 };
 
@@ -53,4 +64,16 @@ function getCursor(): string {
   return activeTool().getCursor();
 }
 
-export const toolManager = { ...store, setActiveTool, onPointerDown, onPointerMove, onPointerUp, getCursor };
+function onDoubleClick(event: ToolPointerEvent): void {
+  activeTool().onDoubleClick?.(event);
+}
+
+export const toolManager = {
+  ...store,
+  setActiveTool,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onDoubleClick,
+  getCursor,
+};
