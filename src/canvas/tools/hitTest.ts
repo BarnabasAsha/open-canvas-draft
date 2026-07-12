@@ -80,8 +80,10 @@ function hitTestOwnBody(scenePoint: Point, node: SceneNode): boolean {
     case "frame":
       return scratchCtx.isPointInPath(buildRectGeometry(node), x, y);
     case "section":
-      // Purely organizational — no visual body, so no click target of its own.
-      return false;
+      // No fill, but its bbox is still a real click target — same as a
+      // frame's body, just always invisible. Otherwise the only way to
+      // select a section is via the Layers panel.
+      return scratchCtx.isPointInPath(rectBoundsPath(node), x, y);
   }
 }
 

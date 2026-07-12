@@ -1,9 +1,10 @@
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useEffect, useRef } from "react";
+import { documentStore } from "../store/documentStore";
 import { sceneStore } from "../store/sceneStore";
 import { viewportStore } from "../store/viewportStore";
 import { screenToScene } from "../utils/coordinates";
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./canvasSize";
+import { canvasSizeStore } from "./canvasSizeStore";
 import { drawScene } from "./renderer/drawScene";
 import { subscribeImageLoad } from "./renderer/imageCache";
 import { toolManager } from "./tools/toolManager";
@@ -27,20 +28,46 @@ export function Canvas() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = CANVAS_WIDTH * dpr;
-    canvas.height = CANVAS_HEIGHT * dpr;
-    ctx.scale(dpr, dpr);
+    let width = 0;
+    let height = 0;
 
-    const render = () => drawScene(ctx, sceneStore.getState(), CANVAS_WIDTH, CANVAS_HEIGHT);
+    const render = () =>
+      drawScene(ctx, sceneStore.getState(), width, height, documentStore.getState().backgroundColor);
 
-    render();
+    // The canvas element is CSS-sized to fill its flex parent (see the
+    // `width: "100%", height: "100%"` below), so its actual pixel size
+    // depends on layout, not a fixed constant — a ResizeObserver is the
+    // DOM-side-effect equivalent of the store subscriptions below: it
+    // reacts to a real external change (the container's box), not to a
+    // React re-render, so imperatively resizing/redrawing here doesn't
+    // conflict with the "no useEffect for render-driven redraw" rule.
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      width = Math.round(entry.contentRect.width);
+      height = Math.round(entry.contentRect.height);
+      if (width === 0 || height === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      canvasSizeStore.update(() => ({ width, height }));
+      render();
+    });
+    resizeObserver.observe(canvas);
+
     const unsubscribeScene = sceneStore.subscribe(render);
     const unsubscribeImages = subscribeImageLoad(render);
+    const unsubscribeDocument = documentStore.subscribe(render);
 
     return () => {
+      resizeObserver.disconnect();
       unsubscribeScene();
       unsubscribeImages();
+      unsubscribeDocument();
     };
   }, []);
 
@@ -71,7 +98,7 @@ export function Canvas() {
   return (
     <canvas
       ref={canvasRef}
-      style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
+      style={{ display: "block", width: "100%", height: "100%" }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

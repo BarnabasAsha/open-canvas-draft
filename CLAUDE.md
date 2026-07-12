@@ -12,6 +12,10 @@ Work happens in phases. Don't build ahead of the current phase — no scaffoldin
 
 Vite + React 19 + TypeScript, oxlint. No router, no state library, no canvas library yet — these get added deliberately, not by default, when a phase needs them.
 
+**UI components:** [Base UI](https://base-ui.com) (`@base-ui/react`, the MUI/Radix team's headless component library) for interactive primitives — Toolbar, ToggleGroup, Menu, NumberField, Select, Checkbox, Collapsible, Tooltip. It ships zero visual style by design; we style every part ourselves (see `src/ui/theme.css`) rather than adopting Base UI's own look, so the design language stays ours. Reach for it whenever a UI need matches one of its primitives instead of hand-rolling the interaction/accessibility logic again.
+
+**Icons:** [Phosphor Icons](https://phosphoricons.com) (`@phosphor-icons/react`). Import each icon by its `<Name>Icon` export (e.g. `CursorIcon`), not the deprecated unsuffixed alias. Only hand-draw a custom SVG icon when nothing in the set fits.
+
 ## Code philosophy
 
 - **Clear names over comments.** A well-named function needs no explanation. If you feel the urge to write a comment, rename the thing instead.

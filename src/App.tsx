@@ -1,5 +1,4 @@
 import { Canvas } from "./canvas/Canvas";
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./canvas/canvasSize";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import { toolManager } from "./canvas/tools/toolManager";
@@ -7,8 +6,37 @@ import { useActiveTool } from "./canvas/useActiveTool";
 import { useKeyboardShortcuts } from "./canvas/useKeyboardShortcuts";
 import { useSceneGraph } from "./canvas/useSceneGraph";
 import { useSelection } from "./canvas/useSelection";
-import { PropertiesPanel } from "./components/PropertiesPanel";
-import { Toolbar } from "./components/Toolbar";
+import { useDocumentSettings } from "./canvas/useDocumentSettings";
+import { createSetNodeCommand } from "./commands/SetNodeCommand";
+import { documentStore } from "./store/documentStore";
+import { historyManager } from "./store/historyManager";
+import { sceneStore } from "./store/sceneStore";
+import { selectionStore } from "./store/selectionStore";
+import type { NodeId } from "./types/scene";
+import { LayersPanel } from "./ui/Sidebar/LeftSidebar/LayersPanel";
+import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
+import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
+import { Toolbar } from "./ui/Toolbar/Toolbar";
+
+function selectLayer(id: NodeId): void {
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([id]) }));
+}
+
+function toggleVisible(id: NodeId): void {
+  const node = sceneStore.getState().nodes[id];
+  if (!node) return;
+  historyManager.execute(createSetNodeCommand(id, node, { ...node, visible: !node.visible }));
+}
+
+function toggleLocked(id: NodeId): void {
+  const node = sceneStore.getState().nodes[id];
+  if (!node) return;
+  historyManager.execute(createSetNodeCommand(id, node, { ...node, locked: !node.locked }));
+}
+
+function setBackgroundColor(color: string | null): void {
+  documentStore.update((settings) => ({ ...settings, backgroundColor: color }));
+}
 
 export default function App() {
   useKeyboardShortcuts();
@@ -16,17 +44,39 @@ export default function App() {
   const activeToolId = useActiveTool();
   const scene = useSceneGraph();
   const { selectedIds } = useSelection();
+  const documentSettings = useDocumentSettings();
 
   const selectedIdList = [...selectedIds];
   const soleSelectedNode = selectedIdList.length === 1 ? (scene.nodes[selectedIdList[0]] ?? null) : null;
+  const nodeEdit = useNodeEdit(soleSelectedNode?.id ?? "");
 
   return (
-    <div style={{ position: "relative", width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
-      <Canvas />
-      <SelectionOverlay />
-      <TextEditOverlay />
-      <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
-      <PropertiesPanel node={soleSelectedNode} selectionCount={selectedIdList.length} />
+    <div style={{ display: "flex", width: "100%", height: "100%" }}>
+      <LayersPanel
+        scene={scene}
+        selectedIds={selectedIds}
+        onSelect={selectLayer}
+        onToggleVisible={toggleVisible}
+        onToggleLocked={toggleLocked}
+      />
+      <div
+        className={documentSettings.backgroundColor ? undefined : "canvas-checkerboard"}
+        style={{ position: "relative", flex: 1, minWidth: 0, height: "100%" }}
+      >
+        <Canvas />
+        <SelectionOverlay />
+        <TextEditOverlay />
+        <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
+      </div>
+      <PropertiesPanel
+        node={soleSelectedNode}
+        selectionCount={selectedIdList.length}
+        backgroundColor={documentSettings.backgroundColor}
+        onBackgroundColorChange={setBackgroundColor}
+        onFieldFocus={nodeEdit.onFieldFocus}
+        onFieldChange={nodeEdit.onFieldChange}
+        onFieldCommit={nodeEdit.onFieldCommit}
+      />
     </div>
   );
 }

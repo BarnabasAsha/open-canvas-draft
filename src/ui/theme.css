@@ -1,0 +1,509 @@
+:root {
+  --panel-bg: #18181b;
+  --panel-border: #2a2a2e;
+  --panel-text: #e4e4e7;
+  --panel-text-muted: #8b8b93;
+  --panel-hover: #232326;
+  --panel-active: #313138;
+  --panel-input-bg: #1f1f23;
+  --accent: #4f46e5;
+  --accent-soft: rgba(79, 70, 229, 0.22);
+}
+
+/* Base UI components render bare elements with no visual style of their
+   own by design — everything below is us defining the design language on
+   top, targeting the data-attributes Base UI puts on each part for state
+   (data-pressed, data-highlighted, data-popup-open, etc). */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-right: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.toolbar[data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 2px;
+}
+
+.toolbar-group[data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--panel-border);
+}
+
+/* A separator's own orientation is perpendicular to the toolbar's, so a
+   vertical toolbar (see Toolbar.tsx) gets horizontal dividers here. */
+.toolbar-separator[data-orientation="horizontal"] {
+  width: 20px;
+  height: 1px;
+  margin: 4px 0;
+}
+
+.toolbar-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--panel-text);
+  cursor: pointer;
+}
+
+/* Pinned to the button's own corner, independent of the icon's size or
+   position — signals "opens a menu" the same way Figma's own toolbar
+   flyouts do. A pure CSS triangle rather than a scaled-down SVG icon glyph
+   — an 8px icon doesn't render crisply (anti-aliasing turns it into a
+   fuzzy smudge at that size), while a border-trick triangle stays crisp
+   at any size and inherits currentColor for free. */
+.menu-trigger-caret {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.55;
+}
+
+.toolbar-button:hover:not([data-disabled]) {
+  background: var(--panel-hover);
+}
+
+.toolbar-button[data-pressed],
+.toolbar-button[data-popup-open] {
+  background: var(--accent-soft);
+  color: #a5b4fc;
+}
+
+.toolbar-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.menu-positioner {
+  outline: none;
+  z-index: 20;
+}
+
+.menu-popup,
+.select-popup {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  outline: none;
+  min-width: var(--anchor-width);
+  max-height: var(--available-height);
+  overflow-y: auto;
+}
+
+.shape-menu-popup {
+  flex-direction: row;
+}
+
+.menu-item,
+.select-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--panel-text);
+  cursor: default;
+  outline: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.shape-menu-item {
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.menu-item[data-highlighted],
+.select-item[data-highlighted] {
+  background: var(--panel-hover);
+}
+
+.select-item {
+  justify-content: space-between;
+}
+
+.select-item-indicator {
+  display: flex;
+  color: var(--accent);
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 84px;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--panel-text);
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  cursor: default;
+}
+
+.select-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.select-icon {
+  display: flex;
+  color: var(--panel-text-muted);
+}
+
+.number-field-group {
+  display: flex;
+  width: 84px;
+}
+
+.number-field-input {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--panel-text);
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.number-field-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.checkbox-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.checkbox-root[data-checked] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.checkbox-indicator {
+  display: flex;
+  color: white;
+}
+
+.color-swatch-trigger {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  cursor: pointer;
+  background-clip: padding-box;
+}
+
+.color-swatch-trigger:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.color-swatch-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.color-picker-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 200px;
+  padding: 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  outline: none;
+}
+
+.color-sv-square {
+  position: relative;
+  width: 100%;
+  height: 130px;
+  border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.color-sv-square:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.color-sv-thumb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.hue-slider-root {
+  position: relative;
+}
+
+.hue-slider-control {
+  display: flex;
+  align-items: center;
+  position: relative;
+  height: 16px;
+  touch-action: none;
+}
+
+.hue-slider-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    to right,
+    #ff0000 0%,
+    #ffff00 17%,
+    #00ff00 33%,
+    #00ffff 50%,
+    #0000ff 67%,
+    #ff00ff 83%,
+    #ff0000 100%
+  );
+}
+
+.hue-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+}
+
+.hue-slider-thumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.color-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+}
+
+.color-hex-prefix {
+  font-size: 12px;
+  color: var(--panel-text-muted);
+}
+
+.color-hex-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--panel-text);
+  font-size: 12px;
+  font-family: inherit;
+  text-transform: uppercase;
+}
+
+.color-hex-input:focus {
+  outline: none;
+}
+
+.color-rgb-row {
+  display: flex;
+  gap: 4px;
+}
+
+.color-rgb-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--panel-text);
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+}
+
+.color-rgb-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--panel-text-muted);
+}
+
+.panel-section {
+  margin-bottom: 12px;
+}
+
+.panel-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--panel-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+.panel-section-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.collapsible-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-bottom: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--panel-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.collapsible-chevron {
+  display: flex;
+  transition: transform 100ms;
+}
+
+.collapsible-chevron[data-expanded] {
+  transform: rotate(90deg);
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  height: 34px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--panel-text);
+  user-select: none;
+}
+
+.layer-row:hover {
+  background: var(--panel-hover);
+}
+
+.layer-row[data-selected] {
+  background: var(--accent-soft);
+}
+
+.layer-row[data-hidden] {
+  color: var(--panel-text-muted);
+}
+
+.layer-row-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--panel-active);
+}
+
+/* Shown behind the canvas whenever its background is null (transparent) —
+   same checkerboard convention as Figma/every other design tool, sitting
+   on the canvas-area container so it shows through the raster's cleared
+   (fully transparent) pixels. */
+.canvas-checkerboard {
+  background-color: #232326;
+  background-image:
+    linear-gradient(45deg, #2c2c30 25%, transparent 25%),
+    linear-gradient(-45deg, #2c2c30 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2c2c30 75%),
+    linear-gradient(-45deg, transparent 75%, #2c2c30 75%);
+  background-size: 20px 20px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0px;
+}
