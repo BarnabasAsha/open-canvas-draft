@@ -1,5 +1,8 @@
 import { useEffect } from "react";
+import { createDeleteNodesCommand } from "../commands/DeleteNodesCommand";
 import { historyManager } from "../store/historyManager";
+import { sceneStore } from "../store/sceneStore";
+import { selectionStore } from "../store/selectionStore";
 import { toolManager } from "./tools/toolManager";
 
 export function useKeyboardShortcuts(): void {
@@ -11,6 +14,20 @@ export function useKeyboardShortcuts(): void {
       // switch tools, and Cmd+Z would hijack the textarea's own native undo
       // instead of letting it work normally.
       if (isTextInput(e.target)) return;
+
+      // Give the active tool first look — currently only penTool cares
+      // (Enter finishes an open path, Escape cancels it), and neither key
+      // collides with anything below.
+      toolManager.onKeyDown(e);
+
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        const { selectedIds } = selectionStore.getState();
+        if (selectedIds.size === 0) return;
+        historyManager.execute(createDeleteNodesCommand(sceneStore.getState(), [...selectedIds]));
+        selectionStore.update((state) => ({ ...state, selectedIds: new Set() }));
+        return;
+      }
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
@@ -27,8 +44,9 @@ export function useKeyboardShortcuts(): void {
 
       // The toolbar covers most of these too now — mnemonics match Figma's
       // own (V select, F frame, Shift+S section, R rectangle, O ellipse,
-      // L line, A arrow, T text). No dedicated shortcut for image — placing
-      // one needs a file picker anyway, so the toolbar button is enough.
+      // L line, A arrow, P pen, T text). No dedicated shortcut for image —
+      // placing one needs a file picker anyway, so the toolbar button is
+      // enough.
       switch (e.key.toLowerCase()) {
         case "v":
           toolManager.setActiveTool("select");
@@ -50,6 +68,9 @@ export function useKeyboardShortcuts(): void {
           break;
         case "a":
           toolManager.setActiveTool("arrow");
+          break;
+        case "p":
+          toolManager.setActiveTool("pen");
           break;
         case "t":
           toolManager.setActiveTool("text");

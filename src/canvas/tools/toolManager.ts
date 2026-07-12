@@ -4,6 +4,7 @@ import { ellipseTool } from "./ellipseTool";
 import { frameTool } from "./frameTool";
 import { imageTool } from "./imageTool";
 import { lineTool } from "./lineTool";
+import { penTool } from "./penTool";
 import { rectangleTool } from "./rectangleTool";
 import { sectionTool } from "./sectionTool";
 import { selectTool } from "./selectTool";
@@ -18,6 +19,7 @@ export type ToolId =
   | "ellipse"
   | "line"
   | "arrow"
+  | "pen"
   | "text"
   | "image";
 
@@ -29,6 +31,7 @@ const tools: Record<ToolId, Tool> = {
   ellipse: ellipseTool,
   line: lineTool,
   arrow: arrowTool,
+  pen: penTool,
   text: textTool,
   image: imageTool,
 };
@@ -41,6 +44,8 @@ const tools: Record<ToolId, Tool> = {
 const store = createStore<ToolId>("select");
 
 function setActiveTool(id: ToolId): void {
+  if (store.getState() === id) return; // no-op switch shouldn't cancel an in-progress session
+  activeTool().onDeactivate?.();
   store.update(() => id);
 }
 
@@ -68,6 +73,10 @@ function onDoubleClick(event: ToolPointerEvent): void {
   activeTool().onDoubleClick?.(event);
 }
 
+function onKeyDown(event: KeyboardEvent): void {
+  activeTool().onKeyDown?.(event);
+}
+
 export const toolManager = {
   ...store,
   setActiveTool,
@@ -75,5 +84,6 @@ export const toolManager = {
   onPointerMove,
   onPointerUp,
   onDoubleClick,
+  onKeyDown,
   getCursor,
 };

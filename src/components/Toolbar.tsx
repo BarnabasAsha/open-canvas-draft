@@ -6,6 +6,7 @@ import {
   FrameIcon,
   ImageIcon,
   LineIcon,
+  PenIcon,
   RectangleIcon,
   SectionIcon,
   SelectIcon,
@@ -31,6 +32,7 @@ const TOOLS: ToolDefinition[] = [
   { id: "ellipse", label: "Ellipse (O)", icon: <EllipseIcon /> },
   { id: "line", label: "Line (L)", icon: <LineIcon /> },
   { id: "arrow", label: "Arrow (A)", icon: <ArrowIcon /> },
+  { id: "pen", label: "Pen (P)", icon: <PenIcon /> },
   { id: "text", label: "Text (T)", icon: <TextIcon /> },
   { id: "image", label: "Image", icon: <ImageIcon /> },
 ];

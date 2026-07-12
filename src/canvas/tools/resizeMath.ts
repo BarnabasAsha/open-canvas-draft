@@ -1,4 +1,4 @@
-import type { ArrowNode, LineNode, NodeId, SceneNode } from "../../types/scene";
+import type { ArrowNode, LineNode, NodeId, PathPoint, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { getWorldMatrix } from "../../utils/worldTransform";
 import type { BBoxHandleId, EndpointHandleId } from "./resizeHandles";
@@ -52,7 +52,39 @@ export function resizeBBoxNode(start: SceneNode, handleId: BBoxHandleId, localPo
   const horizontal = resizeAxis(start.x, start.width, localPoint.x, axes.horizontal);
   const vertical = resizeAxis(start.y, start.height, localPoint.y, axes.vertical);
 
+  // A path's points are fixed local coordinates, not derived from
+  // width/height like a rect's corners are — resizing the bbox alone
+  // moves/resizes the selection box but leaves the actual geometry sitting
+  // exactly where it was, visibly detached from the new box. Scaling every
+  // point (and its handles) by how much each axis changed keeps the shape
+  // filling the box the same way it did before the resize.
+  if (start.type === "path") {
+    const scaleX = start.width === 0 ? 1 : horizontal.size / start.width;
+    const scaleY = start.height === 0 ? 1 : vertical.size / start.height;
+    return {
+      ...start,
+      x: horizontal.origin,
+      y: vertical.origin,
+      width: horizontal.size,
+      height: vertical.size,
+      points: scalePathPoints(start.points, scaleX, scaleY),
+    };
+  }
+
   return { ...start, x: horizontal.origin, y: vertical.origin, width: horizontal.size, height: vertical.size };
+}
+
+function scalePathPoints(points: PathPoint[], scaleX: number, scaleY: number): PathPoint[] {
+  return points.map((point) => ({
+    x: point.x * scaleX,
+    y: point.y * scaleY,
+    handleIn: point.handleIn ? scalePoint(point.handleIn, scaleX, scaleY) : undefined,
+    handleOut: point.handleOut ? scalePoint(point.handleOut, scaleX, scaleY) : undefined,
+  }));
+}
+
+function scalePoint(point: Point, scaleX: number, scaleY: number): Point {
+  return { x: point.x * scaleX, y: point.y * scaleY };
 }
 
 // Line/arrow resize deliberately ignores the node's own rotation (ancestor

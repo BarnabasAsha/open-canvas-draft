@@ -67,7 +67,10 @@ function hitTestOwnBody(scenePoint: Point, node: SceneNode): boolean {
       return strokeHit(buildArrowGeometry(node), node.strokeWidth, x, y);
     case "path": {
       const geometry = buildPathGeometry(node);
-      if (node.fill) return scratchCtx.isPointInPath(geometry, x, y);
+      // A closed path reads as an enclosed region even with no explicit
+      // fill color — unlike an open squiggle, which has no real "inside" —
+      // so its interior is still a valid click target, not just the line.
+      if ((node.fill || node.closed) && scratchCtx.isPointInPath(geometry, x, y)) return true;
       if (node.stroke) return strokeHit(geometry, node.strokeWidth, x, y);
       return false;
     }

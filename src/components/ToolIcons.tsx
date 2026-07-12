@@ -66,6 +66,16 @@ export function ArrowIcon() {
   );
 }
 
+export function PenIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" {...STROKE_PROPS}>
+      <path d="M3 14C3 8 8 4 15 4" />
+      <circle cx="3" cy="14" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="4" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function TextIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" {...STROKE_PROPS}>

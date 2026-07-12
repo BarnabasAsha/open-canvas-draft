@@ -22,6 +22,34 @@ export function removeNodeFromGraph(graph: SceneGraph, nodeId: NodeId): SceneGra
   return { nodes, rootIds };
 }
 
+// Deleting a frame/section without also deleting its children would leave
+// them in the graph with a parentId pointing at nothing — every id here
+// (the requested ones plus anything nested inside a deleted container) is
+// what actually needs to disappear.
+export function collectWithDescendants(graph: SceneGraph, nodeIds: readonly NodeId[]): NodeId[] {
+  const result: NodeId[] = [];
+  const seen = new Set<NodeId>();
+  const stack = [...nodeIds];
+
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === undefined || seen.has(id)) continue;
+    seen.add(id);
+
+    const node = graph.nodes[id];
+    if (!node) continue;
+
+    result.push(id);
+    if (isContainer(node)) stack.push(...node.children);
+  }
+
+  return result;
+}
+
+export function removeNodesFromGraph(graph: SceneGraph, nodeIds: readonly NodeId[]): SceneGraph {
+  return nodeIds.reduce(removeNodeFromGraph, graph);
+}
+
 export function reparentNodeInGraph(graph: SceneGraph, nodeId: NodeId, newParentId: NodeId | null): SceneGraph {
   const node = graph.nodes[nodeId];
   if (!node || node.parentId === newParentId) return graph;
