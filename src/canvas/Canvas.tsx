@@ -9,6 +9,7 @@ import { drawScene } from "./renderer/drawScene";
 import { subscribeImageLoad } from "./renderer/imageCache";
 import { toolManager } from "./tools/toolManager";
 import type { ToolPointerEvent } from "./tools/toolTypes";
+import { panBy, zoomAtPoint } from "./viewportControls";
 
 // What toToolEvent actually needs from either React event type — just
 // enough to share one conversion function between pointer events and the
@@ -32,7 +33,14 @@ export function Canvas() {
     let height = 0;
 
     const render = () =>
-      drawScene(ctx, sceneStore.getState(), width, height, documentStore.getState().backgroundColor);
+      drawScene(
+        ctx,
+        sceneStore.getState(),
+        width,
+        height,
+        documentStore.getState().backgroundColor,
+        viewportStore.getState(),
+      );
 
     // The canvas element is CSS-sized to fill its flex parent (see the
     // `width: "100%", height: "100%"` below), so its actual pixel size
@@ -62,12 +70,36 @@ export function Canvas() {
     const unsubscribeScene = sceneStore.subscribe(render);
     const unsubscribeImages = subscribeImageLoad(render);
     const unsubscribeDocument = documentStore.subscribe(render);
+    const unsubscribeViewport = viewportStore.subscribe(render);
+
+    // A native, non-passive listener rather than React's onWheel — browsers
+    // may treat wheel listeners as passive by default, which would silently
+    // ignore preventDefault() and let Ctrl+scroll fall through to the
+    // browser's own page-zoom instead of ours.
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const screenPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+      if (e.ctrlKey) {
+        // Trackpad pinch is delivered as a wheel event with ctrlKey set —
+        // same gesture browsers use for their own page-zoom, so this one
+        // check covers both pinch and an explicit Ctrl/Cmd+scroll.
+        const zoomFactor = Math.exp(-e.deltaY * 0.002);
+        viewportStore.update((viewport) => zoomAtPoint(viewport, screenPoint, zoomFactor));
+      } else {
+        viewportStore.update((viewport) => panBy(viewport, e.deltaX, e.deltaY));
+      }
+    };
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
 
     return () => {
       resizeObserver.disconnect();
       unsubscribeScene();
       unsubscribeImages();
       unsubscribeDocument();
+      unsubscribeViewport();
+      canvas.removeEventListener("wheel", handleWheel);
     };
   }, []);
 

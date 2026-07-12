@@ -11,9 +11,10 @@ export interface Handle {
   point: Point;
 }
 
-// Scene-unit hit radius. Fine while zoom is fixed at 1 (Phase 2); once
-// zoom/pan interaction exists this should scale with 1/zoom to stay a
-// constant screen-pixel target.
+// Screen-pixel hit radius — hitTestHandles divides this by zoom to convert
+// it into the scene-unit radius that's actually correct at the current
+// zoom level, so the click target stays a constant on-screen size instead
+// of shrinking to nothing when zoomed out or ballooning when zoomed in.
 export const HANDLE_HIT_RADIUS = 8;
 
 export function getHandles(nodeId: NodeId, nodes: Record<NodeId, SceneNode>): Handle[] {
@@ -43,11 +44,13 @@ export function hitTestHandles(
   scenePoint: Point,
   nodeId: NodeId,
   nodes: Record<NodeId, SceneNode>,
+  zoom: number,
 ): HandleId | null {
+  const radius = HANDLE_HIT_RADIUS / zoom;
   for (const handle of getHandles(nodeId, nodes)) {
     const dx = handle.point.x - scenePoint.x;
     const dy = handle.point.y - scenePoint.y;
-    if (Math.hypot(dx, dy) <= HANDLE_HIT_RADIUS) return handle.id;
+    if (Math.hypot(dx, dy) <= radius) return handle.id;
   }
   return null;
 }

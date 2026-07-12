@@ -3,7 +3,10 @@ import { createDeleteNodesCommand } from "../commands/DeleteNodesCommand";
 import { historyManager } from "../store/historyManager";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
+import { INITIAL_VIEWPORT, viewportStore } from "../store/viewportStore";
+import { canvasSizeStore } from "./canvasSizeStore";
 import { toolManager } from "./tools/toolManager";
+import { zoomAtPoint } from "./viewportControls";
 
 export function useKeyboardShortcuts(): void {
   useEffect(() => {
@@ -36,6 +39,22 @@ export function useKeyboardShortcuts(): void {
         } else {
           historyManager.undo();
         }
+        return;
+      }
+
+      // Keyboard zoom has no cursor position to anchor to (unlike the wheel
+      // handler in Canvas.tsx), so it zooms toward the center of whatever's
+      // currently visible instead.
+      if ((e.metaKey || e.ctrlKey) && (e.key === "0" || e.key === "=" || e.key === "+" || e.key === "-" || e.key === "_")) {
+        e.preventDefault();
+        if (e.key === "0") {
+          viewportStore.update(() => INITIAL_VIEWPORT);
+          return;
+        }
+        const { width, height } = canvasSizeStore.getState();
+        const center = { x: width / 2, y: height / 2 };
+        const factor = e.key === "=" || e.key === "+" ? 1.2 : 1 / 1.2;
+        viewportStore.update((viewport) => zoomAtPoint(viewport, center, factor));
         return;
       }
 

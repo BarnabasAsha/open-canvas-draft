@@ -7,16 +7,20 @@ import { useKeyboardShortcuts } from "./canvas/useKeyboardShortcuts";
 import { useSceneGraph } from "./canvas/useSceneGraph";
 import { useSelection } from "./canvas/useSelection";
 import { useDocumentSettings } from "./canvas/useDocumentSettings";
+import { useViewport } from "./canvas/useViewport";
+import { useZoomIndicatorVisible } from "./canvas/useZoomIndicatorVisible";
 import { createSetNodeCommand } from "./commands/SetNodeCommand";
 import { documentStore } from "./store/documentStore";
 import { historyManager } from "./store/historyManager";
 import { sceneStore } from "./store/sceneStore";
 import { selectionStore } from "./store/selectionStore";
+import { INITIAL_VIEWPORT, viewportStore } from "./store/viewportStore";
 import type { NodeId } from "./types/scene";
 import { LayersPanel } from "./ui/Sidebar/LeftSidebar/LayersPanel";
 import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
 import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
 import { Toolbar } from "./ui/Toolbar/Toolbar";
+import { ZoomIndicator } from "./ui/ZoomIndicator";
 
 function selectLayer(id: NodeId, additive: boolean): void {
   selectionStore.update((state) => {
@@ -45,6 +49,10 @@ function setBackgroundColor(color: string | null): void {
   documentStore.update((settings) => ({ ...settings, backgroundColor: color }));
 }
 
+function resetViewport(): void {
+  viewportStore.update(() => INITIAL_VIEWPORT);
+}
+
 export default function App() {
   useKeyboardShortcuts();
 
@@ -52,6 +60,8 @@ export default function App() {
   const scene = useSceneGraph();
   const { selectedIds } = useSelection();
   const documentSettings = useDocumentSettings();
+  const viewport = useViewport();
+  const zoomIndicatorVisible = useZoomIndicatorVisible(viewport.zoom);
 
   const selectedIdList = [...selectedIds];
   const soleSelectedNode = selectedIdList.length === 1 ? (scene.nodes[selectedIdList[0]] ?? null) : null;
@@ -74,6 +84,7 @@ export default function App() {
         <SelectionOverlay />
         <TextEditOverlay />
         <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
+        <ZoomIndicator zoom={viewport.zoom} visible={zoomIndicatorVisible} onReset={resetViewport} />
       </div>
       <PropertiesPanel
         node={soleSelectedNode}

@@ -1,4 +1,5 @@
 import type { SceneGraph } from "../../types/scene";
+import type { Viewport } from "../../utils/coordinates";
 import { drawNode } from "./drawNode";
 
 export function drawScene(
@@ -7,15 +8,26 @@ export function drawScene(
   width: number,
   height: number,
   backgroundColor: string | null,
+  viewport: Viewport,
 ): void {
+  // Background fill happens in plain (DPR-only) canvas space, before the
+  // viewport transform, so it always covers the full visible area exactly
+  // once regardless of zoom — content is what pans/scales, not the page
+  // itself.
   ctx.clearRect(0, 0, width, height);
   if (backgroundColor) {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, width, height);
   }
 
+  ctx.save();
+  ctx.translate(viewport.pan.x, viewport.pan.y);
+  ctx.scale(viewport.zoom, viewport.zoom);
+
   for (const id of scene.rootIds) {
     const node = scene.nodes[id];
     if (node) drawNode(ctx, node, scene.nodes);
   }
+
+  ctx.restore();
 }

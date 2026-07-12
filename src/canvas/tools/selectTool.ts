@@ -5,6 +5,7 @@ import { getParentOrigin } from "../../store/graphMutations";
 import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
 import { selectionStore } from "../../store/selectionStore";
+import { viewportStore } from "../../store/viewportStore";
 import type { ArrowNode, LineNode, NodeId, SceneGraph, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { findContainerAt } from "./containment";
@@ -65,16 +66,18 @@ let hoveredHandleId: HandleId | null = null;
 function onPointerDown({ scenePoint, shiftKey }: ToolPointerEvent): void {
   const { selectedIds } = selectionStore.getState();
 
+  const zoom = viewportStore.getState().zoom;
+
   if (selectedIds.size === 1) {
     const [soleId] = selectedIds;
-    const handleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes);
+    const handleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes, zoom);
     if (handleId) {
       startResizeDrag(soleId, handleId);
       return;
     }
   } else if (selectedIds.size > 1) {
     const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
-    const handleId = bounds ? hitTestGroupHandles(scenePoint, bounds, 1) : null;
+    const handleId = bounds ? hitTestGroupHandles(scenePoint, bounds, zoom) : null;
     if (handleId && bounds) {
       startGroupResizeDrag(selectedIds, bounds, handleId);
       return;
@@ -245,12 +248,13 @@ function commitGroupResize(drag: GroupResizeDrag): void {
 
 function updateHoverState(scenePoint: Point): void {
   const { selectedIds } = selectionStore.getState();
+  const zoom = viewportStore.getState().zoom;
   if (selectedIds.size === 1) {
     const [soleId] = selectedIds;
-    hoveredHandleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes);
+    hoveredHandleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes, zoom);
   } else if (selectedIds.size > 1) {
     const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
-    hoveredHandleId = bounds ? hitTestGroupHandles(scenePoint, bounds, 1) : null;
+    hoveredHandleId = bounds ? hitTestGroupHandles(scenePoint, bounds, zoom) : null;
   } else {
     hoveredHandleId = null;
   }
