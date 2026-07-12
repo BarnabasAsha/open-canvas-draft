@@ -1,4 +1,5 @@
 import type { NodeId, SceneNode } from "../../types/scene";
+import { applyNodeTransform } from "./applyNodeTransform";
 import { drawArrow } from "./shapes/drawArrow";
 import { drawEllipse } from "./shapes/drawEllipse";
 import { drawFrame } from "./shapes/drawFrame";
@@ -53,15 +54,6 @@ export function drawNode(
 }
 
 function applyTransform(ctx: CanvasRenderingContext2D, node: SceneNode): void {
-  ctx.translate(node.x, node.y);
-
-  if (node.rotation !== 0) {
-    const pivotX = node.width / 2;
-    const pivotY = node.height / 2;
-    ctx.translate(pivotX, pivotY);
-    ctx.rotate((node.rotation * Math.PI) / 180);
-    ctx.translate(-pivotX, -pivotY);
-  }
-
+  applyNodeTransform(ctx, node);
   ctx.globalAlpha *= node.opacity;
 }

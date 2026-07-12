@@ -1,12 +1,15 @@
 import type { LineNode } from "../../../types/scene";
 
-export function drawLine(ctx: CanvasRenderingContext2D, node: LineNode): void {
-  const { x, y, x2, y2, stroke, strokeWidth } = node;
+export function buildLineGeometry(node: LineNode): Path2D {
+  const path = new Path2D();
+  path.moveTo(0, 0);
+  path.lineTo(node.x2 - node.x, node.y2 - node.y);
+  return path;
+}
 
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(x2 - x, y2 - y);
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = strokeWidth;
-  ctx.stroke();
+export function drawLine(ctx: CanvasRenderingContext2D, node: LineNode): void {
+  const path = buildLineGeometry(node);
+  ctx.strokeStyle = node.stroke;
+  ctx.lineWidth = node.strokeWidth;
+  ctx.stroke(path);
 }

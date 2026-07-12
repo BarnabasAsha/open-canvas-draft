@@ -2,30 +2,33 @@ import type { ArrowNode } from "../../../types/scene";
 
 const ARROWHEAD_ANGLE = Math.PI / 7;
 
-export function drawArrow(ctx: CanvasRenderingContext2D, node: ArrowNode): void {
-  const { x, y, x2, y2, stroke, strokeWidth, arrowheadSize } = node;
+export function buildArrowGeometry(node: ArrowNode): Path2D {
+  const { x, y, x2, y2, arrowheadSize } = node;
   const dx = x2 - x;
   const dy = y2 - y;
   const angle = Math.atan2(dy, dx);
 
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = strokeWidth;
+  const path = new Path2D();
+  path.moveTo(0, 0);
+  path.lineTo(dx, dy);
 
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(dx, dy);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(dx, dy);
-  ctx.lineTo(
+  path.moveTo(dx, dy);
+  path.lineTo(
     dx - arrowheadSize * Math.cos(angle - ARROWHEAD_ANGLE),
     dy - arrowheadSize * Math.sin(angle - ARROWHEAD_ANGLE),
   );
-  ctx.moveTo(dx, dy);
-  ctx.lineTo(
+  path.moveTo(dx, dy);
+  path.lineTo(
     dx - arrowheadSize * Math.cos(angle + ARROWHEAD_ANGLE),
     dy - arrowheadSize * Math.sin(angle + ARROWHEAD_ANGLE),
   );
-  ctx.stroke();
+
+  return path;
+}
+
+export function drawArrow(ctx: CanvasRenderingContext2D, node: ArrowNode): void {
+  const path = buildArrowGeometry(node);
+  ctx.strokeStyle = node.stroke;
+  ctx.lineWidth = node.strokeWidth;
+  ctx.stroke(path);
 }
