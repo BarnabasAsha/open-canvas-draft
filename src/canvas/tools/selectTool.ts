@@ -8,7 +8,11 @@ import { selectionStore } from "../../store/selectionStore";
 import type { ArrowNode, LineNode, NodeId, SceneGraph, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { findContainerAt } from "./containment";
+import { computeGroupScale, getGroupBounds, getGroupHandles, hitTestGroupHandles, resizeNodeInGroup } from "./groupResize";
+import type { Bounds } from "./groupResize";
 import { hitTestScene } from "./hitTest";
+import { marqueeSelectedIds } from "./marqueeSelection";
+import { marqueeStore } from "./marqueeStore";
 import { getResizeCursor } from "./resizeCursor";
 import { getHandles, hitTestHandles } from "./resizeHandles";
 import type { BBoxHandleId, EndpointHandleId, HandleId } from "./resizeHandles";
@@ -35,7 +39,25 @@ interface ResizeDrag {
   startNode: SceneNode;
 }
 
-type DragState = MoveDrag | ResizeDrag;
+interface MarqueeDrag {
+  kind: "marquee";
+  startPoint: Point;
+  // The selection to union marquee hits into (shift held) — captured once
+  // at drag start, not re-read live, since by pointermove selectionStore
+  // already holds this drag's own in-progress result.
+  baseSelectedIds: Set<NodeId>;
+  additive: boolean;
+}
+
+interface GroupResizeDrag {
+  kind: "group-resize";
+  handleId: BBoxHandleId;
+  startBounds: Bounds;
+  snapshots: Map<NodeId, SceneNode>;
+  startRootIds: NodeId[];
+}
+
+type DragState = MoveDrag | ResizeDrag | MarqueeDrag | GroupResizeDrag;
 
 let dragState: DragState | null = null;
 let hoveredHandleId: HandleId | null = null;
@@ -50,16 +72,20 @@ function onPointerDown({ scenePoint, shiftKey }: ToolPointerEvent): void {
       startResizeDrag(soleId, handleId);
       return;
     }
+  } else if (selectedIds.size > 1) {
+    const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
+    const handleId = bounds ? hitTestGroupHandles(scenePoint, bounds, 1) : null;
+    if (handleId && bounds) {
+      startGroupResizeDrag(selectedIds, bounds, handleId);
+      return;
+    }
   }
 
   const scene = sceneStore.getState();
   const hitId = hitTestScene(scenePoint, scene);
 
   if (!hitId) {
-    dragState = null;
-    if (!shiftKey && selectedIds.size > 0) {
-      selectionStore.update((state) => ({ ...state, selectedIds: new Set() }));
-    }
+    startMarqueeDrag(scenePoint, shiftKey, selectedIds);
     return;
   }
 
@@ -95,6 +121,11 @@ function onPointerMove({ scenePoint }: ToolPointerEvent): void {
 
   if (dragState.kind === "resize") {
     applyResize(dragState, scenePoint);
+  } else if (dragState.kind === "group-resize") {
+    applyGroupResize(dragState, scenePoint);
+  } else if (dragState.kind === "marquee") {
+    marqueeStore.update((state) => (state ? { ...state, current: scenePoint } : state));
+    applyMarqueeSelection(dragState, scenePoint);
   } else {
     applyMove(dragState, scenePoint);
   }
@@ -109,6 +140,15 @@ function onPointerUp({ scenePoint }: ToolPointerEvent): void {
   // drag that never happened and get recorded as a no-op undo step.
   if (dragState?.kind === "move" && didMove(dragState, scenePoint)) {
     applyMove(dragState, scenePoint);
+  }
+
+  if (dragState?.kind === "group-resize") {
+    applyGroupResize(dragState, scenePoint);
+  }
+
+  if (dragState?.kind === "marquee") {
+    applyMarqueeSelection(dragState, scenePoint);
+    marqueeStore.update(() => null);
   }
 
   if (dragState) commitDrag(dragState);
@@ -127,9 +167,13 @@ function didMove(drag: MoveDrag, scenePoint: Point): boolean {
 function commitDrag(drag: DragState): void {
   if (drag.kind === "move") {
     commitMove(drag);
-  } else {
+  } else if (drag.kind === "resize") {
     commitResize(drag);
+  } else if (drag.kind === "group-resize") {
+    commitGroupResize(drag);
   }
+  // marquee: nothing to commit to history — selection has never been part
+  // of the undo stack, same as a plain click-to-select.
 }
 
 function commitMove(drag: MoveDrag): void {
@@ -176,27 +220,59 @@ function commitResize(drag: ResizeDrag): void {
   historyManager.execute(createSetNodeCommand(drag.nodeId, drag.startNode, current));
 }
 
-function updateHoverState(scenePoint: Point): void {
-  const { selectedIds } = selectionStore.getState();
-  if (selectedIds.size !== 1) {
-    hoveredHandleId = null;
-    return;
+// Reuses MoveNodeCommand's before/after-map shape — it doesn't care why a
+// set of nodes changed, only how to swap their full values, which is
+// exactly what undoing a group resize needs too. rootIds never change here
+// (no reparenting during a resize), so the same array serves both sides.
+function commitGroupResize(drag: GroupResizeDrag): void {
+  const finalNodes = sceneStore.getState().nodes;
+  const after = new Map<NodeId, SceneNode>();
+  let changed = false;
+
+  for (const [id, before] of drag.snapshots) {
+    const current = finalNodes[id];
+    if (!current) continue;
+    after.set(id, current);
+    if (current !== before) changed = true;
   }
 
-  const [soleId] = selectedIds;
-  hoveredHandleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes);
+  if (!changed) return;
+
+  const before: MoveSnapshot = { nodes: drag.snapshots, rootIds: drag.startRootIds };
+  const afterSnapshot: MoveSnapshot = { nodes: after, rootIds: drag.startRootIds };
+  historyManager.execute(createMoveNodeCommand(before, afterSnapshot));
+}
+
+function updateHoverState(scenePoint: Point): void {
+  const { selectedIds } = selectionStore.getState();
+  if (selectedIds.size === 1) {
+    const [soleId] = selectedIds;
+    hoveredHandleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes);
+  } else if (selectedIds.size > 1) {
+    const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
+    hoveredHandleId = bounds ? hitTestGroupHandles(scenePoint, bounds, 1) : null;
+  } else {
+    hoveredHandleId = null;
+  }
 }
 
 function getCursor(): string {
   if (dragState?.kind === "resize") {
     return getResizeCursor(dragState.handleId, getHandles(dragState.nodeId, sceneStore.getState().nodes));
   }
+  if (dragState?.kind === "group-resize") {
+    return getResizeCursor(dragState.handleId, getGroupHandles(dragState.startBounds));
+  }
   if (dragState?.kind === "move") return "grabbing";
 
   if (hoveredHandleId) {
     const { selectedIds } = selectionStore.getState();
-    const [soleId] = selectedIds;
-    return getResizeCursor(hoveredHandleId, getHandles(soleId, sceneStore.getState().nodes));
+    if (selectedIds.size === 1) {
+      const [soleId] = selectedIds;
+      return getResizeCursor(hoveredHandleId, getHandles(soleId, sceneStore.getState().nodes));
+    }
+    const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
+    if (bounds) return getResizeCursor(hoveredHandleId, getGroupHandles(bounds));
   }
 
   return "default";
@@ -290,10 +366,56 @@ function translateNode(scene: SceneGraph, start: SceneNode, current: SceneNode, 
   return { ...current, x: start.x + shiftX, y: start.y + shiftY };
 }
 
+function startMarqueeDrag(scenePoint: Point, additive: boolean, currentSelectedIds: Set<NodeId>): void {
+  dragState = {
+    kind: "marquee",
+    startPoint: scenePoint,
+    baseSelectedIds: additive ? currentSelectedIds : new Set(),
+    additive,
+  };
+  marqueeStore.update(() => ({ start: scenePoint, current: scenePoint }));
+  // Applied immediately (not deferred to the first pointermove) so a plain
+  // click with no drag at all still clears the selection right away, same
+  // as the old "click empty space" behavior — a zero-size marquee rect
+  // naturally intersects nothing.
+  applyMarqueeSelection(dragState, scenePoint);
+}
+
+function applyMarqueeSelection(drag: MarqueeDrag, scenePoint: Point): void {
+  const scene = sceneStore.getState();
+  const hits = marqueeSelectedIds(scene, drag.startPoint, scenePoint);
+  const nextSelectedIds = drag.additive ? new Set([...drag.baseSelectedIds, ...hits]) : hits;
+  selectionStore.update((state) => ({ ...state, selectedIds: nextSelectedIds }));
+}
+
 function startResizeDrag(nodeId: NodeId, handleId: HandleId): void {
   const node = sceneStore.getState().nodes[nodeId];
   if (!node || node.locked) return;
   dragState = { kind: "resize", nodeId, handleId, startNode: node };
+}
+
+function startGroupResizeDrag(selectedIds: Set<NodeId>, startBounds: Bounds, handleId: BBoxHandleId): void {
+  const { nodes, rootIds } = sceneStore.getState();
+  const snapshots = new Map<NodeId, SceneNode>();
+  for (const id of selectedIds) {
+    const node = nodes[id];
+    if (node && !node.locked) snapshots.set(id, node);
+  }
+  if (snapshots.size === 0) return;
+
+  dragState = { kind: "group-resize", handleId, startBounds, snapshots, startRootIds: rootIds };
+}
+
+function applyGroupResize(drag: GroupResizeDrag, scenePoint: Point): void {
+  const scale = computeGroupScale(drag.startBounds, drag.handleId, scenePoint);
+
+  sceneStore.update((scene) => {
+    const nodes = { ...scene.nodes };
+    for (const [id, startNode] of drag.snapshots) {
+      nodes[id] = resizeNodeInGroup(startNode, scale, scene);
+    }
+    return { ...scene, nodes };
+  });
 }
 
 function applyResize(drag: ResizeDrag, scenePoint: Point): void {

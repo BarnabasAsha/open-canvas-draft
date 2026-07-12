@@ -7,7 +7,7 @@ import { LayerItem } from "./LayerItem";
 interface LayersPanelProps {
   scene: SceneGraph;
   selectedIds: Set<NodeId>;
-  onSelect: (id: NodeId) => void;
+  onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
 }

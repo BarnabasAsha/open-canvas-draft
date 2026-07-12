@@ -8,7 +8,7 @@ interface LayerItemProps {
   scene: SceneGraph;
   selectedIds: Set<NodeId>;
   depth: number;
-  onSelect: (id: NodeId) => void;
+  onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
 }
@@ -31,7 +31,7 @@ export function LayerItem({ nodeId, scene, selectedIds, depth, onSelect, onToggl
     <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
       <div
         className="layer-row"
-        onClick={() => onSelect(nodeId)}
+        onClick={(e) => onSelect(nodeId, e.shiftKey)}
         data-selected={isSelected || undefined}
         data-hidden={!node.visible || undefined}
         style={{ paddingLeft: 8 + depth * 14 }}

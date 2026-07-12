@@ -18,8 +18,15 @@ import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
 import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
 import { Toolbar } from "./ui/Toolbar/Toolbar";
 
-function selectLayer(id: NodeId): void {
-  selectionStore.update((state) => ({ ...state, selectedIds: new Set([id]) }));
+function selectLayer(id: NodeId, additive: boolean): void {
+  selectionStore.update((state) => {
+    if (!additive) return { ...state, selectedIds: new Set([id]) };
+
+    const next = new Set(state.selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return { ...state, selectedIds: next };
+  });
 }
 
 function toggleVisible(id: NodeId): void {

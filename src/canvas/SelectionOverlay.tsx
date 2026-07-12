@@ -1,6 +1,8 @@
 import { getSceneCorners } from "./selectionBounds";
+import { getGroupBounds, getGroupHandles } from "./tools/groupResize";
 import { getHandles } from "./tools/resizeHandles";
 import { useCanvasSize } from "./useCanvasSize";
+import { useMarquee } from "./useMarquee";
 import { useSceneGraph } from "./useSceneGraph";
 import { useSelection } from "./useSelection";
 import { useViewport } from "./useViewport";
@@ -17,10 +19,16 @@ export function SelectionOverlay() {
   const { selectedIds } = useSelection();
   const viewport = useViewport();
   const canvasSize = useCanvasSize();
+  const marquee = useMarquee();
 
   const selectedIdList = [...selectedIds];
   const soleSelectedId = selectedIdList.length === 1 ? selectedIdList[0] : null;
-  const handles = soleSelectedId ? getHandles(soleSelectedId, scene.nodes) : [];
+  const groupBounds = selectedIdList.length > 1 ? getGroupBounds(selectedIds, scene.nodes) : null;
+  const handles = soleSelectedId
+    ? getHandles(soleSelectedId, scene.nodes)
+    : groupBounds
+      ? getGroupHandles(groupBounds)
+      : [];
 
   return (
     <svg
@@ -54,6 +62,23 @@ export function SelectionOverlay() {
           </g>
         );
       })}
+      {groupBounds &&
+        (() => {
+          const topLeft = sceneToScreen({ x: groupBounds.minX, y: groupBounds.minY }, viewport);
+          const bottomRight = sceneToScreen({ x: groupBounds.maxX, y: groupBounds.maxY }, viewport);
+          return (
+            <rect
+              x={topLeft.x}
+              y={topLeft.y}
+              width={bottomRight.x - topLeft.x}
+              height={bottomRight.y - topLeft.y}
+              fill="none"
+              stroke={STROKE_COLOR}
+              strokeWidth={1}
+              strokeDasharray="4 3"
+            />
+          );
+        })()}
       {handles.map((handle) => {
         const screen = sceneToScreen(handle.point, viewport);
         return (
@@ -69,6 +94,23 @@ export function SelectionOverlay() {
           />
         );
       })}
+      {marquee &&
+        (() => {
+          const p1 = sceneToScreen(marquee.start, viewport);
+          const p2 = sceneToScreen(marquee.current, viewport);
+          return (
+            <rect
+              x={Math.min(p1.x, p2.x)}
+              y={Math.min(p1.y, p2.y)}
+              width={Math.abs(p2.x - p1.x)}
+              height={Math.abs(p2.y - p1.y)}
+              fill={STROKE_COLOR}
+              fillOpacity={0.1}
+              stroke={STROKE_COLOR}
+              strokeWidth={1}
+            />
+          );
+        })()}
     </svg>
   );
 }

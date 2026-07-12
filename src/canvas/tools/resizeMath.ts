@@ -3,11 +3,11 @@ import type { Point } from "../../utils/coordinates";
 import { getWorldMatrix } from "../../utils/worldTransform";
 import type { BBoxHandleId, EndpointHandleId } from "./resizeHandles";
 
-const MIN_SIZE = 1;
+export const MIN_SIZE = 1;
 
 type Side = "min" | "max" | null;
 
-const HANDLE_AXES: Record<BBoxHandleId, { horizontal: Side; vertical: Side }> = {
+export const HANDLE_AXES: Record<BBoxHandleId, { horizontal: Side; vertical: Side }> = {
   nw: { horizontal: "min", vertical: "min" },
   n: { horizontal: null, vertical: "min" },
   ne: { horizontal: "max", vertical: "min" },
@@ -74,7 +74,7 @@ export function resizeBBoxNode(start: SceneNode, handleId: BBoxHandleId, localPo
   return { ...start, x: horizontal.origin, y: vertical.origin, width: horizontal.size, height: vertical.size };
 }
 
-function scalePathPoints(points: PathPoint[], scaleX: number, scaleY: number): PathPoint[] {
+export function scalePathPoints(points: PathPoint[], scaleX: number, scaleY: number): PathPoint[] {
   return points.map((point) => ({
     x: point.x * scaleX,
     y: point.y * scaleY,
@@ -113,7 +113,7 @@ export function resizeEndpointNode(
 // dragged handle fixed. min/abs naturally normalizes if the dragged edge
 // crosses past the fixed edge, so a handle can flip through the opposite
 // corner and keep tracking the cursor instead of getting stuck at MIN_SIZE.
-function resizeAxis(
+export function resizeAxis(
   startOrigin: number,
   startSize: number,
   pointerLocal: number,

@@ -53,3 +53,15 @@ Two separate bugs — drag distortion, then a stale resize outline — both trac
 2. **`resizeMath.ts`** — rotation-aware inverse transforms, plus a real unsolved edge case (pivot drift) that had to be consciously scoped rather than either ignored or fully solved.
 3. **`selectionBounds.ts`'s `getWorldMatrix`** — not hard to write, but easy to get subtly wrong (transform composition order matters a lot), and it's load-bearing for three other files.
 4. **The line/arrow bugs** — not hard to *fix* once found, but easy to miss entirely, since the bbox-uniformity assumption is implicit everywhere and only breaks on this one type pair.
+
+## Later addition: marquee select and group resize
+
+Both features reuse the same pattern the phases above already established, rather than inventing a new one.
+
+**`canvas/tools/marqueeSelection.ts`** — a click on empty canvas used to just clear the selection; now it starts a drag, and `marqueeSelectedIds` is the pure-function twin of `hitTestScene`: given a scene and a start/end point, return the set of top-level nodes whose bounds overlap the marquee rectangle. Only `rootIds` are tested, matching how most design tools scope a canvas-level drag — reaching a specific child nested in a frame still means clicking it directly.
+
+**`canvas/tools/marqueeStore.ts`** — ephemeral drag-in-progress state (the rectangle's current corners), not scene data, so it gets its own tiny store rather than living on `selectionStore`. Same role `textEditStore` already plays: the bridge between a plain-module tool and the React overlay that renders it.
+
+**`canvas/tools/groupResize.ts`** — a multi-selection resizes as one "virtual node" whose bounding box is the union of every selected node's scene-space bounds (`getGroupBounds`). Dragging a handle computes a single scale factor and anchor point (`computeGroupScale`, a direct generalization of `resizeMath.ts`'s `resizeAxis`), then every selected node is scaled around that same anchor (`resizeNodeInGroup`) — which is what makes the whole selection resize together instead of each node shrinking toward its own center. Reuses `resizeMath.ts`'s exported `MIN_SIZE`/`HANDLE_AXES`/`scalePathPoints`/`resizeAxis` and `resizeHandles.ts`'s exported `getLocalHandlePoints`/`HANDLE_HIT_RADIUS` rather than re-deriving them — the same "keep geometry pure and reusable" discipline the original phases set up paid off directly here.
+
+**`selectTool.ts`'s further extension** — `DragState` grew two more variants (`marquee`, `group-resize`), and the priority order in `onPointerDown` grew with it: a single selection's own resize handles are checked first, then a multi-selection's group handles, then a plain hit-test, and only then does an empty hit fall through to starting a marquee — same "most specific gesture wins" principle the resize-vs-select priority from Phase 3 already used.

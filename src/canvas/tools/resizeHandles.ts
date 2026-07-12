@@ -14,7 +14,7 @@ export interface Handle {
 // Scene-unit hit radius. Fine while zoom is fixed at 1 (Phase 2); once
 // zoom/pan interaction exists this should scale with 1/zoom to stay a
 // constant screen-pixel target.
-const HANDLE_HIT_RADIUS = 8;
+export const HANDLE_HIT_RADIUS = 8;
 
 export function getHandles(nodeId: NodeId, nodes: Record<NodeId, SceneNode>): Handle[] {
   const node = nodes[nodeId];
@@ -52,7 +52,7 @@ export function hitTestHandles(
   return null;
 }
 
-function getLocalHandlePoints(width: number, height: number): Record<BBoxHandleId, Point> {
+export function getLocalHandlePoints(width: number, height: number): Record<BBoxHandleId, Point> {
   return {
     nw: { x: 0, y: 0 },
     n: { x: width / 2, y: 0 },
