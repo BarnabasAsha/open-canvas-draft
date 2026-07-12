@@ -1,8 +1,5 @@
 import { useEffect } from "react";
 import { historyManager } from "../store/historyManager";
-import { frameTool } from "./tools/frameTool";
-import { sectionTool } from "./tools/sectionTool";
-import { selectTool } from "./tools/selectTool";
 import { toolManager } from "./tools/toolManager";
 
 export function useKeyboardShortcuts(): void {
@@ -21,18 +18,31 @@ export function useKeyboardShortcuts(): void {
       // Don't hijack browser/OS shortcuts that happen to share a letter.
       if (e.metaKey || e.ctrlKey) return;
 
-      // No toolbar UI yet, so these are the only way to reach the frame/
-      // section tools — mnemonics match Figma's own (V select, F frame,
-      // Shift+S section).
+      // The toolbar covers most of these too now — mnemonics match Figma's
+      // own (V select, F frame, Shift+S section, R rectangle, O ellipse,
+      // L line, A arrow). No dedicated shortcut for image — placing one
+      // needs a file picker anyway, so the toolbar button is enough.
       switch (e.key.toLowerCase()) {
         case "v":
-          toolManager.setActiveTool(selectTool);
+          toolManager.setActiveTool("select");
           break;
         case "f":
-          toolManager.setActiveTool(frameTool);
+          toolManager.setActiveTool("frame");
           break;
         case "s":
-          if (e.shiftKey) toolManager.setActiveTool(sectionTool);
+          if (e.shiftKey) toolManager.setActiveTool("section");
+          break;
+        case "r":
+          toolManager.setActiveTool("rectangle");
+          break;
+        case "o":
+          toolManager.setActiveTool("ellipse");
+          break;
+        case "l":
+          toolManager.setActiveTool("line");
+          break;
+        case "a":
+          toolManager.setActiveTool("arrow");
           break;
       }
     }

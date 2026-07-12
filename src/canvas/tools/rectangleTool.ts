@@ -1,21 +1,21 @@
-import type { FrameNode } from "../../types/scene";
+import type { RectNode } from "../../types/scene";
 import { createDragToCreateTool, rectFromPoints } from "./dragToCreateTool";
 import type { Tool } from "./toolTypes";
 
-export const frameTool: Tool = createDragToCreateTool({
-  buildNode: (id, start, current): FrameNode => ({
+export const rectangleTool: Tool = createDragToCreateTool({
+  buildNode: (id, start, current): RectNode => ({
     id,
-    type: "frame",
-    name: "Frame",
+    type: "rect",
+    name: "Rectangle",
     parentId: null,
     ...rectFromPoints(start, current),
     rotation: 0,
     opacity: 1,
     visible: true,
     locked: false,
-    fill: "#ffffff",
-    clipsContent: true,
+    fill: "#d9d9d9",
+    stroke: null,
+    strokeWidth: 0,
     cornerRadius: 0,
-    children: [],
   }),
 });

@@ -1,19 +1,20 @@
-import type { SectionNode } from "../../types/scene";
+import type { EllipseNode } from "../../types/scene";
 import { createDragToCreateTool, rectFromPoints } from "./dragToCreateTool";
 import type { Tool } from "./toolTypes";
 
-export const sectionTool: Tool = createDragToCreateTool({
-  buildNode: (id, start, current): SectionNode => ({
+export const ellipseTool: Tool = createDragToCreateTool({
+  buildNode: (id, start, current): EllipseNode => ({
     id,
-    type: "section",
-    name: "Section",
+    type: "ellipse",
+    name: "Ellipse",
     parentId: null,
     ...rectFromPoints(start, current),
     rotation: 0,
     opacity: 1,
     visible: true,
     locked: false,
-    label: "Section",
-    children: [],
+    fill: "#d9d9d9",
+    stroke: null,
+    strokeWidth: 0,
   }),
 });
