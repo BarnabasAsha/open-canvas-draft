@@ -692,6 +692,14 @@
   background: var(--surface-panel-active);
 }
 
+.align-toolbar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
 /* Shown behind the canvas whenever its background is null (transparent) —
    same checkerboard convention as Figma/every other design tool, sitting
    on the canvas-area container so it shows through the raster's cleared
