@@ -1,3 +1,4 @@
+import { isAlignableContainer } from "../../../canvas/tools/alignment";
 import type { AlignKind } from "../../../canvas/tools/alignment";
 import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode } from "../../../types/scene";
 import { AlignmentToolbar } from "./AlignmentToolbar";
@@ -12,6 +13,10 @@ import { TypographySection } from "./sections/TypographySection";
 interface PropertiesPanelProps {
   node: SceneNode | null;
   selectionCount: number;
+  // Set only when 2+ nodes are selected and every one shares the same
+  // type — one of them, standing in for "the shared style fields all of
+  // them can be batch-edited through" (see SharedPropertySections below).
+  uniformNode: SceneNode | null;
   backgroundColor: string | null;
   onBackgroundColorChange: (color: string | null) => void;
   gridVisible: boolean;
@@ -50,15 +55,25 @@ function asCornerRadiusNode(node: SceneNode): RectNode | FrameNode | null {
 // empty state — this is now a fixed structural column (see App.tsx), so
 // hiding its content entirely would waste that space every time selection
 // is cleared, and a design tool's canvas has real properties of its own
-// (Figma's page background is the same idea). Exactly 1: the full set of
-// sections relevant to that node's type. More than 1: a lightweight count
-// only — editing shared properties across a heterogeneous multi-selection
-// is a real, separate feature (which fields are even shared, batch-command
-// semantics) rather than a natural extension of single-node editing, so
-// it's deliberately not attempted here.
+// (Figma's page background is the same idea).
+//
+// Exactly 1 node selected: the full set of sections relevant to that
+// node's type, plus an Align section on top if it's a Frame/Section/Group
+// with children (aligning them to itself, Figma-style).
+//
+// 2+ selected: an Align section (relative to each other) always shows.
+// Below it, a same-type selection also gets the shared *style* fields
+// (Appearance/Stroke/Corner radius/Typography) via SharedPropertySections
+// so e.g. two Text nodes can have their font/color set together in one
+// edit. Position is deliberately excluded even then — batch-setting X/Y
+// would collapse every selected node onto the same point, which is never
+// what "set the same font for both" actually means; Align already covers
+// relative positioning. A heterogeneous selection (mixed types) has no
+// well-defined shared schema, so it still falls back to a plain count.
 export function PropertiesPanel({
   node,
   selectionCount,
+  uniformNode,
   backgroundColor,
   onBackgroundColorChange,
   gridVisible,
@@ -92,15 +107,26 @@ export function PropertiesPanel({
           rulerVisible={rulerVisible}
           onRulerVisibleChange={onRulerVisibleChange}
         />
-      ) : selectionCount > 1 || !node ? (
+      ) : selectionCount === 1 && node ? (
+        <>
+          {isAlignableContainer(node) && (
+            <PanelSection title="Align">
+              <AlignmentToolbar onAlign={onAlign} />
+            </PanelSection>
+          )}
+          <PropertySections node={node} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
+        </>
+      ) : (
         <>
           <PanelSection title="Align">
             <AlignmentToolbar onAlign={onAlign} />
           </PanelSection>
-          <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
+          {uniformNode ? (
+            <SharedPropertySections node={uniformNode} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
+          ) : (
+            <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
+          )}
         </>
-      ) : (
-        <PropertySections node={node} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
       )}
     </div>
   );
@@ -122,6 +148,26 @@ function PropertySections({ node, onFocus, onChange, onCommit }: PropertySection
     <>
       <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>{node.name}</div>
       <PositionSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {cornerRadiusNode && (
+        <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      )}
+      {node.type === "text" && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+    </>
+  );
+}
+
+// Same section set as PropertySections minus Position (see the "2+
+// selected" comment above PropertiesPanel for why) and the name header,
+// which would misleadingly show only the first selected node's name.
+function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertySectionsProps) {
+  const fillNode = asFillNode(node);
+  const strokeNode = asStrokeNode(node);
+  const cornerRadiusNode = asCornerRadiusNode(node);
+
+  return (
+    <>
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {cornerRadiusNode && (
