@@ -29,6 +29,10 @@ function onPointerDown({ scenePoint }: ToolPointerEvent): void {
     fontSize: 16,
     fontFamily: "sans-serif",
     fontWeight: 400,
+    fontStyle: "normal",
+    letterSpacing: 0,
+    lineHeight: 1.2,
+    textDecoration: "none",
     color: "#111827",
     align: "left",
   };

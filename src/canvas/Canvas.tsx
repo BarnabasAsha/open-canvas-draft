@@ -73,6 +73,16 @@ export function Canvas() {
     const unsubscribeDocument = documentStore.subscribe(render);
     const unsubscribeViewport = viewportStore.subscribe(render);
 
+    // A Google Font requested via a text node's fontFamily may still be
+    // downloading the first time it's drawn — the browser silently falls
+    // back to a default font rather than erroring, so without this the
+    // canvas would just keep showing the fallback forever. "loadingdone"
+    // fires whenever any font finishes loading anywhere on the page, which
+    // is a broader signal than "the one font this canvas cares about" but
+    // redrawing on a no-op font change is harmless, and it means this
+    // doesn't need to track which families are actually in use.
+    document.fonts.addEventListener("loadingdone", render);
+
     // A native, non-passive listener rather than React's onWheel — browsers
     // may treat wheel listeners as passive by default, which would silently
     // ignore preventDefault() and let Ctrl+scroll fall through to the
@@ -101,6 +111,7 @@ export function Canvas() {
       unsubscribeDocument();
       unsubscribeViewport();
       canvas.removeEventListener("wheel", handleWheel);
+      document.fonts.removeEventListener("loadingdone", render);
     };
   }, []);
 

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { textEditStore } from "../store/textEditStore";
-import { LINE_HEIGHT_MULTIPLIER } from "./renderer/shapes/drawText";
 import { getScreenTransform } from "./screenTransform";
 import { cancelTextEdit, commitTextEdit } from "./tools/textEdit";
 import { useSceneGraph } from "./useSceneGraph";
@@ -78,9 +77,12 @@ export function TextEditOverlay() {
         fontSize: node.fontSize * viewport.zoom,
         fontFamily: node.fontFamily,
         fontWeight: node.fontWeight,
+        fontStyle: node.fontStyle,
+        letterSpacing: node.letterSpacing * viewport.zoom,
+        textDecoration: node.textDecoration,
         color: node.color,
         textAlign: node.align,
-        lineHeight: LINE_HEIGHT_MULTIPLIER,
+        lineHeight: node.lineHeight,
         background: "transparent",
         border: "none",
         outline: "none",
