@@ -4,7 +4,7 @@ import { RULER_SIZE, Ruler } from "./canvas/Ruler";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import type { AlignKind } from "./canvas/tools/alignment";
-import { computeAlignedNodes, computeAlignedToContainer } from "./canvas/tools/alignment";
+import { computeAlignedNodes, computeAlignedToContainer, isAlignableContainer } from "./canvas/tools/alignment";
 import type { FramePreset } from "./canvas/tools/framePresets";
 import { buildFrameNode } from "./canvas/tools/frameTool";
 import { toolManager } from "./canvas/tools/toolManager";
@@ -161,17 +161,33 @@ export default function App() {
   // fields — see the PropertiesPanel doc comment for what's shown and why
   // Position isn't. uniformNode is just the first one, standing in for
   // "what type/shape of fields to render"; the actual values written come
-  // from useMultiNodeEdit applying to every id in selectedIdList.
-  const selectedNodes = selectedIdList.map((id) => scene.nodes[id]).filter((n): n is SceneNode => n !== undefined);
-  const uniformNode =
-    selectedNodes.length > 1 && selectedNodes.every((n) => n.type === selectedNodes[0].type) ? selectedNodes[0] : null;
+  // from useMultiNodeEdit applying to every id in uniformNodeIds.
+  const directSelectedNodes = selectedIdList.map((id) => scene.nodes[id]).filter((n): n is SceneNode => n !== undefined);
+  const directUniformNode =
+    directSelectedNodes.length > 1 && directSelectedNodes.every((n) => n.type === directSelectedNodes[0].type)
+      ? directSelectedNodes[0]
+      : null;
+
+  // Same idea, one level down: a single selected Frame/Section/Group whose
+  // own children are all the same type can have THEIR shared style edited
+  // too (e.g. selecting the "Nav Links" group and setting one font/color
+  // for all three link texts inside it) — the same "operate on a lone
+  // container's children" pattern Align already uses.
+  const containerChildIds = soleSelectedNode && isAlignableContainer(soleSelectedNode) ? soleSelectedNode.children : [];
+  const containerChildNodes = containerChildIds.map((id) => scene.nodes[id]).filter((n): n is SceneNode => n !== undefined);
+  const containerUniformNode =
+    containerChildNodes.length > 0 && containerChildNodes.every((n) => n.type === containerChildNodes[0].type)
+      ? containerChildNodes[0]
+      : null;
+
+  const uniformNode = directUniformNode ?? containerUniformNode;
+  const uniformNodeIds = directUniformNode ? selectedIdList : containerChildIds;
 
   // Hooks can't be called conditionally, so both are always instantiated;
-  // whichever one applies to the current selection is picked below. Neither
-  // does anything when handed an empty id (single) or id list (multi).
+  // whichever one applies is picked below. Neither does anything when
+  // handed an empty id (single) or id list (multi/shared).
   const singleNodeEdit = useNodeEdit(soleSelectedNode?.id ?? "");
-  const multiNodeEdit = useMultiNodeEdit(uniformNode ? selectedIdList : []);
-  const nodeEdit = soleSelectedNode ? singleNodeEdit : multiNodeEdit;
+  const multiNodeEdit = useMultiNodeEdit(uniformNode ? uniformNodeIds : []);
 
   const rulerSize = documentSettings.rulerVisible ? RULER_SIZE : 0;
 
@@ -217,9 +233,12 @@ export default function App() {
         onGridVisibleChange={setGridVisible}
         rulerVisible={documentSettings.rulerVisible}
         onRulerVisibleChange={setRulerVisible}
-        onFieldFocus={nodeEdit.onFieldFocus}
-        onFieldChange={nodeEdit.onFieldChange}
-        onFieldCommit={nodeEdit.onFieldCommit}
+        onFieldFocus={singleNodeEdit.onFieldFocus}
+        onFieldChange={singleNodeEdit.onFieldChange}
+        onFieldCommit={singleNodeEdit.onFieldCommit}
+        onSharedFieldFocus={multiNodeEdit.onFieldFocus}
+        onSharedFieldChange={multiNodeEdit.onFieldChange}
+        onSharedFieldCommit={multiNodeEdit.onFieldCommit}
         onAlign={alignSelection}
       />
     </div>

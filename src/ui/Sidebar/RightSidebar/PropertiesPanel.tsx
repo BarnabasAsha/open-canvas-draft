@@ -13,9 +13,10 @@ import { TypographySection } from "./sections/TypographySection";
 interface PropertiesPanelProps {
   node: SceneNode | null;
   selectionCount: number;
-  // Set only when 2+ nodes are selected and every one shares the same
-  // type — one of them, standing in for "the shared style fields all of
-  // them can be batch-edited through" (see SharedPropertySections below).
+  // Set when either 2+ selected nodes share the same type, or exactly one
+  // Frame/Section/Group is selected and its own children share a type —
+  // one of them, standing in for "the shared style fields that whole set
+  // can be batch-edited through" (see SharedPropertySections below).
   uniformNode: SceneNode | null;
   backgroundColor: string | null;
   onBackgroundColorChange: (color: string | null) => void;
@@ -26,6 +27,13 @@ interface PropertiesPanelProps {
   onFieldFocus: () => void;
   onFieldChange: (patch: Record<string, unknown>) => void;
   onFieldCommit: () => void;
+  // Separate from onField*: uniformNode's fields write to a different set
+  // of node ids than `node` itself (the container's children, not the
+  // container) whenever both a container and its children's shared
+  // section are showing at once.
+  onSharedFieldFocus: () => void;
+  onSharedFieldChange: (patch: Record<string, unknown>) => void;
+  onSharedFieldCommit: () => void;
   onAlign: (kind: AlignKind) => void;
 }
 
@@ -59,7 +67,11 @@ function asCornerRadiusNode(node: SceneNode): RectNode | FrameNode | null {
 //
 // Exactly 1 node selected: the full set of sections relevant to that
 // node's type, plus an Align section on top if it's a Frame/Section/Group
-// with children (aligning them to itself, Figma-style).
+// with children (aligning them to itself, Figma-style). If it's a
+// container whose children are all the same type, a "Contents" shared
+// section is also appended below — selecting the "Nav Links" group and
+// setting one font for all three link texts inside it, without needing
+// to select those texts directly first.
 //
 // 2+ selected: an Align section (relative to each other) always shows.
 // Below it, a same-type selection also gets the shared *style* fields
@@ -83,6 +95,9 @@ export function PropertiesPanel({
   onFieldFocus,
   onFieldChange,
   onFieldCommit,
+  onSharedFieldFocus,
+  onSharedFieldChange,
+  onSharedFieldCommit,
   onAlign,
 }: PropertiesPanelProps) {
   return (
@@ -115,6 +130,19 @@ export function PropertiesPanel({
             </PanelSection>
           )}
           <PropertySections node={node} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
+          {uniformNode && (
+            <>
+              <div className="panel-section">
+                <div className="panel-section-title">Contents</div>
+              </div>
+              <SharedPropertySections
+                node={uniformNode}
+                onFocus={onSharedFieldFocus}
+                onChange={onSharedFieldChange}
+                onCommit={onSharedFieldCommit}
+              />
+            </>
+          )}
         </>
       ) : (
         <>
@@ -122,7 +150,12 @@ export function PropertiesPanel({
             <AlignmentToolbar onAlign={onAlign} />
           </PanelSection>
           {uniformNode ? (
-            <SharedPropertySections node={uniformNode} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
+            <SharedPropertySections
+              node={uniformNode}
+              onFocus={onSharedFieldFocus}
+              onChange={onSharedFieldChange}
+              onCommit={onSharedFieldCommit}
+            />
           ) : (
             <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
           )}
