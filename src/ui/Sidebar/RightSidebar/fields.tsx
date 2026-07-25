@@ -62,8 +62,8 @@ interface NumberFieldProps {
 // shape changed.
 export function NumberField({ label, value, onFocus, onChange, onCommit, min, max, step = 1 }: NumberFieldProps) {
   return (
-    <label className="number-field-row">
-      <span className="number-field-label">{label}</span>
+    <label className="field-box">
+      <span className="field-box-label">{label}</span>
       <BaseNumberField.Root
         value={round(value)}
         min={min}
@@ -99,8 +99,8 @@ const DEFAULT_COLOR = "#d9d9d9";
 export function ColorField({ label, value, onFocus, onChange, onCommit }: ColorFieldProps) {
   const enabled = value !== null;
   return (
-    <div className="field-row">
-      <label className="field-label">
+    <div className="field-box color-field-box">
+      <label className="color-field-checkbox-label">
         <Checkbox.Root
           checked={enabled}
           className="checkbox-root"
@@ -114,9 +114,11 @@ export function ColorField({ label, value, onFocus, onChange, onCommit }: ColorF
             <CheckIcon size={11} />
           </Checkbox.Indicator>
         </Checkbox.Root>
-        {label}
+        <span className="field-box-label">{label}</span>
       </label>
-      <ColorPicker value={value ?? DEFAULT_COLOR} disabled={!enabled} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      <div className="color-field-swatch">
+        <ColorPicker value={value ?? DEFAULT_COLOR} disabled={!enabled} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      </div>
     </div>
   );
 }
@@ -132,34 +134,34 @@ interface SelectFieldProps<T extends string> {
 // distinction needed the way NumberField/ColorField have one.
 export function SelectField<T extends string>({ label, value, options, onChange }: SelectFieldProps<T>) {
   return (
-    <div className="field-row">
-      <span className="field-label">{label}</span>
-      <BaseSelect.Root value={value} onValueChange={(next) => onChange(next as T)}>
-        <BaseSelect.Trigger className="select-trigger">
-          {/* Select.Value shows the raw value verbatim unless told
-              otherwise — without this, "Weight" read as "400" instead of
-              "Regular". */}
-          <BaseSelect.Value>{(current: T) => options.find((option) => option.value === current)?.label ?? current}</BaseSelect.Value>
-          <BaseSelect.Icon className="select-icon">
-            <CaretUpDownIcon size={14} />
-          </BaseSelect.Icon>
-        </BaseSelect.Trigger>
-        <BaseSelect.Portal>
-          <BaseSelect.Positioner sideOffset={4} className="select-positioner">
-            <BaseSelect.Popup className="select-popup">
-              {options.map((option) => (
-                <BaseSelect.Item key={option.value} value={option.value} className="select-item">
-                  <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
-                  <BaseSelect.ItemIndicator className="select-item-indicator">
-                    <CheckIcon size={12} />
-                  </BaseSelect.ItemIndicator>
-                </BaseSelect.Item>
-              ))}
-            </BaseSelect.Popup>
-          </BaseSelect.Positioner>
-        </BaseSelect.Portal>
-      </BaseSelect.Root>
-    </div>
+    <BaseSelect.Root value={value} onValueChange={(next) => onChange(next as T)}>
+      <BaseSelect.Trigger className="field-box select-trigger">
+        <span className="field-box-label">{label}</span>
+        {/* Select.Value shows the raw value verbatim unless told
+            otherwise — without this, "Weight" read as "400" instead of
+            "Regular". */}
+        <BaseSelect.Value className="select-trigger-value">
+          {(current: T) => options.find((option) => option.value === current)?.label ?? current}
+        </BaseSelect.Value>
+        <BaseSelect.Icon className="select-icon">
+          <CaretUpDownIcon size={14} />
+        </BaseSelect.Icon>
+      </BaseSelect.Trigger>
+      <BaseSelect.Portal>
+        <BaseSelect.Positioner sideOffset={4} className="select-positioner">
+          <BaseSelect.Popup className="select-popup">
+            {options.map((option) => (
+              <BaseSelect.Item key={option.value} value={option.value} className="select-item">
+                <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
+                <BaseSelect.ItemIndicator className="select-item-indicator">
+                  <CheckIcon size={12} />
+                </BaseSelect.ItemIndicator>
+              </BaseSelect.Item>
+            ))}
+          </BaseSelect.Popup>
+        </BaseSelect.Positioner>
+      </BaseSelect.Portal>
+    </BaseSelect.Root>
   );
 }
 
