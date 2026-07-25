@@ -4,7 +4,7 @@ import { RULER_SIZE, Ruler } from "./canvas/Ruler";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import type { AlignKind } from "./canvas/tools/alignment";
-import { computeAlignedNodes } from "./canvas/tools/alignment";
+import { computeAlignedNodes, computeAlignedToContainer } from "./canvas/tools/alignment";
 import type { FramePreset } from "./canvas/tools/framePresets";
 import { buildFrameNode } from "./canvas/tools/frameTool";
 import { toolManager } from "./canvas/tools/toolManager";
@@ -20,6 +20,7 @@ import { createMoveNodeCommand } from "./commands/MoveNodeCommand";
 import { createSetNodeCommand } from "./commands/SetNodeCommand";
 import { documentStore } from "./store/documentStore";
 import { historyManager } from "./store/historyManager";
+import { reconcileGroupBounds } from "./store/reconcileGroupBounds";
 import { sceneStore } from "./store/sceneStore";
 import { selectionStore } from "./store/selectionStore";
 import { INITIAL_VIEWPORT, viewportStore } from "./store/viewportStore";
@@ -29,6 +30,7 @@ import { generateId } from "./utils/id";
 import { nextDefaultName } from "./utils/nodeNaming";
 import { LayersPanel } from "./ui/Sidebar/LeftSidebar/LayersPanel";
 import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
+import { useMultiNodeEdit } from "./ui/Sidebar/RightSidebar/useMultiNodeEdit";
 import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
 import { Toolbar } from "./ui/Toolbar/Toolbar";
 import { ZoomIndicator } from "./ui/ZoomIndicator";
@@ -64,20 +66,43 @@ function renameLayer(id: NodeId, name: string): void {
 
 function alignSelection(kind: AlignKind): void {
   const { selectedIds } = selectionStore.getState();
-  if (selectedIds.size < 2) return;
-
   const graph = sceneStore.getState();
-  const updated = computeAlignedNodes([...selectedIds], graph, kind);
-  if (updated.size === 0) return;
+
+  // A single selected container aligns its own children to itself
+  // (matching Figma); 2+ selected nodes align relative to each other.
+  // Anything else (0 or 1 non-container node) has nothing to align.
+  const patch =
+    selectedIds.size === 1
+      ? computeAlignedToContainer([...selectedIds][0], graph, kind)
+      : selectedIds.size > 1
+        ? computeAlignedNodes([...selectedIds], graph, kind)
+        : new Map<NodeId, SceneNode>();
+  if (patch.size === 0) return;
+
+  // Reconciling here (rather than letting sceneStore.update do it as a
+  // side effect of historyManager.execute) lets the command capture every
+  // node the reconcile pass actually touches — including an auto-fit
+  // group's own box, and sibling children this align didn't move directly
+  // but got shifted to compensate. Diffing the whole graph rather than
+  // just `patch`'s keys is what catches those: without it, undo could
+  // restore the nodes we intended to move while leaving the group box (or
+  // an untouched sibling) desynced in its post-align state.
+  const patchedNodes = { ...graph.nodes };
+  for (const [id, node] of patch) patchedNodes[id] = node;
+  const reconciled = reconcileGroupBounds({ ...graph, nodes: patchedNodes });
 
   const before = new Map<NodeId, SceneNode>();
-  for (const id of updated.keys()) {
-    const node = graph.nodes[id];
-    if (node) before.set(id, node);
+  const after = new Map<NodeId, SceneNode>();
+  for (const id of Object.keys(reconciled.nodes)) {
+    if (reconciled.nodes[id] !== graph.nodes[id]) {
+      before.set(id, graph.nodes[id]);
+      after.set(id, reconciled.nodes[id]);
+    }
   }
+  if (after.size === 0) return;
 
   historyManager.execute(
-    createMoveNodeCommand({ nodes: before, rootIds: graph.rootIds }, { nodes: updated, rootIds: graph.rootIds }),
+    createMoveNodeCommand({ nodes: before, rootIds: graph.rootIds }, { nodes: after, rootIds: graph.rootIds }),
   );
 }
 
@@ -131,7 +156,23 @@ export default function App() {
 
   const selectedIdList = [...selectedIds];
   const soleSelectedNode = selectedIdList.length === 1 ? (scene.nodes[selectedIdList[0]] ?? null) : null;
-  const nodeEdit = useNodeEdit(soleSelectedNode?.id ?? "");
+
+  // A same-type multi-selection (e.g. two Text nodes) can share style
+  // fields — see the PropertiesPanel doc comment for what's shown and why
+  // Position isn't. uniformNode is just the first one, standing in for
+  // "what type/shape of fields to render"; the actual values written come
+  // from useMultiNodeEdit applying to every id in selectedIdList.
+  const selectedNodes = selectedIdList.map((id) => scene.nodes[id]).filter((n): n is SceneNode => n !== undefined);
+  const uniformNode =
+    selectedNodes.length > 1 && selectedNodes.every((n) => n.type === selectedNodes[0].type) ? selectedNodes[0] : null;
+
+  // Hooks can't be called conditionally, so both are always instantiated;
+  // whichever one applies to the current selection is picked below. Neither
+  // does anything when handed an empty id (single) or id list (multi).
+  const singleNodeEdit = useNodeEdit(soleSelectedNode?.id ?? "");
+  const multiNodeEdit = useMultiNodeEdit(uniformNode ? selectedIdList : []);
+  const nodeEdit = soleSelectedNode ? singleNodeEdit : multiNodeEdit;
+
   const rulerSize = documentSettings.rulerVisible ? RULER_SIZE : 0;
 
   return (
@@ -169,6 +210,7 @@ export default function App() {
       <PropertiesPanel
         node={soleSelectedNode}
         selectionCount={selectedIdList.length}
+        uniformNode={uniformNode}
         backgroundColor={documentSettings.backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
         gridVisible={documentSettings.gridVisible}

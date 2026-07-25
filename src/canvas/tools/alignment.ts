@@ -1,6 +1,6 @@
 import { getSceneCorners } from "../selectionBounds";
-import type { NodeId, SceneGraph, SceneNode } from "../../types/scene";
-import { getGroupBounds } from "./groupResize";
+import type { ContainerNode, NodeId, SceneGraph, SceneNode } from "../../types/scene";
+import { getGroupBounds, type Bounds } from "./groupResize";
 
 export type AlignKind = "left" | "centerH" | "right" | "top" | "centerV" | "bottom";
 
@@ -11,8 +11,35 @@ export type AlignKind = "left" | "centerH" | "right" | "top" | "centerV" | "bott
 // scene-space bounds already make that work with no extra cases.
 export function computeAlignedNodes(nodeIds: readonly NodeId[], graph: SceneGraph, kind: AlignKind): Map<NodeId, SceneNode> {
   const bounds = getGroupBounds(nodeIds, graph.nodes);
+  if (!bounds) return new Map();
+  return alignToBounds(nodeIds, graph, kind, bounds);
+}
+
+// A single selected Frame/Section/Group aligns its own direct children to
+// ITS bounds, not to the union of the children's own bounds — matching
+// Figma: selecting a frame and clicking "align left" snaps every child to
+// the frame's left edge, rather than requiring the children themselves to
+// be multi-selected first.
+export function computeAlignedToContainer(containerId: NodeId, graph: SceneGraph, kind: AlignKind): Map<NodeId, SceneNode> {
+  const container = graph.nodes[containerId];
+  if (!container || !isContainer(container) || container.children.length === 0) return new Map();
+
+  const bounds = getGroupBounds([containerId], graph.nodes);
+  if (!bounds) return new Map();
+
+  return alignToBounds(container.children, graph, kind, bounds);
+}
+
+export function isAlignableContainer(node: SceneNode): node is ContainerNode {
+  return isContainer(node) && node.children.length > 0;
+}
+
+function isContainer(node: SceneNode): node is ContainerNode {
+  return node.type === "frame" || node.type === "section" || node.type === "group";
+}
+
+function alignToBounds(nodeIds: readonly NodeId[], graph: SceneGraph, kind: AlignKind, bounds: Bounds): Map<NodeId, SceneNode> {
   const updated = new Map<NodeId, SceneNode>();
-  if (!bounds) return updated;
 
   const boundsCenterX = (bounds.minX + bounds.maxX) / 2;
   const boundsCenterY = (bounds.minY + bounds.maxY) / 2;
