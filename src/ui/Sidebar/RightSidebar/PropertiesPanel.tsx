@@ -1,6 +1,7 @@
 import type { AlignKind } from "../../../canvas/tools/alignment";
 import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode } from "../../../types/scene";
 import { AlignmentToolbar } from "./AlignmentToolbar";
+import { PanelSection } from "./fields";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { CornerRadiusSection } from "./sections/CornerRadiusSection";
 import { DocumentSection } from "./sections/DocumentSection";
@@ -93,7 +94,9 @@ export function PropertiesPanel({
         />
       ) : selectionCount > 1 || !node ? (
         <>
-          <AlignmentToolbar onAlign={onAlign} />
+          <PanelSection title="Align">
+            <AlignmentToolbar onAlign={onAlign} />
+          </PanelSection>
           <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
         </>
       ) : (
