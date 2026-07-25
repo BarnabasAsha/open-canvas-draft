@@ -100,10 +100,10 @@ export function useKeyboardShortcuts(): void {
       if (e.metaKey || e.ctrlKey) return;
 
       // The toolbar covers most of these too now — mnemonics match Figma's
-      // own (V select, F frame, Shift+S section, R rectangle, O ellipse,
-      // L line, A arrow, P pen, T text). No dedicated shortcut for image —
-      // placing one needs a file picker anyway, so the toolbar button is
-      // enough.
+      // own (V select, F frame, Shift+S section, R rectangle, Shift+R
+      // ruler, O ellipse, L line, A arrow, P pen, T text). No dedicated
+      // shortcut for image — placing one needs a file picker anyway, so the
+      // toolbar button is enough.
       switch (e.key.toLowerCase()) {
         case "v":
           toolManager.setActiveTool("select");
@@ -115,7 +115,11 @@ export function useKeyboardShortcuts(): void {
           if (e.shiftKey) toolManager.setActiveTool("section");
           break;
         case "r":
-          toolManager.setActiveTool("rectangle");
+          if (e.shiftKey) {
+            documentStore.update((settings) => ({ ...settings, rulerVisible: !settings.rulerVisible }));
+          } else {
+            toolManager.setActiveTool("rectangle");
+          }
           break;
         case "o":
           toolManager.setActiveTool("ellipse");

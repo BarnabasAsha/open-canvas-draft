@@ -15,6 +15,8 @@ interface PropertiesPanelProps {
   onBackgroundColorChange: (color: string | null) => void;
   gridVisible: boolean;
   onGridVisibleChange: (visible: boolean) => void;
+  rulerVisible: boolean;
+  onRulerVisibleChange: (visible: boolean) => void;
   onFieldFocus: () => void;
   onFieldChange: (patch: Record<string, unknown>) => void;
   onFieldCommit: () => void;
@@ -55,6 +57,8 @@ export function PropertiesPanel({
   onBackgroundColorChange,
   gridVisible,
   onGridVisibleChange,
+  rulerVisible,
+  onRulerVisibleChange,
   onFieldFocus,
   onFieldChange,
   onFieldCommit,
@@ -79,6 +83,8 @@ export function PropertiesPanel({
           onBackgroundColorChange={onBackgroundColorChange}
           gridVisible={gridVisible}
           onGridVisibleChange={onGridVisibleChange}
+          rulerVisible={rulerVisible}
+          onRulerVisibleChange={onRulerVisibleChange}
         />
       ) : selectionCount > 1 || !node ? (
         <>
