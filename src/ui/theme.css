@@ -239,6 +239,29 @@
   justify-content: space-between;
 }
 
+.menu-item-with-meta {
+  justify-content: space-between;
+}
+
+.menu-item-meta {
+  color: var(--text-disabled);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.menu-group-label {
+  padding: 6px 10px 2px;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.frame-preset-popup {
+  min-width: 210px;
+}
+
 .select-item-indicator {
   display: flex;
   color: var(--accent);

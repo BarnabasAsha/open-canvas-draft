@@ -1,32 +1,28 @@
 import { Menu } from "@base-ui/react/menu";
 import { Toolbar as BaseToolbar } from "@base-ui/react/toolbar";
 import { FrameCornersIcon, RowsIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import type { FramePreset } from "../../canvas/tools/framePresets";
+import { FRAME_PRESET_CATEGORIES } from "../../canvas/tools/framePresets";
 import type { ToolId } from "../../canvas/tools/toolManager";
 import { MenuTriggerIcon } from "./MenuTriggerIcon";
 
 interface StructureMenuProps {
   activeToolId: ToolId;
   onSelectTool: (id: ToolId) => void;
+  onSelectFramePreset: (preset: FramePreset) => void;
 }
 
-interface StructureToolDefinition {
-  id: ToolId;
-  label: string;
-  icon: ReactNode;
-}
+const FRAME_ICON = <FrameCornersIcon size={16} />;
+const SECTION_ICON = <RowsIcon size={16} />;
 
-const STRUCTURE_TOOLS: StructureToolDefinition[] = [
-  { id: "frame", label: "Frame (F)", icon: <FrameCornersIcon size={16} /> },
-  { id: "section", label: "Section (Shift+S)", icon: <RowsIcon size={16} /> },
-];
-
-// Groups Frame and Section behind one toolbar slot — both are structural,
-// non-drawing containers rather than shapes, the same "group the
-// conceptually related tools behind a popover" idea ShapeMenu already
-// established for the five shape tools.
-export function StructureMenu({ activeToolId, onSelectTool }: StructureMenuProps) {
-  const activeStructureTool = STRUCTURE_TOOLS.find((tool) => tool.id === activeToolId);
+// Frame is the one structural tool with more than one way to create it —
+// drag one out freehand ("Custom"), or place one already sized to a real
+// device — so unlike Section (still a plain click-to-select item), it
+// opens its own nested submenu instead of just activating a tool directly.
+export function StructureMenu({ activeToolId, onSelectTool, onSelectFramePreset }: StructureMenuProps) {
+  const isFrameActive = activeToolId === "frame";
+  const isSectionActive = activeToolId === "section";
+  const activeIcon = isSectionActive ? SECTION_ICON : FRAME_ICON;
 
   return (
     <Menu.Root orientation="horizontal">
@@ -35,24 +31,52 @@ export function StructureMenu({ activeToolId, onSelectTool }: StructureMenuProps
         aria-label="Structure tools"
         title="Structure tools"
         className="toolbar-button"
-        data-pressed={activeStructureTool ? "" : undefined}
+        data-pressed={isFrameActive || isSectionActive ? "" : undefined}
       >
-        <MenuTriggerIcon icon={(activeStructureTool ?? STRUCTURE_TOOLS[0]).icon} />
+        <MenuTriggerIcon icon={activeIcon} />
       </BaseToolbar.Button>
       <Menu.Portal>
         <Menu.Positioner side="left" sideOffset={8} className="menu-positioner">
           <Menu.Popup className="menu-popup shape-menu-popup">
-            {STRUCTURE_TOOLS.map((tool) => (
-              <Menu.Item
-                key={tool.id}
-                aria-label={tool.label}
-                title={tool.label}
-                className="menu-item shape-menu-item"
-                onClick={() => onSelectTool(tool.id)}
-              >
-                {tool.icon}
-              </Menu.Item>
-            ))}
+            <Menu.SubmenuRoot>
+              <Menu.SubmenuTrigger aria-label="Frame (F)" title="Frame (F)" className="menu-item shape-menu-item">
+                {FRAME_ICON}
+              </Menu.SubmenuTrigger>
+              <Menu.Portal>
+                <Menu.Positioner side="bottom" align="start" sideOffset={4} className="menu-positioner">
+                  <Menu.Popup className="menu-popup frame-preset-popup">
+                    <Menu.Item className="menu-item" onClick={() => onSelectTool("frame")}>
+                      Custom
+                    </Menu.Item>
+                    {FRAME_PRESET_CATEGORIES.map((category) => (
+                      <div key={category.category}>
+                        <div className="menu-group-label">{category.category}</div>
+                        {category.presets.map((preset) => (
+                          <Menu.Item
+                            key={preset.name}
+                            className="menu-item menu-item-with-meta"
+                            onClick={() => onSelectFramePreset(preset)}
+                          >
+                            <span>{preset.name}</span>
+                            <span className="menu-item-meta">
+                              {preset.width}×{preset.height}
+                            </span>
+                          </Menu.Item>
+                        ))}
+                      </div>
+                    ))}
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.SubmenuRoot>
+            <Menu.Item
+              aria-label="Section (Shift+S)"
+              title="Section (Shift+S)"
+              className="menu-item shape-menu-item"
+              onClick={() => onSelectTool("section")}
+            >
+              {SECTION_ICON}
+            </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
