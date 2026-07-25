@@ -13,6 +13,8 @@ interface PropertiesPanelProps {
   selectionCount: number;
   backgroundColor: string | null;
   onBackgroundColorChange: (color: string | null) => void;
+  gridVisible: boolean;
+  onGridVisibleChange: (visible: boolean) => void;
   onFieldFocus: () => void;
   onFieldChange: (patch: Record<string, unknown>) => void;
   onFieldCommit: () => void;
@@ -51,6 +53,8 @@ export function PropertiesPanel({
   selectionCount,
   backgroundColor,
   onBackgroundColorChange,
+  gridVisible,
+  onGridVisibleChange,
   onFieldFocus,
   onFieldChange,
   onFieldCommit,
@@ -70,7 +74,12 @@ export function PropertiesPanel({
       }}
     >
       {selectionCount === 0 ? (
-        <DocumentSection backgroundColor={backgroundColor} onBackgroundColorChange={onBackgroundColorChange} />
+        <DocumentSection
+          backgroundColor={backgroundColor}
+          onBackgroundColorChange={onBackgroundColorChange}
+          gridVisible={gridVisible}
+          onGridVisibleChange={onGridVisibleChange}
+        />
       ) : selectionCount > 1 || !node ? (
         <>
           <AlignmentToolbar onAlign={onAlign} />

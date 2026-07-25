@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createDeleteNodesCommand } from "../commands/DeleteNodesCommand";
 import { createGroupNodesCommand } from "../commands/GroupNodesCommand";
 import { createUngroupNodesCommand } from "../commands/UngroupNodesCommand";
+import { documentStore } from "../store/documentStore";
 import { historyManager } from "../store/historyManager";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
@@ -70,6 +71,12 @@ export function useKeyboardShortcuts(): void {
         const [anyMemberId] = selectedIds;
         const groupId = sceneStore.getState().nodes[anyMemberId]?.parentId;
         if (groupId) selectionStore.update((state) => ({ ...state, selectedIds: new Set([groupId]) }));
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "'") {
+        e.preventDefault();
+        documentStore.update((settings) => ({ ...settings, gridVisible: !settings.gridVisible }));
         return;
       }
 

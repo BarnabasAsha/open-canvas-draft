@@ -40,6 +40,7 @@ export function Canvas() {
         height,
         documentStore.getState().backgroundColor,
         viewportStore.getState(),
+        documentStore.getState().gridVisible,
       );
 
     // The canvas element is CSS-sized to fill its flex parent (see the

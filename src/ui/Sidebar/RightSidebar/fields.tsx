@@ -14,6 +14,30 @@ export function PanelSection({ title, children }: { title: string; children: Rea
   );
 }
 
+interface CheckboxFieldProps {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}
+
+// A plain boolean toggle with a label — distinct from ColorField's
+// checkbox, which is bundled specifically with a color swatch. The grid
+// toggle is the first standalone user of this shape.
+export function CheckboxField({ label, checked, onChange }: CheckboxFieldProps) {
+  return (
+    <label className="field-row">
+      <span className="field-label">
+        <Checkbox.Root checked={checked} className="checkbox-root" onCheckedChange={onChange}>
+          <Checkbox.Indicator className="checkbox-indicator">
+            <CheckIcon size={11} />
+          </Checkbox.Indicator>
+        </Checkbox.Root>
+        {label}
+      </span>
+    </label>
+  );
+}
+
 interface NumberFieldProps {
   label: string;
   value: number;
