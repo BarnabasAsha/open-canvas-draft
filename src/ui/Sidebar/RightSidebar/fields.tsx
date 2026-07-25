@@ -136,7 +136,10 @@ export function SelectField<T extends string>({ label, value, options, onChange 
       <span className="field-label">{label}</span>
       <BaseSelect.Root value={value} onValueChange={(next) => onChange(next as T)}>
         <BaseSelect.Trigger className="select-trigger">
-          <BaseSelect.Value />
+          {/* Select.Value shows the raw value verbatim unless told
+              otherwise — without this, "Weight" read as "400" instead of
+              "Regular". */}
+          <BaseSelect.Value>{(current: T) => options.find((option) => option.value === current)?.label ?? current}</BaseSelect.Value>
           <BaseSelect.Icon className="select-icon">
             <CaretUpDownIcon size={14} />
           </BaseSelect.Icon>

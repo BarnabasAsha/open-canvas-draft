@@ -122,6 +122,10 @@ export interface TextNode extends BaseNode {
   fontSize: number;
   fontFamily: string;
   fontWeight: number;
+  fontStyle: "normal" | "italic";
+  letterSpacing: number; // px
+  lineHeight: number; // multiplier of fontSize, e.g. 1.2
+  textDecoration: "none" | "underline" | "line-through";
   color: string;
   align: "left" | "center" | "right";
 }
