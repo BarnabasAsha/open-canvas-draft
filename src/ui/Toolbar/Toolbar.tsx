@@ -2,6 +2,7 @@ import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toolbar as BaseToolbar } from "@base-ui/react/toolbar";
 import { CursorIcon, PenNibIcon, TextTIcon } from "@phosphor-icons/react";
+import type { FramePreset } from "../../canvas/tools/framePresets";
 import type { ToolId } from "../../canvas/tools/toolManager";
 import { ShapeMenu } from "./ShapeMenu";
 import { StructureMenu } from "./StructureMenu";
@@ -9,6 +10,7 @@ import { StructureMenu } from "./StructureMenu";
 interface ToolbarProps {
   activeToolId: ToolId;
   onSelectTool: (id: ToolId) => void;
+  onSelectFramePreset: (preset: FramePreset) => void;
 }
 
 const TRAILING_TOOL_IDS: ToolId[] = ["pen", "text"];
@@ -17,7 +19,7 @@ const TRAILING_TOOL_IDS: ToolId[] = ["pen", "text"];
 // the properties panel) rather than centered along the bottom — leaves
 // room to grow: a horizontal strip runs out of width fast once you start
 // adding more tools, a vertical one just gets taller.
-export function Toolbar({ activeToolId, onSelectTool }: ToolbarProps) {
+export function Toolbar({ activeToolId, onSelectTool, onSelectFramePreset }: ToolbarProps) {
   const handleGroupChange = (values: string[]) => {
     const id = values[0] as ToolId | undefined;
     if (id) onSelectTool(id);
@@ -38,7 +40,7 @@ export function Toolbar({ activeToolId, onSelectTool }: ToolbarProps) {
         <CursorIcon size={18} />
       </BaseToolbar.Button>
       <BaseToolbar.Separator className="toolbar-separator" />
-      <StructureMenu activeToolId={activeToolId} onSelectTool={onSelectTool} />
+      <StructureMenu activeToolId={activeToolId} onSelectTool={onSelectTool} onSelectFramePreset={onSelectFramePreset} />
       <BaseToolbar.Separator className="toolbar-separator" />
       <ShapeMenu activeToolId={activeToolId} onSelectTool={onSelectTool} />
       <BaseToolbar.Separator className="toolbar-separator" />

@@ -1,14 +1,20 @@
-import type { FrameNode } from "../../types/scene";
+import type { FrameNode, NodeId } from "../../types/scene";
 import { createDragToCreateTool, rectFromPoints } from "./dragToCreateTool";
 import type { Tool } from "./toolTypes";
 
-export const frameTool: Tool = createDragToCreateTool({
-  buildNode: (id, start, current): FrameNode => ({
+// Shared with the frame-preset picker (StructureMenu/App.tsx), which places
+// a frame directly at a fixed size instead of dragging one out by hand —
+// same node shape either way, just a different way of arriving at x/y/w/h.
+export function buildFrameNode(id: NodeId, name: string, x: number, y: number, width: number, height: number): FrameNode {
+  return {
     id,
     type: "frame",
-    name: "Frame",
+    name,
     parentId: null,
-    ...rectFromPoints(start, current),
+    x,
+    y,
+    width,
+    height,
     rotation: 0,
     opacity: 1,
     visible: true,
@@ -19,5 +25,12 @@ export const frameTool: Tool = createDragToCreateTool({
     clipsContent: true,
     cornerRadius: 0,
     children: [],
-  }),
+  };
+}
+
+export const frameTool: Tool = createDragToCreateTool({
+  buildNode: (id, start, current) => {
+    const { x, y, width, height } = rectFromPoints(start, current);
+    return buildFrameNode(id, "Frame", x, y, width, height);
+  },
 });

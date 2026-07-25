@@ -1,9 +1,12 @@
 import { Canvas } from "./canvas/Canvas";
+import { canvasSizeStore } from "./canvas/canvasSizeStore";
 import { RULER_SIZE, Ruler } from "./canvas/Ruler";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import type { AlignKind } from "./canvas/tools/alignment";
 import { computeAlignedNodes } from "./canvas/tools/alignment";
+import type { FramePreset } from "./canvas/tools/framePresets";
+import { buildFrameNode } from "./canvas/tools/frameTool";
 import { toolManager } from "./canvas/tools/toolManager";
 import { useActiveTool } from "./canvas/useActiveTool";
 import { useKeyboardShortcuts } from "./canvas/useKeyboardShortcuts";
@@ -12,6 +15,7 @@ import { useSelection } from "./canvas/useSelection";
 import { useDocumentSettings } from "./canvas/useDocumentSettings";
 import { useViewport } from "./canvas/useViewport";
 import { useZoomIndicatorVisible } from "./canvas/useZoomIndicatorVisible";
+import { createAddNodeCommand } from "./commands/AddNodeCommand";
 import { createMoveNodeCommand } from "./commands/MoveNodeCommand";
 import { createSetNodeCommand } from "./commands/SetNodeCommand";
 import { documentStore } from "./store/documentStore";
@@ -20,6 +24,9 @@ import { sceneStore } from "./store/sceneStore";
 import { selectionStore } from "./store/selectionStore";
 import { INITIAL_VIEWPORT, viewportStore } from "./store/viewportStore";
 import type { NodeId, SceneNode } from "./types/scene";
+import { screenToScene } from "./utils/coordinates";
+import { generateId } from "./utils/id";
+import { nextDefaultName } from "./utils/nodeNaming";
 import { LayersPanel } from "./ui/Sidebar/LeftSidebar/LayersPanel";
 import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
 import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
@@ -82,6 +89,28 @@ function setGridVisible(visible: boolean): void {
   documentStore.update((settings) => ({ ...settings, gridVisible: visible }));
 }
 
+// Places a frame already sized to a real device rather than dragging one
+// out by hand — centered on whatever's currently in view, same "center of
+// the visible canvas" anchor the keyboard zoom shortcuts already use.
+function placeFramePreset(preset: FramePreset): void {
+  const { width: canvasWidth, height: canvasHeight } = canvasSizeStore.getState();
+  const sceneCenter = screenToScene({ x: canvasWidth / 2, y: canvasHeight / 2 }, viewportStore.getState());
+
+  const graph = sceneStore.getState();
+  const node = buildFrameNode(
+    generateId(),
+    nextDefaultName(graph, preset.name),
+    sceneCenter.x - preset.width / 2,
+    sceneCenter.y - preset.height / 2,
+    preset.width,
+    preset.height,
+  );
+
+  historyManager.execute(createAddNodeCommand(node));
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([node.id]) }));
+  toolManager.setActiveTool("select");
+}
+
 function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
 }
@@ -128,7 +157,7 @@ export default function App() {
           <Canvas />
           <SelectionOverlay />
           <TextEditOverlay />
-          <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
+          <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} onSelectFramePreset={placeFramePreset} />
           <ZoomIndicator zoom={viewport.zoom} visible={zoomIndicatorVisible} onReset={resetViewport} />
         </div>
       </div>
