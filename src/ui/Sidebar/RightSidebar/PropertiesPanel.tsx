@@ -1,4 +1,6 @@
+import type { AlignKind } from "../../../canvas/tools/alignment";
 import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode } from "../../../types/scene";
+import { AlignmentToolbar } from "./AlignmentToolbar";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { CornerRadiusSection } from "./sections/CornerRadiusSection";
 import { DocumentSection } from "./sections/DocumentSection";
@@ -14,6 +16,7 @@ interface PropertiesPanelProps {
   onFieldFocus: () => void;
   onFieldChange: (patch: Record<string, unknown>) => void;
   onFieldCommit: () => void;
+  onAlign: (kind: AlignKind) => void;
 }
 
 type FillNode = RectNode | EllipseNode | PathNode | FrameNode;
@@ -51,6 +54,7 @@ export function PropertiesPanel({
   onFieldFocus,
   onFieldChange,
   onFieldCommit,
+  onAlign,
 }: PropertiesPanelProps) {
   return (
     <div
@@ -68,7 +72,10 @@ export function PropertiesPanel({
       {selectionCount === 0 ? (
         <DocumentSection backgroundColor={backgroundColor} onBackgroundColorChange={onBackgroundColorChange} />
       ) : selectionCount > 1 || !node ? (
-        <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
+        <>
+          <AlignmentToolbar onAlign={onAlign} />
+          <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
+        </>
       ) : (
         <PropertySections node={node} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
       )}
