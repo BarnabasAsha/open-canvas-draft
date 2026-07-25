@@ -18,6 +18,7 @@ export const rectangleTool: Tool = createDragToCreateTool({
     fill: "#d9d9d9",
     stroke: null,
     strokeWidth: 0,
+    strokeStyle: "solid",
     cornerRadius: 0,
   }),
 });

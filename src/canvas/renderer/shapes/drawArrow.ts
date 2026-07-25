@@ -1,4 +1,5 @@
 import type { ArrowNode } from "../../../types/scene";
+import { applyStrokeStyle } from "./strokeStyle";
 
 const ARROWHEAD_ANGLE = Math.PI / 7;
 
@@ -30,5 +31,6 @@ export function drawArrow(ctx: CanvasRenderingContext2D, node: ArrowNode): void 
   const path = buildArrowGeometry(node);
   ctx.strokeStyle = node.stroke;
   ctx.lineWidth = node.strokeWidth;
+  applyStrokeStyle(ctx, node.strokeStyle, node.strokeWidth);
   ctx.stroke(path);
 }

@@ -24,14 +24,19 @@ interface PropertiesPanelProps {
 }
 
 type FillNode = RectNode | EllipseNode | PathNode | FrameNode;
-type StrokeNode = RectNode | EllipseNode | PathNode | LineNode | ArrowNode;
+type StrokeNode = RectNode | EllipseNode | PathNode | LineNode | ArrowNode | FrameNode;
 
 function asFillNode(node: SceneNode): FillNode | null {
   return node.type === "rect" || node.type === "ellipse" || node.type === "path" || node.type === "frame" ? node : null;
 }
 
 function asStrokeNode(node: SceneNode): StrokeNode | null {
-  return node.type === "rect" || node.type === "ellipse" || node.type === "path" || node.type === "line" || node.type === "arrow"
+  return node.type === "rect" ||
+    node.type === "ellipse" ||
+    node.type === "path" ||
+    node.type === "line" ||
+    node.type === "arrow" ||
+    node.type === "frame"
     ? node
     : null;
 }

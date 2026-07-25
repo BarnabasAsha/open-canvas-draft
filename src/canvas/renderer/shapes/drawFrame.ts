@@ -1,32 +1,38 @@
 import type { FrameNode, NodeId, SceneNode } from "../../../types/scene";
 import { drawNode } from "../drawNode";
+import { buildRectGeometry } from "./drawRect";
+import { applyStrokeStyle } from "./strokeStyle";
 
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
   node: FrameNode,
   nodes: Record<NodeId, SceneNode>,
 ): void {
-  const { width, height, cornerRadius, fill, clipsContent, children } = node;
-
-  ctx.beginPath();
-  if (cornerRadius > 0) {
-    ctx.roundRect(0, 0, width, height, cornerRadius);
-  } else {
-    ctx.rect(0, 0, width, height);
-  }
+  const { fill, stroke, strokeWidth, strokeStyle, clipsContent, children } = node;
+  const path = buildRectGeometry(node);
 
   if (fill) {
     ctx.fillStyle = fill;
-    ctx.fill();
+    ctx.fill(path);
   }
 
   if (clipsContent) {
     ctx.save();
-    ctx.clip();
+    ctx.clip(path);
     drawChildren(ctx, children, nodes);
     ctx.restore();
   } else {
     drawChildren(ctx, children, nodes);
+  }
+
+  // Drawn last, outside any clip — a border should read as a full-width
+  // ring around the frame, not have its outer half clipped away along with
+  // whatever content spills past the edge.
+  if (stroke && strokeWidth > 0) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = strokeWidth;
+    applyStrokeStyle(ctx, strokeStyle, strokeWidth);
+    ctx.stroke(path);
   }
 }
 

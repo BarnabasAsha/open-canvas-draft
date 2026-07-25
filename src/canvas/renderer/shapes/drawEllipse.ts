@@ -1,4 +1,5 @@
 import type { EllipseNode } from "../../../types/scene";
+import { applyStrokeStyle } from "./strokeStyle";
 
 export function buildEllipseGeometry(node: EllipseNode): Path2D {
   const rx = node.width / 2;
@@ -10,7 +11,7 @@ export function buildEllipseGeometry(node: EllipseNode): Path2D {
 
 export function drawEllipse(ctx: CanvasRenderingContext2D, node: EllipseNode): void {
   const path = buildEllipseGeometry(node);
-  const { fill, stroke, strokeWidth } = node;
+  const { fill, stroke, strokeWidth, strokeStyle } = node;
 
   if (fill) {
     ctx.fillStyle = fill;
@@ -19,6 +20,7 @@ export function drawEllipse(ctx: CanvasRenderingContext2D, node: EllipseNode): v
   if (stroke && strokeWidth > 0) {
     ctx.strokeStyle = stroke;
     ctx.lineWidth = strokeWidth;
+    applyStrokeStyle(ctx, strokeStyle, strokeWidth);
     ctx.stroke(path);
   }
 }

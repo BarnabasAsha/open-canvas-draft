@@ -1,4 +1,5 @@
 import type { PathNode, PathPoint } from "../../../types/scene";
+import { applyStrokeStyle } from "./strokeStyle";
 
 export function buildPathGeometry(node: PathNode): Path2D {
   const path = new Path2D();
@@ -21,7 +22,7 @@ export function buildPathGeometry(node: PathNode): Path2D {
 
 export function drawPath(ctx: CanvasRenderingContext2D, node: PathNode): void {
   const path = buildPathGeometry(node);
-  const { fill, stroke, strokeWidth } = node;
+  const { fill, stroke, strokeWidth, strokeStyle } = node;
 
   if (fill) {
     ctx.fillStyle = fill;
@@ -30,6 +31,7 @@ export function drawPath(ctx: CanvasRenderingContext2D, node: PathNode): void {
   if (stroke && strokeWidth > 0) {
     ctx.strokeStyle = stroke;
     ctx.lineWidth = strokeWidth;
+    applyStrokeStyle(ctx, strokeStyle, strokeWidth);
     ctx.stroke(path);
   }
 }

@@ -78,11 +78,17 @@ export type Interaction =
   | { trigger: "load"; actions: InteractionAction[] }
   | { trigger: "afterDelay"; delayMs: number; actions: InteractionAction[] };
 
+// A dash pattern applied to any stroked node — kept as its own type rather
+// than inlining the union everywhere, since every stroke-bearing node type
+// below repeats it.
+export type StrokeStyle = "solid" | "dashed" | "dotted";
+
 export interface RectNode extends BaseNode {
   type: "rect";
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeStyle: StrokeStyle;
   cornerRadius: number;
 }
 
@@ -91,6 +97,7 @@ export interface EllipseNode extends BaseNode {
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeStyle: StrokeStyle;
 }
 
 export interface LineNode extends BaseNode {
@@ -99,6 +106,7 @@ export interface LineNode extends BaseNode {
   y2: number;
   stroke: string;
   strokeWidth: number;
+  strokeStyle: StrokeStyle;
 }
 
 export interface ArrowNode extends BaseNode {
@@ -107,6 +115,7 @@ export interface ArrowNode extends BaseNode {
   y2: number;
   stroke: string;
   strokeWidth: number;
+  strokeStyle: StrokeStyle;
   arrowheadSize: number;
 }
 
@@ -144,12 +153,16 @@ export interface PathNode extends BaseNode {
   fill: string | null;
   stroke: string | null;
   strokeWidth: number;
+  strokeStyle: StrokeStyle;
 }
 
 export interface FrameNode extends BaseNode {
   type: "frame";
   children: NodeId[];
   fill: string | null;
+  stroke: string | null;
+  strokeWidth: number;
+  strokeStyle: StrokeStyle;
   clipsContent: boolean;
   cornerRadius: number;
 }

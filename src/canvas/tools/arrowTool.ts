@@ -22,6 +22,7 @@ export const arrowTool: Tool = createDragToCreateTool({
     interactions: [],
     stroke: "#111827",
     strokeWidth: 2,
+    strokeStyle: "solid",
     arrowheadSize: 10,
   }),
   // Same reasoning as lineTool: length, not bbox dimensions, is what makes

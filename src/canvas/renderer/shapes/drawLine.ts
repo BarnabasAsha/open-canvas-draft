@@ -1,4 +1,5 @@
 import type { LineNode } from "../../../types/scene";
+import { applyStrokeStyle } from "./strokeStyle";
 
 export function buildLineGeometry(node: LineNode): Path2D {
   const path = new Path2D();
@@ -11,5 +12,6 @@ export function drawLine(ctx: CanvasRenderingContext2D, node: LineNode): void {
   const path = buildLineGeometry(node);
   ctx.strokeStyle = node.stroke;
   ctx.lineWidth = node.strokeWidth;
+  applyStrokeStyle(ctx, node.strokeStyle, node.strokeWidth);
   ctx.stroke(path);
 }
