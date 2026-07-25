@@ -39,7 +39,7 @@ export function CheckboxField({ label, checked, onChange }: CheckboxFieldProps) 
 }
 
 interface NumberFieldProps {
-  label: string;
+  label: ReactNode;
   value: number;
   onFocus: () => void;
   onChange: (value: number) => void;
@@ -65,6 +65,7 @@ export function NumberField({ label, value, onFocus, onChange, onCommit, min, ma
     <label className="field-box">
       <span className="field-box-label">{label}</span>
       <BaseNumberField.Root
+        className="number-field-root"
         value={round(value)}
         min={min}
         max={max}
