@@ -24,47 +24,49 @@ export function PositionSection({ node, onFocus, onChange, onCommit }: PositionS
 
   return (
     <PanelSection title="Position">
+      <div className="paired-field-grid">
+        <NumberField
+          label="X"
+          value={node.x}
+          onFocus={onFocus}
+          onCommit={onCommit}
+          onChange={(value) => onChange(segment ? { x: value, x2: segment.x2 + (value - segment.x) } : { x: value })}
+        />
+        <NumberField
+          label="Y"
+          value={node.y}
+          onFocus={onFocus}
+          onCommit={onCommit}
+          onChange={(value) => onChange(segment ? { y: value, y2: segment.y2 + (value - segment.y) } : { y: value })}
+        />
+        {segment ? (
+          <>
+            <NumberField label="X2" value={segment.x2} onFocus={onFocus} onCommit={onCommit} onChange={(value) => onChange({ x2: value })} />
+            <NumberField label="Y2" value={segment.y2} onFocus={onFocus} onCommit={onCommit} onChange={(value) => onChange({ y2: value })} />
+          </>
+        ) : (
+          <>
+            <NumberField
+              label="W"
+              value={node.width}
+              min={0}
+              onFocus={onFocus}
+              onCommit={onCommit}
+              onChange={(value) => onChange({ width: value })}
+            />
+            <NumberField
+              label="H"
+              value={node.height}
+              min={0}
+              onFocus={onFocus}
+              onCommit={onCommit}
+              onChange={(value) => onChange({ height: value })}
+            />
+          </>
+        )}
+      </div>
       <NumberField
-        label="X"
-        value={node.x}
-        onFocus={onFocus}
-        onCommit={onCommit}
-        onChange={(value) => onChange(segment ? { x: value, x2: segment.x2 + (value - segment.x) } : { x: value })}
-      />
-      <NumberField
-        label="Y"
-        value={node.y}
-        onFocus={onFocus}
-        onCommit={onCommit}
-        onChange={(value) => onChange(segment ? { y: value, y2: segment.y2 + (value - segment.y) } : { y: value })}
-      />
-      {segment ? (
-        <>
-          <NumberField label="X2" value={segment.x2} onFocus={onFocus} onCommit={onCommit} onChange={(value) => onChange({ x2: value })} />
-          <NumberField label="Y2" value={segment.y2} onFocus={onFocus} onCommit={onCommit} onChange={(value) => onChange({ y2: value })} />
-        </>
-      ) : (
-        <>
-          <NumberField
-            label="W"
-            value={node.width}
-            min={0}
-            onFocus={onFocus}
-            onCommit={onCommit}
-            onChange={(value) => onChange({ width: value })}
-          />
-          <NumberField
-            label="H"
-            value={node.height}
-            min={0}
-            onFocus={onFocus}
-            onCommit={onCommit}
-            onChange={(value) => onChange({ height: value })}
-          />
-        </>
-      )}
-      <NumberField
-        label="Rotation"
+        label="∠"
         value={node.rotation}
         onFocus={onFocus}
         onCommit={onCommit}

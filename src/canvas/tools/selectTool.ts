@@ -1,7 +1,7 @@
 import { createMoveNodeCommand } from "../../commands/MoveNodeCommand";
 import type { MoveSnapshot } from "../../commands/MoveNodeCommand";
 import { createSetNodeCommand } from "../../commands/SetNodeCommand";
-import { getParentOrigin } from "../../store/graphMutations";
+import { collectWithDescendants, getParentOrigin } from "../../store/graphMutations";
 import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
 import { selectionStore } from "../../store/selectionStore";
@@ -70,10 +70,19 @@ function onPointerDown({ scenePoint, shiftKey }: ToolPointerEvent): void {
 
   if (selectedIds.size === 1) {
     const [soleId] = selectedIds;
-    const handleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes, zoom);
-    if (handleId) {
-      startResizeDrag(soleId, handleId);
-      return;
+    const groupMembers = getGroupMemberBounds(soleId, sceneStore.getState());
+    if (groupMembers) {
+      const handleId = hitTestGroupHandles(scenePoint, groupMembers.bounds, zoom);
+      if (handleId) {
+        startGroupResizeDrag(new Set(groupMembers.memberIds), groupMembers.bounds, handleId);
+        return;
+      }
+    } else {
+      const handleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes, zoom);
+      if (handleId) {
+        startResizeDrag(soleId, handleId);
+        return;
+      }
     }
   } else if (selectedIds.size > 1) {
     const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
@@ -251,7 +260,10 @@ function updateHoverState(scenePoint: Point): void {
   const zoom = viewportStore.getState().zoom;
   if (selectedIds.size === 1) {
     const [soleId] = selectedIds;
-    hoveredHandleId = hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes, zoom);
+    const groupMembers = getGroupMemberBounds(soleId, sceneStore.getState());
+    hoveredHandleId = groupMembers
+      ? hitTestGroupHandles(scenePoint, groupMembers.bounds, zoom)
+      : hitTestHandles(scenePoint, soleId, sceneStore.getState().nodes, zoom);
   } else if (selectedIds.size > 1) {
     const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
     hoveredHandleId = bounds ? hitTestGroupHandles(scenePoint, bounds, zoom) : null;
@@ -273,13 +285,31 @@ function getCursor(): string {
     const { selectedIds } = selectionStore.getState();
     if (selectedIds.size === 1) {
       const [soleId] = selectedIds;
-      return getResizeCursor(hoveredHandleId, getHandles(soleId, sceneStore.getState().nodes));
+      const groupMembers = getGroupMemberBounds(soleId, sceneStore.getState());
+      return groupMembers
+        ? getResizeCursor(hoveredHandleId, getGroupHandles(groupMembers.bounds))
+        : getResizeCursor(hoveredHandleId, getHandles(soleId, sceneStore.getState().nodes));
     }
     const bounds = getGroupBounds(selectedIds, sceneStore.getState().nodes);
     if (bounds) return getResizeCursor(hoveredHandleId, getGroupHandles(bounds));
   }
 
   return "default";
+}
+
+// A lone-selected persisted Group resizes as a unit (group + every
+// descendant), reusing the same multi-select group-resize machinery as an
+// ad-hoc selection — but with the member set derived from the group's own
+// children instead of whatever's currently selected. Returns null for
+// anything that isn't a non-empty group, so callers fall back to the plain
+// single-node resize path.
+function getGroupMemberBounds(soleId: NodeId, scene: SceneGraph): { bounds: Bounds; memberIds: NodeId[] } | null {
+  const node = scene.nodes[soleId];
+  if (!node || node.type !== "group" || node.children.length === 0) return null;
+
+  const memberIds = collectWithDescendants(scene, [soleId]);
+  const bounds = getGroupBounds(memberIds, scene.nodes);
+  return bounds ? { bounds, memberIds } : null;
 }
 
 function toggleId(ids: Set<NodeId>, id: NodeId): Set<NodeId> {
@@ -412,11 +442,13 @@ function startGroupResizeDrag(selectedIds: Set<NodeId>, startBounds: Bounds, han
 
 function applyGroupResize(drag: GroupResizeDrag, scenePoint: Point): void {
   const scale = computeGroupScale(drag.startBounds, drag.handleId, scenePoint);
+  const memberIds = drag.snapshots;
 
   sceneStore.update((scene) => {
     const nodes = { ...scene.nodes };
     for (const [id, startNode] of drag.snapshots) {
-      nodes[id] = resizeNodeInGroup(startNode, scale, scene);
+      const parentIsAlsoResizing = startNode.parentId !== null && memberIds.has(startNode.parentId);
+      nodes[id] = resizeNodeInGroup(startNode, scale, scene, parentIsAlsoResizing);
     }
     return { ...scene, nodes };
   });

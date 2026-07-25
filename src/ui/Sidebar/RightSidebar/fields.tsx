@@ -31,10 +31,15 @@ interface NumberFieldProps {
 // interaction actually finishes — a direct match for the pattern
 // useNodeEdit.ts already implements (one undo step per edit session, not
 // per keystroke), so this just wires straight into it.
+//
+// The label sits inset inside the same bordered box as the input rather
+// than as separate text to its left — the outer <label> still implicitly
+// associates with the nested <input> for accessibility, only the visual
+// shape changed.
 export function NumberField({ label, value, onFocus, onChange, onCommit, min, max, step = 1 }: NumberFieldProps) {
   return (
-    <label className="field-row">
-      <span className="field-label">{label}</span>
+    <label className="number-field-row">
+      <span className="number-field-label">{label}</span>
       <BaseNumberField.Root
         value={round(value)}
         min={min}

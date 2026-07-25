@@ -27,7 +27,7 @@ function searchSiblings(scene: SceneGraph, ids: NodeId[], excludeId: NodeId, nod
 
     const candidate = scene.nodes[id];
     if (!candidate || !candidate.visible) continue;
-    if (candidate.type !== "frame" && candidate.type !== "section") continue;
+    if (candidate.type !== "frame" && candidate.type !== "section" && candidate.type !== "group") continue;
 
     const childMatch = searchSiblings(scene, [...candidate.children].reverse(), excludeId, nodeBounds);
     if (childMatch) return childMatch;

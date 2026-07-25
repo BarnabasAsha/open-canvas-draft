@@ -8,10 +8,14 @@ import { useSelection } from "./useSelection";
 import { useViewport } from "./useViewport";
 import { sceneToScreen } from "../utils/coordinates";
 
-const STROKE_COLOR = "#4f46e5";
+// CSS custom properties, not raw colors — read via the `style` prop below
+// (not the plain SVG attribute) since var() only resolves in a CSS
+// property context, so these stay theme-reactive across light/dark.
+const STROKE_COLOR = "var(--selection)";
 const STROKE_WIDTH = 2;
 const HANDLE_SIZE = 8;
-const SECTION_LABEL_COLOR = "#9ca3af";
+const HANDLE_FILL = "var(--surface-panel)";
+const SECTION_LABEL_COLOR = "var(--canvas-label)";
 const SECTION_LABEL_OFFSET = 4;
 
 export function SelectionOverlay() {
@@ -47,16 +51,16 @@ export function SelectionOverlay() {
 
         return (
           <g key={id}>
-            <polygon points={points} fill="none" stroke={STROKE_COLOR} strokeWidth={STROKE_WIDTH} />
+            <polygon points={points} fill="none" style={{ stroke: STROKE_COLOR }} strokeWidth={STROKE_WIDTH} />
             {node.type === "section" && (
               <text
                 x={topLeft.x}
                 y={topLeft.y - SECTION_LABEL_OFFSET * viewport.zoom}
                 fontSize={12 * viewport.zoom}
                 fontFamily="sans-serif"
-                fill={SECTION_LABEL_COLOR}
+                style={{ fill: SECTION_LABEL_COLOR }}
               >
-                {node.label}
+                {node.name}
               </text>
             )}
           </g>
@@ -73,7 +77,7 @@ export function SelectionOverlay() {
               width={bottomRight.x - topLeft.x}
               height={bottomRight.y - topLeft.y}
               fill="none"
-              stroke={STROKE_COLOR}
+              style={{ stroke: STROKE_COLOR }}
               strokeWidth={1}
               strokeDasharray="4 3"
             />
@@ -88,8 +92,7 @@ export function SelectionOverlay() {
             y={screen.y - HANDLE_SIZE / 2}
             width={HANDLE_SIZE}
             height={HANDLE_SIZE}
-            fill="#ffffff"
-            stroke={STROKE_COLOR}
+            style={{ fill: HANDLE_FILL, stroke: STROKE_COLOR }}
             strokeWidth={STROKE_WIDTH}
           />
         );
@@ -104,9 +107,8 @@ export function SelectionOverlay() {
               y={Math.min(p1.y, p2.y)}
               width={Math.abs(p2.x - p1.x)}
               height={Math.abs(p2.y - p1.y)}
-              fill={STROKE_COLOR}
+              style={{ fill: STROKE_COLOR, stroke: STROKE_COLOR }}
               fillOpacity={0.1}
-              stroke={STROKE_COLOR}
               strokeWidth={1}
             />
           );

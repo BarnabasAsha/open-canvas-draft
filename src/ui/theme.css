@@ -1,13 +1,88 @@
+/* Two layers: primitives (raw ramps, referenced only below — never
+   directly by a component) and semantic tokens (what every rule in this
+   file actually uses). Hue 265 runs through the "neutral" ramp too, at
+   very low chroma, so grays and the accent read as one family instead of
+   grayscale UI plus an unrelated brand color. Dark is the default ground,
+   matching the app's original look; light is defined explicitly below
+   rather than mechanically inverted. */
 :root {
-  --panel-bg: #18181b;
-  --panel-border: #2a2a2e;
-  --panel-text: #e4e4e7;
-  --panel-text-muted: #8b8b93;
-  --panel-hover: #232326;
-  --panel-active: #313138;
-  --panel-input-bg: #1f1f23;
-  --accent: #4f46e5;
-  --accent-soft: rgba(79, 70, 229, 0.22);
+  --gray-50: oklch(97% 0.003 265);
+  --gray-100: oklch(93% 0.005 265);
+  --gray-200: oklch(88% 0.007 265);
+  --gray-300: oklch(78% 0.009 265);
+  --gray-400: oklch(64% 0.012 265);
+  --gray-500: oklch(50% 0.013 265);
+  --gray-600: oklch(38% 0.012 265);
+  --gray-700: oklch(28% 0.01 265);
+  --gray-800: oklch(20% 0.008 265);
+  --gray-900: oklch(14% 0.006 265);
+
+  --violet-300: oklch(80% 0.12 265);
+  --violet-400: oklch(72% 0.17 265);
+  --violet-500: oklch(63% 0.2 265);
+  --violet-600: oklch(54% 0.2 265);
+  --violet-700: oklch(45% 0.19 265);
+
+  --surface-canvas: oklch(19% 0.006 265);
+  --surface-panel: oklch(23% 0.007 265);
+  --surface-panel-hover: oklch(27% 0.008 265);
+  --surface-panel-active: oklch(31% 0.009 265);
+  --surface-input: oklch(26% 0.008 265);
+  --surface-selected: oklch(34% 0.008 265);
+  --border: oklch(33% 0.009 265);
+  --text: oklch(89% 0.004 265);
+  --text-muted: oklch(63% 0.012 265);
+  --text-disabled: oklch(45% 0.01 265);
+  --accent: oklch(66% 0.15 265);
+  --accent-hover: oklch(72% 0.13 265);
+  --accent-soft: oklch(66% 0.15 265 / 16%);
+  --accent-text: oklch(82% 0.08 265);
+  --selection: var(--accent);
+  --canvas-label: oklch(62% 0.012 265);
+  --shadow: oklch(0% 0 0 / 30%);
+
+  --font-ui: "Geist", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-theme="light"] {
+  --surface-canvas: oklch(93% 0.004 265);
+  --surface-panel: oklch(99% 0.002 265);
+  --surface-panel-hover: oklch(95% 0.005 265);
+  --surface-panel-active: oklch(91% 0.007 265);
+  --surface-input: oklch(97% 0.004 265);
+  --surface-selected: oklch(87% 0.008 265);
+  --border: oklch(88% 0.007 265);
+  --text: oklch(20% 0.01 265);
+  --text-muted: oklch(46% 0.014 265);
+  --text-disabled: oklch(68% 0.01 265);
+  --accent: oklch(54% 0.2 265);
+  --accent-hover: oklch(48% 0.2 265);
+  --accent-soft: oklch(54% 0.2 265 / 12%);
+  --accent-text: oklch(40% 0.18 265);
+  --canvas-label: oklch(48% 0.014 265);
+  --shadow: oklch(30% 0.02 265 / 18%);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --surface-canvas: oklch(93% 0.004 265);
+    --surface-panel: oklch(99% 0.002 265);
+    --surface-panel-hover: oklch(95% 0.005 265);
+    --surface-panel-active: oklch(91% 0.007 265);
+    --surface-input: oklch(97% 0.004 265);
+    --surface-selected: oklch(87% 0.008 265);
+    --border: oklch(88% 0.007 265);
+    --text: oklch(20% 0.01 265);
+    --text-muted: oklch(46% 0.014 265);
+    --text-disabled: oklch(68% 0.01 265);
+    --accent: oklch(54% 0.2 265);
+    --accent-hover: oklch(48% 0.2 265);
+    --accent-soft: oklch(54% 0.2 265 / 12%);
+    --accent-text: oklch(40% 0.18 265);
+    --canvas-label: oklch(48% 0.014 265);
+    --shadow: oklch(30% 0.02 265 / 18%);
+  }
 }
 
 /* Base UI components render bare elements with no visual style of their
@@ -20,10 +95,10 @@
   align-items: center;
   gap: 2px;
   padding: 6px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   border-right: none;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 16px var(--shadow);
 }
 
 .toolbar[data-orientation="vertical"] {
@@ -43,7 +118,7 @@
   width: 1px;
   height: 20px;
   margin: 0 4px;
-  background: var(--panel-border);
+  background: var(--border);
 }
 
 /* A separator's own orientation is perpendicular to the toolbar's, so a
@@ -63,7 +138,7 @@
   height: 34px;
   border: none;
   background: transparent;
-  color: var(--panel-text);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -86,13 +161,18 @@
 }
 
 .toolbar-button:hover:not([data-disabled]) {
-  background: var(--panel-hover);
+  background: var(--surface-panel-hover);
 }
 
+/* Neutral, not accent-tinted: "this is the active tool" is a persistent
+   current-item state, not a meaningful status — same distinction Linear
+   draws between a plain selected nav row and an actual colored status
+   dot. --accent stays reserved for things that carry real meaning (the
+   canvas selection outline, focus rings, checked states). */
 .toolbar-button[data-pressed],
 .toolbar-button[data-popup-open] {
-  background: var(--accent-soft);
-  color: #a5b4fc;
+  background: var(--surface-selected);
+  color: var(--text);
 }
 
 .toolbar-button:focus-visible {
@@ -110,10 +190,10 @@
   display: flex;
   flex-direction: column;
   padding: 4px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--shadow);
   outline: none;
   min-width: var(--anchor-width);
   max-height: var(--available-height);
@@ -132,7 +212,7 @@
   padding: 7px 10px;
   border-radius: 6px;
   font-size: 12px;
-  color: var(--panel-text);
+  color: var(--text);
   cursor: default;
   outline: none;
   user-select: none;
@@ -146,7 +226,7 @@
 
 .menu-item[data-highlighted],
 .select-item[data-highlighted] {
-  background: var(--panel-hover);
+  background: var(--surface-panel-hover);
 }
 
 .select-item {
@@ -166,9 +246,9 @@
   width: 84px;
   padding: 3px 6px;
   font-size: 12px;
-  color: var(--panel-text);
-  background: var(--panel-input-bg);
-  border: 1px solid var(--panel-border);
+  color: var(--text);
+  background: var(--surface-input);
+  border: 1px solid var(--border);
   border-radius: 5px;
   cursor: default;
 }
@@ -180,41 +260,74 @@
 
 .select-icon {
   display: flex;
-  color: var(--panel-text-muted);
+  color: var(--text-muted);
+}
+
+.number-field-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--surface-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding-left: 8px;
+}
+
+.number-field-row:focus-within {
+  border-color: var(--accent);
+}
+
+.number-field-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-right: 4px;
 }
 
 .number-field-group {
   display: flex;
-  width: 84px;
+  flex: 1;
+  min-width: 0;
 }
 
 .number-field-input {
+  flex: 1;
+  min-width: 0;
   width: 100%;
-  padding: 3px 6px;
+  padding: 8px 8px 8px 0;
   font-size: 12px;
-  color: var(--panel-text);
-  background: var(--panel-input-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 5px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background: transparent;
+  border: none;
   text-align: left;
   font-variant-numeric: tabular-nums;
 }
 
 .number-field-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+  outline: none;
 }
 
+/* Quiet at rest — a visible border only, no fill — so the box doesn't
+   read as a small button when unchecked; it fills in only once there's
+   something to actually indicate. */
 .checkbox-root {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
-  background: var(--panel-input-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: 1.5px solid var(--text-disabled);
+  border-radius: 4.5px;
   flex-shrink: 0;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.checkbox-root:hover {
+  border-color: var(--text-muted);
 }
 
 .checkbox-root[data-checked] {
@@ -231,7 +344,7 @@
   width: 28px;
   height: 22px;
   padding: 0;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--border);
   border-radius: 5px;
   cursor: pointer;
   background-clip: padding-box;
@@ -253,10 +366,10 @@
   gap: 10px;
   width: 200px;
   padding: 12px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--shadow);
   outline: none;
 }
 
@@ -293,15 +406,15 @@
   display: flex;
   align-items: center;
   position: relative;
-  height: 16px;
+  height: 22px;
   touch-action: none;
 }
 
 .hue-slider-track {
   position: relative;
   width: 100%;
-  height: 10px;
-  border-radius: 5px;
+  height: 20px;
+  border-radius: 6px;
   background: linear-gradient(
     to right,
     #ff0000 0%,
@@ -314,15 +427,19 @@
   );
 }
 
+/* No transform: translate(-50%, -50%) here — Base UI's Slider.Thumb
+   already centers itself via the standalone CSS `translate` property
+   (set inline), which composes with, rather than overrides, `transform`.
+   Adding our own translate on top double-applies the offset, shifting
+   the thumb a full extra width/height away from its real position. */
 .hue-slider-thumb {
   position: absolute;
   top: 50%;
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
-  transform: translate(-50%, -50%);
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .hue-slider-thumb:focus-visible {
@@ -335,14 +452,14 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: var(--panel-input-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--surface-input);
+  border: 1px solid var(--border);
   border-radius: 5px;
 }
 
 .color-hex-prefix {
   font-size: 12px;
-  color: var(--panel-text-muted);
+  color: var(--text-muted);
 }
 
 .color-hex-input {
@@ -350,9 +467,9 @@
   min-width: 0;
   border: none;
   background: transparent;
-  color: var(--panel-text);
+  color: var(--text);
   font-size: 12px;
-  font-family: inherit;
+  font-family: var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -365,21 +482,55 @@
   gap: 4px;
 }
 
-.color-rgb-input {
+.color-rgb-field {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   padding: 4px 6px;
-  font-size: 12px;
-  text-align: center;
-  color: var(--panel-text);
-  background: var(--panel-input-bg);
-  border: 1px solid var(--panel-border);
+  background: var(--surface-input);
+  border: 1px solid var(--border);
   border-radius: 5px;
 }
 
+.color-rgb-field:focus-within {
+  border-color: var(--accent);
+}
+
+.color-rgb-prefix {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-disabled);
+}
+
+.color-rgb-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  text-align: center;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  /* Without this, the native up/down spin buttons eat enough width that a
+     3-digit value (e.g. 197) gets visually clipped next to the R/G/B
+     prefix in a field this narrow. */
+  appearance: none;
+  -moz-appearance: textfield;
+}
+
+.color-rgb-input::-webkit-outer-spin-button,
+.color-rgb-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
 .color-rgb-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+  outline: none;
 }
 
 .field-row {
@@ -394,26 +545,39 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--panel-text-muted);
+  color: var(--text-muted);
 }
 
 .panel-section {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.panel-section:last-child {
+  margin-bottom: 0;
 }
 
 .panel-section-title {
   font-size: 11px;
   font-weight: 600;
-  color: var(--panel-text-muted);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .panel-section-fields {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+/* X+Y, W+H (or X2+Y2) read as one pair each — side by side is both more
+   compact and reads as "one position, one size" instead of four
+   unrelated rows. */
+.paired-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .collapsible-trigger {
@@ -423,9 +587,9 @@
   width: 100%;
   padding: 12px;
   border: none;
-  border-bottom: 1px solid var(--panel-border);
+  border-bottom: 1px solid var(--border);
   background: transparent;
-  color: var(--panel-text);
+  color: var(--text);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
@@ -448,20 +612,30 @@
   height: 34px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--panel-text);
+  color: var(--text);
   user-select: none;
 }
 
 .layer-row:hover {
-  background: var(--panel-hover);
+  background: var(--surface-panel-hover);
 }
 
 .layer-row[data-selected] {
-  background: var(--accent-soft);
+  background: var(--surface-selected);
+  font-weight: 600;
 }
 
 .layer-row[data-hidden] {
-  color: var(--panel-text-muted);
+  color: var(--text-disabled);
+}
+
+.layer-row-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  color: var(--text-muted);
 }
 
 .layer-row-name {
@@ -469,6 +643,35 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Quiet at rest — visible only on hover, so a tidy scene doesn't show two
+   icon buttons on every single row all the time. Anything already hidden
+   or locked stays visible regardless, since that's a real state worth
+   seeing without having to hover to find out. */
+.layer-row-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.layer-row:hover .layer-row-actions,
+.layer-row[data-hidden] .layer-row-actions,
+.layer-row[data-locked] .layer-row-actions {
+  opacity: 1;
+}
+
+.layer-row-name-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  background: var(--surface-panel);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin: -1px 0;
 }
 
 .icon-button {
@@ -486,7 +689,7 @@
 }
 
 .icon-button:hover {
-  background: var(--panel-active);
+  background: var(--surface-panel-active);
 }
 
 /* Shown behind the canvas whenever its background is null (transparent) —
@@ -494,12 +697,12 @@
    on the canvas-area container so it shows through the raster's cleared
    (fully transparent) pixels. */
 .canvas-checkerboard {
-  background-color: #232326;
+  background-color: var(--surface-canvas);
   background-image:
-    linear-gradient(45deg, #2c2c30 25%, transparent 25%),
-    linear-gradient(-45deg, #2c2c30 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #2c2c30 75%),
-    linear-gradient(-45deg, transparent 75%, #2c2c30 75%);
+    linear-gradient(45deg, var(--surface-panel-hover) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--surface-panel-hover) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--surface-panel-hover) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--surface-panel-hover) 75%);
   background-size: 20px 20px;
   background-position:
     0 0,

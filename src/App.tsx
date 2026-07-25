@@ -45,6 +45,12 @@ function toggleLocked(id: NodeId): void {
   historyManager.execute(createSetNodeCommand(id, node, { ...node, locked: !node.locked }));
 }
 
+function renameLayer(id: NodeId, name: string): void {
+  const node = sceneStore.getState().nodes[id];
+  if (!node) return;
+  historyManager.execute(createSetNodeCommand(id, node, { ...node, name }));
+}
+
 function setBackgroundColor(color: string | null): void {
   documentStore.update((settings) => ({ ...settings, backgroundColor: color }));
 }
@@ -75,6 +81,7 @@ export default function App() {
         onSelect={selectLayer}
         onToggleVisible={toggleVisible}
         onToggleLocked={toggleLocked}
+        onRename={renameLayer}
       />
       <div
         className={documentSettings.backgroundColor ? undefined : "canvas-checkerboard"}

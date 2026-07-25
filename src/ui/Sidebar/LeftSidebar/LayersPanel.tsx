@@ -10,9 +10,10 @@ interface LayersPanelProps {
   onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
+  onRename: (id: NodeId, name: string) => void;
 }
 
-export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onToggleLocked }: LayersPanelProps) {
+export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onToggleLocked, onRename }: LayersPanelProps) {
   const [expanded, setExpanded] = useState(true);
   const rootIds = [...scene.rootIds].reverse();
 
@@ -25,8 +26,8 @@ export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onT
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        background: "var(--panel-bg)",
-        borderRight: "1px solid var(--panel-border)",
+        background: "var(--surface-panel)",
+        borderRight: "1px solid var(--border)",
         overflow: "hidden",
       }}
     >
@@ -36,7 +37,7 @@ export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onT
       </Collapsible.Trigger>
       <Collapsible.Panel style={{ flex: 1, overflowY: "auto", paddingBottom: 6 }}>
         {rootIds.length === 0 ? (
-          <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--panel-text-muted)" }}>No layers yet</div>
+          <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-muted)" }}>No layers yet</div>
         ) : (
           rootIds.map((id) => (
             <LayerItem
@@ -48,6 +49,7 @@ export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onT
               onSelect={onSelect}
               onToggleVisible={onToggleVisible}
               onToggleLocked={onToggleLocked}
+              onRename={onRename}
             />
           ))
         )}

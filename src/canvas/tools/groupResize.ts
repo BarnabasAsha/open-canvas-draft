@@ -100,7 +100,24 @@ function scaleScenePoint(local: Point, parentOrigin: Point, scale: GroupScale): 
 // unrotated footprint, not a full affine transform" simplification
 // single-node resize already accepts for rotated shapes (see
 // getBBoxLocalPoint's comment), just applied per-node across a group.
-export function resizeNodeInGroup(node: SceneNode, scale: GroupScale, graph: SceneGraph): SceneNode {
+//
+// parentIsAlsoResizing matters once a persisted Group's own resize sweeps up
+// every descendant (group + all its children) into one gesture, unlike an
+// ad-hoc multi-select where a container and its own child are essentially
+// never both selected: a member whose parent is ALSO being scaled this same
+// gesture needs pure local scaling instead — see scaleNodeLocally's comment
+// for why re-deriving its position via the parent's (soon-to-be-stale)
+// origin would be wrong.
+export function resizeNodeInGroup(
+  node: SceneNode,
+  scale: GroupScale,
+  graph: SceneGraph,
+  parentIsAlsoResizing: boolean,
+): SceneNode {
+  return parentIsAlsoResizing ? scaleNodeLocally(node, scale) : scaleNodeByAnchor(node, scale, graph);
+}
+
+function scaleNodeByAnchor(node: SceneNode, scale: GroupScale, graph: SceneGraph): SceneNode {
   const parentOrigin = getParentOrigin(graph, node.parentId);
 
   if (node.type === "line" || node.type === "arrow") {
@@ -125,4 +142,30 @@ export function resizeNodeInGroup(node: SceneNode, scale: GroupScale, graph: Sce
     return { ...node, x: origin.x, y: origin.y, width, height, points: scalePathPoints(node.points, scale.scaleX, scale.scaleY) };
   }
   return { ...node, x: origin.x, y: origin.y, width, height };
+}
+
+// A node's local x/y is already relative to its own parent's origin — if
+// that parent is scaling around the very same global anchor this same
+// gesture, the anchor term cancels out algebraically (new local = old local
+// × scale, independent of the anchor's position or of processing order),
+// so there's no need to know the parent's in-progress resized position at
+// all, unlike scaleNodeByAnchor's case where the parent is NOT moving.
+function scaleNodeLocally(node: SceneNode, scale: GroupScale): SceneNode {
+  if (node.type === "line" || node.type === "arrow") {
+    const x = node.x * scale.scaleX;
+    const y = node.y * scale.scaleY;
+    const x2 = node.x2 * scale.scaleX;
+    const y2 = node.y2 * scale.scaleY;
+    return { ...node, x, y, x2, y2, width: Math.abs(x2 - x), height: Math.abs(y2 - y) };
+  }
+
+  const x = node.x * scale.scaleX;
+  const y = node.y * scale.scaleY;
+  const width = Math.max(node.width * scale.scaleX, MIN_SIZE);
+  const height = Math.max(node.height * scale.scaleY, MIN_SIZE);
+
+  if (node.type === "path") {
+    return { ...node, x, y, width, height, points: scalePathPoints(node.points, scale.scaleX, scale.scaleY) };
+  }
+  return { ...node, x, y, width, height };
 }

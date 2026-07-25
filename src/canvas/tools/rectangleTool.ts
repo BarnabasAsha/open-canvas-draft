@@ -13,6 +13,8 @@ export const rectangleTool: Tool = createDragToCreateTool({
     opacity: 1,
     visible: true,
     locked: false,
+    semantics: null,
+    interactions: [],
     fill: "#d9d9d9",
     stroke: null,
     strokeWidth: 0,

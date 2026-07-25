@@ -1,7 +1,8 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { CaretRightIcon, EyeIcon, EyeSlashIcon, LockSimpleIcon, LockSimpleOpenIcon } from "@phosphor-icons/react";
+import { CaretRightIcon, EyeClosedIcon, EyeIcon, LockSimpleIcon, LockSimpleOpenIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { NodeId, SceneGraph } from "../../../types/scene";
+import { LayerTypeIcon } from "./LayerTypeIcon";
 
 interface LayerItemProps {
   nodeId: NodeId;
@@ -11,17 +12,37 @@ interface LayerItemProps {
   onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
+  onRename: (id: NodeId, name: string) => void;
 }
 
 // Recurses into its own children for frame/section nodes — the layers
 // panel doesn't build a separate tree structure, it just walks the scene
 // graph the same way the renderer and hit-tester already do.
-export function LayerItem({ nodeId, scene, selectedIds, depth, onSelect, onToggleVisible, onToggleLocked }: LayerItemProps) {
+export function LayerItem({
+  nodeId,
+  scene,
+  selectedIds,
+  depth,
+  onSelect,
+  onToggleVisible,
+  onToggleLocked,
+  onRename,
+}: LayerItemProps) {
   const [expanded, setExpanded] = useState(true);
+  // null = not editing; otherwise the in-progress input value. Seeded from
+  // node.name only when editing starts, not at mount, so this doesn't need
+  // node to exist yet when the hook is first declared.
+  const [editingName, setEditingName] = useState<string | null>(null);
   const node = scene.nodes[nodeId];
   if (!node) return null;
 
-  const isContainer = node.type === "frame" || node.type === "section";
+  function commitRename(): void {
+    const trimmed = editingName?.trim();
+    if (trimmed) onRename(nodeId, trimmed);
+    setEditingName(null);
+  }
+
+  const isContainer = node.type === "frame" || node.type === "section" || node.type === "group";
   const isSelected = selectedIds.has(nodeId);
   // rootIds/children are drawn in order (later = on top) — reversed here so
   // the topmost layer reads first, matching every other layers panel.
@@ -34,6 +55,7 @@ export function LayerItem({ nodeId, scene, selectedIds, depth, onSelect, onToggl
         onClick={(e) => onSelect(nodeId, e.shiftKey)}
         data-selected={isSelected || undefined}
         data-hidden={!node.visible || undefined}
+        data-locked={node.locked || undefined}
         style={{ paddingLeft: 8 + depth * 14 }}
       >
         {isContainer ? (
@@ -48,31 +70,59 @@ export function LayerItem({ nodeId, scene, selectedIds, depth, onSelect, onToggl
         ) : (
           <span style={{ width: 26, flexShrink: 0 }} />
         )}
-        <span className="layer-row-name">{node.name}</span>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={node.visible ? "Hide" : "Show"}
-          title={node.visible ? "Hide" : "Show"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleVisible(nodeId);
-          }}
-        >
-          {node.visible ? <EyeIcon size={17} /> : <EyeSlashIcon size={17} />}
-        </button>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label={node.locked ? "Unlock" : "Lock"}
-          title={node.locked ? "Unlock" : "Lock"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleLocked(nodeId);
-          }}
-        >
-          {node.locked ? <LockSimpleIcon size={17} /> : <LockSimpleOpenIcon size={17} />}
-        </button>
+        <span className="layer-row-type-icon">
+          <LayerTypeIcon type={node.type} />
+        </span>
+        {editingName !== null ? (
+          <input
+            className="layer-row-name-input"
+            value={editingName}
+            autoFocus
+            onChange={(e) => setEditingName(e.target.value)}
+            onBlur={commitRename}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              else if (e.key === "Escape") setEditingName(null);
+            }}
+          />
+        ) : (
+          <span
+            className="layer-row-name"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setEditingName(node.name);
+            }}
+          >
+            {node.name}
+          </span>
+        )}
+        <span className="layer-row-actions">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={node.visible ? "Hide" : "Show"}
+            title={node.visible ? "Hide" : "Show"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleVisible(nodeId);
+            }}
+          >
+            {node.visible ? <EyeIcon size={17} /> : <EyeClosedIcon size={17} />}
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={node.locked ? "Unlock" : "Lock"}
+            title={node.locked ? "Unlock" : "Lock"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLocked(nodeId);
+            }}
+          >
+            {node.locked ? <LockSimpleIcon size={17} /> : <LockSimpleOpenIcon size={17} />}
+          </button>
+        </span>
       </div>
       {isContainer && (
         <Collapsible.Panel>
@@ -86,6 +136,7 @@ export function LayerItem({ nodeId, scene, selectedIds, depth, onSelect, onToggl
               onSelect={onSelect}
               onToggleVisible={onToggleVisible}
               onToggleLocked={onToggleLocked}
+              onRename={onRename}
             />
           ))}
         </Collapsible.Panel>

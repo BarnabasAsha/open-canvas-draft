@@ -1,4 +1,6 @@
+// ─── Core scene types ───────────────────────────────────────────────
 export type NodeId = string;
+export type VariableId = string;
 
 export interface BaseNode {
   id: NodeId;
@@ -13,7 +15,68 @@ export interface BaseNode {
   opacity: number; // 0–1
   visible: boolean;
   locked: boolean;
+
+  // AI-native / prototyping additions
+  semantics: Semantics | null;
+  interactions: Interaction[];
+  bindings?: Record<string, VariableId>; // property name -> variable id
+  // NOTE: which keys are valid here is enforced at the UI/AI-schema layer,
+  // per node type (e.g. TextNode allows "content", RectNode allows "fill"),
+  // not by TypeScript itself — see PropertiesPanel per-type allowlists.
 }
+
+// ─── Semantics: what this node becomes when rendered as real DOM ──────
+
+export type SemanticTag = keyof HTMLElementTagNameMap; // "div" | "button" | "input" | "a" | ...
+
+export interface Semantics {
+  tag: SemanticTag;
+  role?: string; // could tighten to React's AriaRole type later
+  properties?: Record<string, string | number | boolean>; // e.g. { placeholder: "Email", href: "/pricing" }
+}
+
+// ─── Variables: shared state that node properties can bind to ─────────
+
+export type VariableType = "boolean" | "number" | "string";
+
+export interface Variable {
+  id: VariableId;
+  name: string;
+  type: VariableType;
+  defaultValue: boolean | number | string;
+}
+
+// ─── Interactions: trigger -> actions, fully data-driven ──────────────
+
+export type TransitionType =
+  | "instant"
+  | "slide"
+  | "dissolve"
+  | "push"
+  | "smartAnimate";
+
+export type InteractionAction =
+  | {
+      type: "setVariable";
+      variableId: VariableId;
+      value: boolean | number | string;
+    }
+  | { type: "toggleVariable"; variableId: VariableId } // boolean only
+  | { type: "incrementVariable"; variableId: VariableId; by: number } // number only
+  | { type: "navigate"; targetNodeId: NodeId; transition?: TransitionType };
+
+export type Interaction =
+  | { trigger: "click"; actions: InteractionAction[] }
+  | { trigger: "hoverStart"; actions: InteractionAction[] }
+  | { trigger: "hoverEnd"; actions: InteractionAction[] }
+  | { trigger: "pressStart"; actions: InteractionAction[] }
+  | { trigger: "pressEnd"; actions: InteractionAction[] }
+  | { trigger: "focus"; actions: InteractionAction[] }
+  | { trigger: "blur"; actions: InteractionAction[] }
+  | { trigger: "change"; actions: InteractionAction[] }
+  | { trigger: "keyPress"; key: string; actions: InteractionAction[] }
+  | { trigger: "load"; actions: InteractionAction[] }
+  | { trigger: "afterDelay"; delayMs: number; actions: InteractionAction[] };
 
 export interface RectNode extends BaseNode {
   type: "rect";
@@ -90,7 +153,11 @@ export interface FrameNode extends BaseNode {
 export interface SectionNode extends BaseNode {
   type: "section";
   children: NodeId[];
-  label: string;
+}
+
+export interface GroupNode extends BaseNode {
+  type: "group";
+  children: NodeId[];
 }
 
 export type SceneNode =
@@ -102,12 +169,13 @@ export type SceneNode =
   | TextNode
   | PathNode
   | FrameNode
-  | SectionNode;
+  | SectionNode
+  | GroupNode;
 
-// The two node types that can hold children — resize/hit-test/reparent
-// logic that needs to walk into children checks against this, not against
-// FrameNode/SectionNode individually.
-export type ContainerNode = FrameNode | SectionNode;
+// The node types that can hold children — resize/hit-test/reparent logic
+// that needs to walk into children checks against this, not against
+// FrameNode/SectionNode/GroupNode individually.
+export type ContainerNode = FrameNode | SectionNode | GroupNode;
 
 export interface SceneGraph {
   nodes: Record<NodeId, SceneNode>;

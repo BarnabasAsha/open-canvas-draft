@@ -58,17 +58,17 @@ export function PropertiesPanel({
         flex: "0 0 260px",
         height: "100%",
         overflowY: "auto",
-        padding: 12,
-        background: "var(--panel-bg)",
-        borderLeft: "1px solid var(--panel-border)",
+        padding: 16,
+        background: "var(--surface-panel)",
+        borderLeft: "1px solid var(--border)",
         fontSize: 12,
-        color: "var(--panel-text)",
+        color: "var(--text)",
       }}
     >
       {selectionCount === 0 ? (
         <DocumentSection backgroundColor={backgroundColor} onBackgroundColorChange={onBackgroundColorChange} />
       ) : selectionCount > 1 || !node ? (
-        <div style={{ padding: "4px 0", color: "var(--panel-text-muted)" }}>{selectionCount} objects selected</div>
+        <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
       ) : (
         <PropertySections node={node} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
       )}
@@ -90,7 +90,7 @@ function PropertySections({ node, onFocus, onChange, onCommit }: PropertySection
 
   return (
     <>
-      <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--panel-text)" }}>{node.name}</div>
+      <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>{node.name}</div>
       <PositionSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}

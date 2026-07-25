@@ -82,12 +82,17 @@ export function reparentNodeInGraph(graph: SceneGraph, nodeId: NodeId, newParent
   // draw at rotation 0).
   const oldOrigin = getParentOrigin(graph, node.parentId);
   const newOrigin = getParentOrigin(graph, newParentId);
-  nodes[nodeId] = {
-    ...node,
-    parentId: newParentId,
-    x: node.x + oldOrigin.x - newOrigin.x,
-    y: node.y + oldOrigin.y - newOrigin.y,
-  };
+  const shiftX = oldOrigin.x - newOrigin.x;
+  const shiftY = oldOrigin.y - newOrigin.y;
+
+  // Line/arrow have a second point of their own (x2/y2, also parent-
+  // relative) that needs the exact same shift — missing this left it stale
+  // in the old parent's coordinate space, stretching the shape toward
+  // wherever that value happened to resolve to under the new parent.
+  nodes[nodeId] =
+    node.type === "line" || node.type === "arrow"
+      ? { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY, x2: node.x2 + shiftX, y2: node.y2 + shiftY }
+      : { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY };
 
   return { nodes, rootIds };
 }
@@ -101,7 +106,7 @@ export function getParentOrigin(graph: SceneGraph, parentId: NodeId | null): { x
 }
 
 function isContainer(node: SceneNode): node is ContainerNode {
-  return node.type === "frame" || node.type === "section";
+  return node.type === "frame" || node.type === "section" || node.type === "group";
 }
 
 function getContainer(graph: SceneGraph, id: NodeId | null): ContainerNode | null {
@@ -110,11 +115,37 @@ function getContainer(graph: SceneGraph, id: NodeId | null): ContainerNode | nul
   return node && isContainer(node) ? node : null;
 }
 
-function isAncestor(graph: SceneGraph, candidateAncestorId: NodeId, nodeId: NodeId): boolean {
+export function isAncestor(graph: SceneGraph, candidateAncestorId: NodeId, nodeId: NodeId): boolean {
   let current: NodeId | null = graph.nodes[nodeId]?.parentId ?? null;
   while (current) {
     if (current === candidateAncestorId) return true;
     current = graph.nodes[current]?.parentId ?? null;
   }
   return false;
+}
+
+function ancestorChain(graph: SceneGraph, nodeId: NodeId): NodeId[] {
+  const chain: NodeId[] = [];
+  let current = graph.nodes[nodeId]?.parentId ?? null;
+  while (current) {
+    chain.push(current);
+    current = graph.nodes[current]?.parentId ?? null;
+  }
+  return chain;
+}
+
+// Deepest ancestor shared by every given node, or null if their only shared
+// ancestor is the root itself — e.g. grouping a root-level shape with one
+// already nested inside a Frame lands the new group at whichever level both
+// of them sit under, root included.
+export function findCommonAncestor(graph: SceneGraph, nodeIds: readonly NodeId[]): NodeId | null {
+  if (nodeIds.length === 0) return null;
+
+  const [first, ...rest] = nodeIds;
+  let common = ancestorChain(graph, first);
+  for (const id of rest) {
+    const chainSet = new Set(ancestorChain(graph, id));
+    common = common.filter((ancestorId) => chainSet.has(ancestorId));
+  }
+  return common[0] ?? null;
 }

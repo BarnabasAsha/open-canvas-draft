@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { createDeleteNodesCommand } from "../commands/DeleteNodesCommand";
+import { createGroupNodesCommand } from "../commands/GroupNodesCommand";
+import { createUngroupNodesCommand } from "../commands/UngroupNodesCommand";
 import { historyManager } from "../store/historyManager";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
@@ -39,6 +41,35 @@ export function useKeyboardShortcuts(): void {
         } else {
           historyManager.undo();
         }
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        const { selectedIds } = selectionStore.getState();
+
+        if (e.shiftKey) {
+          if (selectedIds.size !== 1) return;
+          const [soleId] = selectedIds;
+          const group = sceneStore.getState().nodes[soleId];
+          if (!group || group.type !== "group") return;
+
+          const memberIds = [...group.children];
+          const command = createUngroupNodesCommand(sceneStore.getState(), soleId);
+          if (!command) return;
+          historyManager.execute(command);
+          selectionStore.update((state) => ({ ...state, selectedIds: new Set(memberIds) }));
+          return;
+        }
+
+        const command = createGroupNodesCommand(sceneStore.getState(), [...selectedIds]);
+        if (!command) return;
+        historyManager.execute(command);
+        // The new group's id isn't returned by the command itself — after
+        // apply(), it's whichever node the members now share as a parent.
+        const [anyMemberId] = selectedIds;
+        const groupId = sceneStore.getState().nodes[anyMemberId]?.parentId;
+        if (groupId) selectionStore.update((state) => ({ ...state, selectedIds: new Set([groupId]) }));
         return;
       }
 

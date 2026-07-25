@@ -15,7 +15,7 @@ interface DocumentSectionProps {
 export function DocumentSection({ backgroundColor, onBackgroundColorChange }: DocumentSectionProps) {
   return (
     <>
-      <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--panel-text)" }}>Canvas</div>
+      <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>Canvas</div>
       <PanelSection title="Appearance">
         <ColorField
           label="Background"

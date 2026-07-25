@@ -3,6 +3,7 @@ import { applyNodeTransform } from "./applyNodeTransform";
 import { drawArrow } from "./shapes/drawArrow";
 import { drawEllipse } from "./shapes/drawEllipse";
 import { drawFrame } from "./shapes/drawFrame";
+import { drawGroup } from "./shapes/drawGroup";
 import { drawImage } from "./shapes/drawImage";
 import { drawLine } from "./shapes/drawLine";
 import { drawPath } from "./shapes/drawPath";
@@ -47,6 +48,9 @@ export function drawNode(
       break;
     case "section":
       drawSection(ctx, node, nodes);
+      break;
+    case "group":
+      drawGroup(ctx, node, nodes);
       break;
   }
 

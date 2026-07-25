@@ -13,6 +13,8 @@ export const frameTool: Tool = createDragToCreateTool({
     opacity: 1,
     visible: true,
     locked: false,
+    semantics: null,
+    interactions: [],
     fill: "#ffffff",
     clipsContent: true,
     cornerRadius: 0,

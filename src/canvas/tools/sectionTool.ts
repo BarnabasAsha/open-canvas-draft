@@ -13,7 +13,8 @@ export const sectionTool: Tool = createDragToCreateTool({
     opacity: 1,
     visible: true,
     locked: false,
-    label: "Section",
+    semantics: null,
+    interactions: [],
     children: [],
   }),
 });

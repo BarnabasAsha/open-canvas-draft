@@ -1,6 +1,7 @@
 import { sceneStore } from "../../store/sceneStore";
 import type { TextNode } from "../../types/scene";
 import { generateId } from "../../utils/id";
+import { nextDefaultName } from "../../utils/nodeNaming";
 import { enterTextEdit } from "./textEdit";
 import { toolManager } from "./toolManager";
 import type { Tool, ToolPointerEvent } from "./toolTypes";
@@ -12,7 +13,7 @@ function onPointerDown({ scenePoint }: ToolPointerEvent): void {
   const node: TextNode = {
     id: generateId(),
     type: "text",
-    name: "Text",
+    name: nextDefaultName(sceneStore.getState(), "Text"),
     parentId: null,
     x: scenePoint.x,
     y: scenePoint.y,
@@ -22,6 +23,8 @@ function onPointerDown({ scenePoint }: ToolPointerEvent): void {
     opacity: 1,
     visible: true,
     locked: false,
+    semantics: null,
+    interactions: [],
     content: "",
     fontSize: 16,
     fontFamily: "sans-serif",

@@ -144,17 +144,18 @@ export function ColorPicker({ value, disabled, onFocus, onChange, onCommit }: Co
 
             <div className="color-rgb-row">
               {(["r", "g", "b"] as const).map((channel) => (
-                <input
-                  key={channel}
-                  type="number"
-                  min={0}
-                  max={255}
-                  value={Math.round(rgb[channel])}
-                  onChange={(e) => applyRgb({ ...rgb, [channel]: clamp(Number(e.target.value), 0, 255) })}
-                  onBlur={onCommit}
-                  className="color-rgb-input"
-                  aria-label={channel.toUpperCase()}
-                />
+                <label key={channel} className="color-rgb-field">
+                  <span className="color-rgb-prefix">{channel.toUpperCase()}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={255}
+                    value={Math.round(rgb[channel])}
+                    onChange={(e) => applyRgb({ ...rgb, [channel]: clamp(Number(e.target.value), 0, 255) })}
+                    onBlur={onCommit}
+                    className="color-rgb-input"
+                  />
+                </label>
               ))}
             </div>
           </Popover.Popup>

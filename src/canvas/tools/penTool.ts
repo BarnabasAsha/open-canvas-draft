@@ -5,6 +5,7 @@ import { selectionStore } from "../../store/selectionStore";
 import type { NodeId, PathNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { generateId } from "../../utils/id";
+import { nextDefaultName } from "../../utils/nodeNaming";
 import type { DraftAnchor } from "./penPath";
 import { isNearPoint, mirrorHandle, rebaseAnchors } from "./penPath";
 import { toolManager } from "./toolManager";
@@ -21,6 +22,7 @@ const CLOSE_HIT_RADIUS = 10;
 interface PenSession {
   nodeId: NodeId;
   anchors: DraftAnchor[];
+  name: string;
 }
 
 let session: PenSession | null = null;
@@ -39,8 +41,9 @@ function onPointerDown({ scenePoint }: ToolPointerEvent): void {
 
   if (!session) {
     const nodeId = generateId();
-    session = { nodeId, anchors: [] };
-    sceneStore.addNode(buildPathNode(nodeId, [{ point: scenePoint }]));
+    const name = nextDefaultName(sceneStore.getState(), "Path");
+    session = { nodeId, anchors: [], name };
+    sceneStore.addNode(buildPathNode(nodeId, [{ point: scenePoint }], name));
   } else {
     refreshDraft([...session.anchors, { point: scenePoint }]);
   }
@@ -99,7 +102,7 @@ function buildPlacementAnchor(from: Point, current: Point): DraftAnchor {
 
 function refreshDraft(anchors: DraftAnchor[]): void {
   if (!session) return;
-  const node = buildPathNode(session.nodeId, anchors);
+  const node = buildPathNode(session.nodeId, anchors, session.name);
   const nodeId = session.nodeId;
 
   sceneStore.update((scene) => {
@@ -108,12 +111,12 @@ function refreshDraft(anchors: DraftAnchor[]): void {
   });
 }
 
-function buildPathNode(nodeId: NodeId, anchors: DraftAnchor[]): PathNode {
+function buildPathNode(nodeId: NodeId, anchors: DraftAnchor[], name: string): PathNode {
   const { origin, width, height, points } = rebaseAnchors(anchors);
   return {
     id: nodeId,
     type: "path",
-    name: "Path",
+    name,
     parentId: null,
     x: origin.x,
     y: origin.y,
@@ -123,6 +126,8 @@ function buildPathNode(nodeId: NodeId, anchors: DraftAnchor[]): PathNode {
     opacity: 1,
     visible: true,
     locked: false,
+    semantics: null,
+    interactions: [],
     points,
     closed: false,
     fill: null,
@@ -133,7 +138,7 @@ function buildPathNode(nodeId: NodeId, anchors: DraftAnchor[]): PathNode {
 
 function finishSession(closed: boolean): void {
   if (!session) return;
-  const { nodeId, anchors } = session;
+  const { nodeId, anchors, name } = session;
   session = null;
   placingFrom = null;
 
@@ -144,7 +149,7 @@ function finishSession(closed: boolean): void {
     return;
   }
 
-  const node: PathNode = { ...buildPathNode(nodeId, anchors), closed };
+  const node: PathNode = { ...buildPathNode(nodeId, anchors, name), closed };
   sceneStore.update((scene) => ({ ...scene, nodes: { ...scene.nodes, [nodeId]: node } }));
 
   historyManager.execute(createAddNodeCommand(node));

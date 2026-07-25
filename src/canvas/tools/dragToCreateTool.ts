@@ -5,6 +5,7 @@ import { selectionStore } from "../../store/selectionStore";
 import type { NodeId, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { generateId } from "../../utils/id";
+import { nextDefaultName } from "../../utils/nodeNaming";
 import { toolManager } from "./toolManager";
 import type { Tool, ToolPointerEvent } from "./toolTypes";
 
@@ -33,18 +34,23 @@ interface DragToCreateOptions {
 // to history and switching back to the select tool only happens once, at
 // pointerup, if the result is big enough to be a real shape.
 export function createDragToCreateTool(options: DragToCreateOptions): Tool {
-  let draft: { id: NodeId; startPoint: Point } | null = null;
+  // The default name is resolved once, at pointerdown, and reused for every
+  // rebuild during the drag — recomputing it on each move would count the
+  // draft node itself as an existing match and drift the number upward.
+  let draft: { id: NodeId; startPoint: Point; name: string } | null = null;
 
   function onPointerDown({ scenePoint }: ToolPointerEvent): void {
     const id = generateId();
-    sceneStore.addNode(options.buildNode(id, scenePoint, scenePoint));
-    draft = { id, startPoint: scenePoint };
+    const node = options.buildNode(id, scenePoint, scenePoint);
+    const name = nextDefaultName(sceneStore.getState(), node.name);
+    sceneStore.addNode({ ...node, name });
+    draft = { id, startPoint: scenePoint, name };
   }
 
   function onPointerMove({ scenePoint }: ToolPointerEvent): void {
     if (!draft) return;
 
-    const node = options.buildNode(draft.id, draft.startPoint, scenePoint);
+    const node = { ...options.buildNode(draft.id, draft.startPoint, scenePoint), name: draft.name };
     const draftId = draft.id;
 
     sceneStore.update((scene) => {

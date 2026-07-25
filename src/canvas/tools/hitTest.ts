@@ -41,7 +41,7 @@ function hitTestSiblings(scenePoint: Point, scene: SceneGraph, ids: NodeId[]): N
 }
 
 function hitTestNode(scenePoint: Point, node: SceneNode, scene: SceneGraph): NodeId | null {
-  if (node.type === "frame" || node.type === "section") {
+  if (node.type === "frame" || node.type === "section" || node.type === "group") {
     const childHit = hitTestSiblings(scenePoint, scene, [...node.children].reverse());
     if (childHit) return childHit;
   }
@@ -80,9 +80,10 @@ function hitTestOwnBody(scenePoint: Point, node: SceneNode): boolean {
     case "frame":
       return scratchCtx.isPointInPath(buildRectGeometry(node), x, y);
     case "section":
+    case "group":
       // No fill, but its bbox is still a real click target — same as a
       // frame's body, just always invisible. Otherwise the only way to
-      // select a section is via the Layers panel.
+      // select a section/group is via the Layers panel.
       return scratchCtx.isPointInPath(rectBoundsPath(node), x, y);
   }
 }

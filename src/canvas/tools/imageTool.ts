@@ -5,6 +5,7 @@ import { selectionStore } from "../../store/selectionStore";
 import type { ImageNode, NodeId } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { generateId } from "../../utils/id";
+import { nextDefaultName } from "../../utils/nodeNaming";
 import { MIN_DRAW_SIZE, rectFromPoints } from "./dragToCreateTool";
 import { toolManager } from "./toolManager";
 import type { Tool, ToolPointerEvent } from "./toolTypes";
@@ -14,19 +15,21 @@ import type { Tool, ToolPointerEvent } from "./toolTypes";
 // (empty src) still lives in sceneStore the same way so it renders/tracks
 // the drag for free, but committing to history and selecting it waits on
 // an async file picker instead of happening immediately.
-let draft: { id: NodeId; startPoint: Point } | null = null;
+let draft: { id: NodeId; startPoint: Point; name: string } | null = null;
 
-function buildDraftNode(id: NodeId, start: Point, current: Point): ImageNode {
+function buildDraftNode(id: NodeId, start: Point, current: Point, name: string): ImageNode {
   return {
     id,
     type: "image",
-    name: "Image",
+    name,
     parentId: null,
     ...rectFromPoints(start, current),
     rotation: 0,
     opacity: 1,
     visible: true,
     locked: false,
+    semantics: null,
+    interactions: [],
     src: "",
     objectFit: "cover",
   };
@@ -34,14 +37,15 @@ function buildDraftNode(id: NodeId, start: Point, current: Point): ImageNode {
 
 function onPointerDown({ scenePoint }: ToolPointerEvent): void {
   const id = generateId();
-  sceneStore.addNode(buildDraftNode(id, scenePoint, scenePoint));
-  draft = { id, startPoint: scenePoint };
+  const name = nextDefaultName(sceneStore.getState(), "Image");
+  sceneStore.addNode(buildDraftNode(id, scenePoint, scenePoint, name));
+  draft = { id, startPoint: scenePoint, name };
 }
 
 function onPointerMove({ scenePoint }: ToolPointerEvent): void {
   if (!draft) return;
 
-  const node = buildDraftNode(draft.id, draft.startPoint, scenePoint);
+  const node = buildDraftNode(draft.id, draft.startPoint, scenePoint, draft.name);
   const draftId = draft.id;
 
   sceneStore.update((scene) => {

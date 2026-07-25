@@ -18,6 +18,8 @@ export const arrowTool: Tool = createDragToCreateTool({
     opacity: 1,
     visible: true,
     locked: false,
+    semantics: null,
+    interactions: [],
     stroke: "#111827",
     strokeWidth: 2,
     arrowheadSize: 10,

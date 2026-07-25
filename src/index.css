@@ -1,5 +1,23 @@
+@font-face {
+  font-family: "Geist";
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Geist-Variable.woff2") format("woff2-variations");
+}
+
 :root {
   color-scheme: light dark;
+}
+
+/* Forces native controls (scrollbars, etc.) to match an explicit
+   data-theme override instead of still following the OS regardless. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 * {
@@ -15,6 +33,6 @@ body,
 
 body {
   overflow: hidden;
-  font-family: system-ui, sans-serif;
-  background: #18181b;
+  font-family: var(--font-ui);
+  background: var(--surface-canvas);
 }
