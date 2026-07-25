@@ -89,6 +89,10 @@ function setGridVisible(visible: boolean): void {
   documentStore.update((settings) => ({ ...settings, gridVisible: visible }));
 }
 
+function setRulerVisible(visible: boolean): void {
+  documentStore.update((settings) => ({ ...settings, rulerVisible: visible }));
+}
+
 // Places a frame already sized to a real device rather than dragging one
 // out by hand — centered on whatever's currently in view, same "center of
 // the visible canvas" anchor the keyboard zoom shortcuts already use.
@@ -128,6 +132,7 @@ export default function App() {
   const selectedIdList = [...selectedIds];
   const soleSelectedNode = selectedIdList.length === 1 ? (scene.nodes[selectedIdList[0]] ?? null) : null;
   const nodeEdit = useNodeEdit(soleSelectedNode?.id ?? "");
+  const rulerSize = documentSettings.rulerVisible ? RULER_SIZE : 0;
 
   return (
     <div style={{ display: "flex", width: "100%", height: "100%" }}>
@@ -145,11 +150,11 @@ export default function App() {
           minWidth: 0,
           height: "100%",
           display: "grid",
-          gridTemplateColumns: `${RULER_SIZE}px 1fr`,
-          gridTemplateRows: `${RULER_SIZE}px 1fr`,
+          gridTemplateColumns: `${rulerSize}px 1fr`,
+          gridTemplateRows: `${rulerSize}px 1fr`,
         }}
       >
-        <Ruler />
+        {documentSettings.rulerVisible && <Ruler />}
         <div
           className={documentSettings.backgroundColor ? undefined : "canvas-checkerboard"}
           style={{ position: "relative", gridColumn: 2, gridRow: 2, minWidth: 0, minHeight: 0 }}
@@ -168,6 +173,8 @@ export default function App() {
         onBackgroundColorChange={setBackgroundColor}
         gridVisible={documentSettings.gridVisible}
         onGridVisibleChange={setGridVisible}
+        rulerVisible={documentSettings.rulerVisible}
+        onRulerVisibleChange={setRulerVisible}
         onFieldFocus={nodeEdit.onFieldFocus}
         onFieldChange={nodeEdit.onFieldChange}
         onFieldCommit={nodeEdit.onFieldCommit}

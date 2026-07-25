@@ -44,13 +44,24 @@ Line width is set to `1 / viewport.zoom` — a fixed *scene-space* value that re
 
 Unlike `SelectionOverlay`, which floats on top of the canvas with `pointer-events: none`, a ruler that overlapped canvas content would permanently hide whatever's underneath its own strip. `App.tsx`'s canvas area is now a small CSS grid — a 20px corner box, a 20px-tall horizontal ruler, a 20px-wide vertical ruler, and the actual canvas viewport occupying the remaining cell — instead of the plain single `flex: 1` div it was before. The canvas viewport div (with `Canvas`/`SelectionOverlay`/`TextEditOverlay`/`Toolbar`/`ZoomIndicator` inside it, `position: relative` as its own positioning context) is unchanged internally; it just now lives in one grid cell instead of being the whole area, with `minWidth: 0; minHeight: 0` to stop it overflowing its cell the same way `minWidth: 0` was already needed to stop it overflowing its flex slot.
 
-## The grid toggle: a document setting, not a node edit
+## Both toggles: document settings, not node edits
 
-`gridVisible` joined `backgroundColor` in `documentStore` rather than becoming a node property or a `historyManager`-tracked change — same reasoning that already applied to background color: it's a rarely-changed, trivially-reversible global setting, not scene data worth an undo step. Wired to a plain `CheckboxField` (a small extraction from `ColorField`'s bundled checkbox, now used standalone for the first time) in `DocumentSection`, plus Cmd/Ctrl+' as a keyboard shortcut, matching Figma's own binding for the same action.
+`gridVisible` (and, added right after this walkthrough first shipped, `rulerVisible`) joined `backgroundColor` in `documentStore` rather than becoming a node property or a `historyManager`-tracked change — same reasoning that already applied to background color: rarely-changed, trivially-reversible global settings, not scene data worth an undo step. Both are wired to a plain `CheckboxField` (a small extraction from `ColorField`'s bundled checkbox, first used standalone for the grid toggle) in `DocumentSection`, plus keyboard shortcuts matching Figma's own bindings — Cmd/Ctrl+' for the grid, Shift+R for the ruler.
+
+The ruler's toggle needed one more piece the grid's didn't: hiding the grid is just skipping a draw call, but the ruler occupies real grid-layout space (see above), so hiding it means collapsing that space too, not just not rendering the `<Ruler>` component:
+
+```tsx
+const rulerSize = documentSettings.rulerVisible ? RULER_SIZE : 0;
+// ...
+gridTemplateColumns: `${rulerSize}px 1fr`,
+gridTemplateRows: `${rulerSize}px 1fr`,
+```
+
+Collapsing the track to `0px` and conditionally rendering `<Ruler />` together means the canvas viewport cell (which is already sized as the grid's remaining `1fr` track) reclaims that space automatically — no separate "full width" layout branch needed.
 
 ## Verified
 
-Checked the ruler/grid together at three zoom levels (100%, 173%, 58%) via Playwright screenshots — tick step adapts correctly at each (100 → 50 → 200), grid lines visibly align with ruler ticks at every level, and panned-out negative coordinates (down to -200) render correctly on both. Toggled the grid both via the checkbox and the keyboard shortcut, confirming they stay in sync (both read/write the same `documentStore` field). No console errors.
+Checked the ruler/grid together at three zoom levels (100%, 173%, 58%) via Playwright screenshots — tick step adapts correctly at each (100 → 50 → 200), grid lines visibly align with ruler ticks at every level, and panned-out negative coordinates (down to -200) render correctly on both. Toggled the grid both via the checkbox and the keyboard shortcut, confirming they stay in sync (both read/write the same `documentStore` field). Separately verified the ruler toggle: checkbox off removes the ruler and its layout space cleanly (no gap, canvas viewport reclaims the full area), Shift+R brings it back and updates the checkbox to match, and confirmed Shift+R doesn't also trigger the rectangle tool (a real risk, since plain "R" already does). No console errors.
 
 ## What's deliberately out of scope for this pass
 
