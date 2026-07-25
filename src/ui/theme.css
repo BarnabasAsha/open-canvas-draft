@@ -39,6 +39,12 @@
   --accent-text: oklch(82% 0.08 265);
   --selection: var(--accent);
   --canvas-label: oklch(62% 0.012 265);
+  /* Not overridden per-theme like the other tokens above — this draws over
+     the document's own canvas background, which the user can set to
+     anything regardless of app theme, so a mid-tone gray at low opacity
+     reads reasonably against either a light or dark page rather than
+     tuning for the app chrome's own light/dark surfaces. */
+  --grid-line: oklch(60% 0.01 265 / 16%);
   --shadow: oklch(0% 0 0 / 30%);
 
   --font-ui: "Geist", system-ui, sans-serif;
@@ -717,4 +723,23 @@
     0 10px,
     10px -10px,
     -10px 0px;
+}
+
+.ruler-corner {
+  background: var(--surface-panel);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.ruler {
+  background: var(--surface-panel);
+  overflow: hidden;
+}
+
+.ruler-horizontal {
+  border-bottom: 1px solid var(--border);
+}
+
+.ruler-vertical {
+  border-right: 1px solid var(--border);
 }

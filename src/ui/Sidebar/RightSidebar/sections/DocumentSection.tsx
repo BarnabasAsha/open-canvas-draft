@@ -1,8 +1,10 @@
-import { ColorField, PanelSection } from "../fields";
+import { CheckboxField, ColorField, PanelSection } from "../fields";
 
 interface DocumentSectionProps {
   backgroundColor: string | null;
   onBackgroundColorChange: (color: string | null) => void;
+  gridVisible: boolean;
+  onGridVisibleChange: (visible: boolean) => void;
 }
 
 // Shown in place of a node's properties when nothing is selected — the
@@ -12,7 +14,7 @@ interface DocumentSectionProps {
 // live-drag-then-commit gesture like a node field. Unchecking it (null)
 // makes the canvas transparent — Canvas.tsx renders a checkerboard behind
 // it, same convention as any node's nullable fill.
-export function DocumentSection({ backgroundColor, onBackgroundColorChange }: DocumentSectionProps) {
+export function DocumentSection({ backgroundColor, onBackgroundColorChange, gridVisible, onGridVisibleChange }: DocumentSectionProps) {
   return (
     <>
       <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>Canvas</div>
@@ -24,6 +26,9 @@ export function DocumentSection({ backgroundColor, onBackgroundColorChange }: Do
           onCommit={() => {}}
           onChange={onBackgroundColorChange}
         />
+      </PanelSection>
+      <PanelSection title="Layout">
+        <CheckboxField label="Show grid" checked={gridVisible} onChange={onGridVisibleChange} />
       </PanelSection>
     </>
   );

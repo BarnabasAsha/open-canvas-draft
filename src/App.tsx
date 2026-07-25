@@ -1,4 +1,5 @@
 import { Canvas } from "./canvas/Canvas";
+import { RULER_SIZE, Ruler } from "./canvas/Ruler";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import type { AlignKind } from "./canvas/tools/alignment";
@@ -77,6 +78,10 @@ function setBackgroundColor(color: string | null): void {
   documentStore.update((settings) => ({ ...settings, backgroundColor: color }));
 }
 
+function setGridVisible(visible: boolean): void {
+  documentStore.update((settings) => ({ ...settings, gridVisible: visible }));
+}
+
 function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
 }
@@ -106,20 +111,34 @@ export default function App() {
         onRename={renameLayer}
       />
       <div
-        className={documentSettings.backgroundColor ? undefined : "canvas-checkerboard"}
-        style={{ position: "relative", flex: 1, minWidth: 0, height: "100%" }}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          display: "grid",
+          gridTemplateColumns: `${RULER_SIZE}px 1fr`,
+          gridTemplateRows: `${RULER_SIZE}px 1fr`,
+        }}
       >
-        <Canvas />
-        <SelectionOverlay />
-        <TextEditOverlay />
-        <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
-        <ZoomIndicator zoom={viewport.zoom} visible={zoomIndicatorVisible} onReset={resetViewport} />
+        <Ruler />
+        <div
+          className={documentSettings.backgroundColor ? undefined : "canvas-checkerboard"}
+          style={{ position: "relative", gridColumn: 2, gridRow: 2, minWidth: 0, minHeight: 0 }}
+        >
+          <Canvas />
+          <SelectionOverlay />
+          <TextEditOverlay />
+          <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} />
+          <ZoomIndicator zoom={viewport.zoom} visible={zoomIndicatorVisible} onReset={resetViewport} />
+        </div>
       </div>
       <PropertiesPanel
         node={soleSelectedNode}
         selectionCount={selectedIdList.length}
         backgroundColor={documentSettings.backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
+        gridVisible={documentSettings.gridVisible}
+        onGridVisibleChange={setGridVisible}
         onFieldFocus={nodeEdit.onFieldFocus}
         onFieldChange={nodeEdit.onFieldChange}
         onFieldCommit={nodeEdit.onFieldCommit}

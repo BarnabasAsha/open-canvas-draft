@@ -1,5 +1,6 @@
 import type { SceneGraph } from "../../types/scene";
 import type { Viewport } from "../../utils/coordinates";
+import { drawGrid } from "./drawGrid";
 import { drawNode } from "./drawNode";
 
 export function drawScene(
@@ -9,6 +10,7 @@ export function drawScene(
   height: number,
   backgroundColor: string | null,
   viewport: Viewport,
+  gridVisible: boolean,
 ): void {
   // Background fill happens in plain (DPR-only) canvas space, before the
   // viewport transform, so it always covers the full visible area exactly
@@ -23,6 +25,8 @@ export function drawScene(
   ctx.save();
   ctx.translate(viewport.pan.x, viewport.pan.y);
   ctx.scale(viewport.zoom, viewport.zoom);
+
+  if (gridVisible) drawGrid(ctx, viewport, width, height);
 
   for (const id of scene.rootIds) {
     const node = scene.nodes[id];
