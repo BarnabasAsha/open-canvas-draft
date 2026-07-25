@@ -1,3 +1,4 @@
+import { AngleIcon } from "@phosphor-icons/react";
 import type { ArrowNode, LineNode, SceneNode } from "../../../../types/scene";
 import { NumberField, PanelSection } from "../fields";
 
@@ -66,7 +67,7 @@ export function PositionSection({ node, onFocus, onChange, onCommit }: PositionS
         )}
       </div>
       <NumberField
-        label="∠"
+        label={<AngleIcon size={14} />}
         value={node.rotation}
         onFocus={onFocus}
         onCommit={onCommit}
