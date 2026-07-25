@@ -267,32 +267,12 @@
   color: var(--accent);
 }
 
-.select-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 84px;
-  padding: 3px 6px;
-  font-size: 12px;
-  color: var(--text);
-  background: var(--surface-input);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  cursor: default;
-}
-
-.select-trigger:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.select-icon {
-  display: flex;
-  color: var(--text-muted);
-}
-
-.number-field-row {
+/* Shared bordered-box shape for every property-panel field — a label
+   inset inside the same box as the control, rather than external text to
+   its left. NumberField, SelectField, and ColorField all sit on this one
+   base so the panel reads as one consistent input language instead of
+   several different shapes glued together. */
+.field-box {
   display: flex;
   align-items: center;
   width: 100%;
@@ -302,11 +282,11 @@
   padding-left: 8px;
 }
 
-.number-field-row:focus-within {
+.field-box:focus-within {
   border-color: var(--accent);
 }
 
-.number-field-label {
+.field-box-label {
   font-size: 10.5px;
   font-weight: 600;
   color: var(--text-muted);
@@ -337,6 +317,53 @@
 
 .number-field-input:focus {
   outline: none;
+}
+
+.field-box.select-trigger {
+  gap: 6px;
+  padding-top: 8px;
+  padding-right: 8px;
+  padding-bottom: 8px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: default;
+}
+
+.select-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.select-trigger-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-icon {
+  display: flex;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.field-box.color-field-box {
+  padding: 4px 8px;
+  gap: 8px;
+}
+
+.color-field-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.color-field-swatch {
+  display: flex;
+  margin-left: auto;
 }
 
 /* Quiet at rest — a visible border only, no fill — so the box doesn't
