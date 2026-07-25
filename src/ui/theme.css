@@ -311,7 +311,7 @@
   color: var(--text);
   background: transparent;
   border: none;
-  text-align: left;
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
