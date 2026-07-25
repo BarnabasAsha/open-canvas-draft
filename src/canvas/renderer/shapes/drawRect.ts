@@ -1,4 +1,5 @@
 import type { RectNode } from "../../../types/scene";
+import { applyStrokeStyle } from "./strokeStyle";
 
 interface RoundedBox {
   width: number;
@@ -18,7 +19,7 @@ export function buildRectGeometry(node: RoundedBox): Path2D {
 
 export function drawRect(ctx: CanvasRenderingContext2D, node: RectNode): void {
   const path = buildRectGeometry(node);
-  const { fill, stroke, strokeWidth } = node;
+  const { fill, stroke, strokeWidth, strokeStyle } = node;
 
   if (fill) {
     ctx.fillStyle = fill;
@@ -27,6 +28,7 @@ export function drawRect(ctx: CanvasRenderingContext2D, node: RectNode): void {
   if (stroke && strokeWidth > 0) {
     ctx.strokeStyle = stroke;
     ctx.lineWidth = strokeWidth;
+    applyStrokeStyle(ctx, strokeStyle, strokeWidth);
     ctx.stroke(path);
   }
 }

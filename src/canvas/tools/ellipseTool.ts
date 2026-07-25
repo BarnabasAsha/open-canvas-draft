@@ -18,5 +18,6 @@ export const ellipseTool: Tool = createDragToCreateTool({
     fill: "#d9d9d9",
     stroke: null,
     strokeWidth: 0,
+    strokeStyle: "solid",
   }),
 });

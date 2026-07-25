@@ -133,6 +133,7 @@ function buildPathNode(nodeId: NodeId, anchors: DraftAnchor[], name: string): Pa
     fill: null,
     stroke: "#111827",
     strokeWidth: 2,
+    strokeStyle: "solid",
   };
 }
 

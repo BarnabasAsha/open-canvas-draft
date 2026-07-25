@@ -22,6 +22,7 @@ export const lineTool: Tool = createDragToCreateTool({
     interactions: [],
     stroke: "#111827",
     strokeWidth: 2,
+    strokeStyle: "solid",
   }),
   // A perfectly horizontal or vertical line has a real width/height of 0 in
   // one axis — the bbox "either dimension trivial" rule would always
