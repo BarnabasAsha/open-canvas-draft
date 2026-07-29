@@ -1,11 +1,12 @@
 import type { NodeId } from "../types/scene";
-import { createStore } from "./createStore";
+import { createActivePageFacade } from "./activePageFacade";
+import { getActivePage } from "./pagesStore";
 
 export interface SelectionState {
   selectedIds: Set<NodeId>;
   hoveredId: NodeId | null;
 }
 
-const initialSelection: SelectionState = { selectedIds: new Set(), hoveredId: null };
-
-export const selectionStore = createStore<SelectionState>(initialSelection);
+// Thin facade over whichever page is active — see sceneStore.ts's comment
+// for why this preserves every existing import site unchanged.
+export const selectionStore = createActivePageFacade(() => getActivePage().selection);

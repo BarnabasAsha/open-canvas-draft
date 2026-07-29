@@ -1,29 +1,12 @@
 import type { Command } from "../commands/Command";
-import { sceneStore } from "./sceneStore";
+import { getActivePage } from "./pagesStore";
 
-let undoStack: Command[] = [];
-let redoStack: Command[] = [];
-
-function execute(command: Command): void {
-  sceneStore.update((graph) => command.apply(graph));
-  undoStack.push(command);
-  redoStack = [];
-}
-
-function undo(): void {
-  const command = undoStack.pop();
-  if (!command) return;
-
-  sceneStore.update((graph) => command.invert(graph));
-  redoStack.push(command);
-}
-
-function redo(): void {
-  const command = redoStack.pop();
-  if (!command) return;
-
-  sceneStore.update((graph) => command.apply(graph));
-  undoStack.push(command);
-}
-
-export const historyManager = { execute, undo, redo };
+// Thin facade over whichever page is active — same idea as sceneStore.ts's
+// facade, just simpler: nothing subscribes to undo/redo state today (no
+// visible undo/redo buttons, keyboard-only), so this is a plain
+// pass-through with no subscribe/notify machinery needed.
+export const historyManager = {
+  execute: (command: Command) => getActivePage().history.execute(command),
+  undo: () => getActivePage().history.undo(),
+  redo: () => getActivePage().history.redo(),
+};
