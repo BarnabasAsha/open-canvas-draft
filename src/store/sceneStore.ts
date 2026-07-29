@@ -1,34 +1,15 @@
-import type { NodeId, SceneGraph, SceneNode } from "../types/scene";
-import { createStore } from "./createStore";
-import { addNodeToGraph, removeNodeFromGraph, reparentNodeInGraph } from "./graphMutations";
-import { reconcileGroupBounds } from "./reconcileGroupBounds";
+import { createActivePageFacade } from "./activePageFacade";
+import { getActivePage } from "./pagesStore";
+import type { SceneStore } from "./createSceneStore";
 
-const emptyScene: SceneGraph = { nodes: {}, rootIds: [] };
-
-const store = createStore<SceneGraph>(emptyScene);
-
-// Every write funnels through here — including addNode/removeNode/
-// reparentNode below — so a Group's bounds stay reconciled to its children
-// after literally any mutation (live drag, resize, delete, undo/redo)
-// without every one of those call sites needing to know groups exist.
-function update(updater: (graph: SceneGraph) => SceneGraph): void {
-  store.update((graph) => reconcileGroupBounds(updater(graph)));
-}
-
-// Direct, non-undoable mutations — mirrors how position updates during a
-// live drag call store.update() directly. Callers that need these
-// undoable (e.g. committing a finished drag or a newly drawn frame) wrap
-// the equivalent graphMutations function in a Command instead.
-function addNode(node: SceneNode): void {
-  update((graph) => addNodeToGraph(graph, node));
-}
-
-function removeNode(nodeId: NodeId): void {
-  update((graph) => removeNodeFromGraph(graph, nodeId));
-}
-
-function reparentNode(nodeId: NodeId, newParentId: NodeId | null): void {
-  update((graph) => reparentNodeInGraph(graph, nodeId, newParentId));
-}
-
-export const sceneStore = { ...store, update, addNode, removeNode, reparentNode };
+// A thin facade over whichever page is currently active — every file that
+// already imports sceneStore keeps working completely unchanged, since this
+// still satisfies the exact same SceneStore shape; only where the state
+// actually lives changed (per-page instead of one global instance). See
+// activePageFacade.ts and pagesStore.ts for the real implementation.
+export const sceneStore: SceneStore = {
+  ...createActivePageFacade(() => getActivePage().scene),
+  addNode: (node) => getActivePage().scene.addNode(node),
+  removeNode: (nodeId) => getActivePage().scene.removeNode(nodeId),
+  reparentNode: (nodeId, newParentId) => getActivePage().scene.reparentNode(nodeId, newParentId),
+};

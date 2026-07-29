@@ -8,6 +8,8 @@ export interface Viewport {
   zoom: number;
 }
 
+export const INITIAL_VIEWPORT: Viewport = { pan: { x: 0, y: 0 }, zoom: 1 };
+
 export function screenToScene(screenPoint: Point, viewport: Viewport): Point {
   return {
     x: (screenPoint.x - viewport.pan.x) / viewport.zoom,
