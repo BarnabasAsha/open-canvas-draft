@@ -20,6 +20,7 @@ interface LeftSidebarProps {
   onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
+  onToggleInstanceChildVisible: (instanceId: NodeId, defNodeId: NodeId) => void;
   onRename: (id: NodeId, name: string) => void;
 }
 
@@ -38,6 +39,7 @@ export function LeftSidebar({
   onSelect,
   onToggleVisible,
   onToggleLocked,
+  onToggleInstanceChildVisible,
   onRename,
 }: LeftSidebarProps) {
   return (
@@ -66,6 +68,7 @@ export function LeftSidebar({
         onSelect={onSelect}
         onToggleVisible={onToggleVisible}
         onToggleLocked={onToggleLocked}
+        onToggleInstanceChildVisible={onToggleInstanceChildVisible}
         onRename={onRename}
       />
     </div>

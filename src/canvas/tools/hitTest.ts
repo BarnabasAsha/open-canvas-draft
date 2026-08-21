@@ -1,13 +1,7 @@
+import { nodeKinds } from "../renderer/nodeKinds";
 import type { NodeId, SceneGraph, SceneNode } from "../../types/scene";
 import type { Point } from "../../utils/coordinates";
 import { applyNodeTransform } from "../renderer/applyNodeTransform";
-import { buildArrowGeometry } from "../renderer/shapes/drawArrow";
-import { buildEllipseGeometry } from "../renderer/shapes/drawEllipse";
-import { buildLineGeometry } from "../renderer/shapes/drawLine";
-import { buildPathGeometry } from "../renderer/shapes/drawPath";
-import { buildRectGeometry } from "../renderer/shapes/drawRect";
-
-const MIN_STROKE_HIT_WIDTH = 4;
 
 function createScratchContext(): CanvasRenderingContext2D {
   const ctx = document.createElement("canvas").getContext("2d");
@@ -50,54 +44,8 @@ function hitTestNode(scenePoint: Point, node: SceneNode, scene: SceneGraph): Nod
 }
 
 function hitTestOwnBody(scenePoint: Point, node: SceneNode): boolean {
-  const { x, y } = scenePoint;
-
-  switch (node.type) {
-    case "rect":
-      if (node.fill) return scratchCtx.isPointInPath(buildRectGeometry(node), x, y);
-      if (node.stroke) return strokeHit(buildRectGeometry(node), node.strokeWidth, x, y);
-      return false;
-    case "ellipse":
-      if (node.fill) return scratchCtx.isPointInPath(buildEllipseGeometry(node), x, y);
-      if (node.stroke) return strokeHit(buildEllipseGeometry(node), node.strokeWidth, x, y);
-      return false;
-    case "line":
-      return strokeHit(buildLineGeometry(node), node.strokeWidth, x, y);
-    case "arrow":
-      return strokeHit(buildArrowGeometry(node), node.strokeWidth, x, y);
-    case "path": {
-      const geometry = buildPathGeometry(node);
-      // A closed path reads as an enclosed region even with no explicit
-      // fill color — unlike an open squiggle, which has no real "inside" —
-      // so its interior is still a valid click target, not just the line.
-      if ((node.fill || node.closed) && scratchCtx.isPointInPath(geometry, x, y)) return true;
-      if (node.stroke) return strokeHit(geometry, node.strokeWidth, x, y);
-      return false;
-    }
-    case "image":
-    case "text":
-      return scratchCtx.isPointInPath(rectBoundsPath(node), x, y);
-    case "frame":
-      return scratchCtx.isPointInPath(buildRectGeometry(node), x, y);
-    case "section":
-    case "group":
-      // No fill, but its bbox is still a real click target — same as a
-      // frame's body, just always invisible. Otherwise the only way to
-      // select a section/group is via the Layers panel.
-      return scratchCtx.isPointInPath(rectBoundsPath(node), x, y);
-  }
-}
-
-function strokeHit(path: Path2D, strokeWidth: number, x: number, y: number): boolean {
-  const previousLineWidth = scratchCtx.lineWidth;
-  scratchCtx.lineWidth = Math.max(strokeWidth, MIN_STROKE_HIT_WIDTH);
-  const hit = scratchCtx.isPointInStroke(path, x, y);
-  scratchCtx.lineWidth = previousLineWidth;
-  return hit;
-}
-
-function rectBoundsPath(node: { width: number; height: number }): Path2D {
-  const path = new Path2D();
-  path.rect(0, 0, node.width, node.height);
-  return path;
+  // See drawNode.ts for why this cast is needed — nodeKinds is keyed by
+  // SceneNode["type"], which TS can't correlate back to node's narrowed
+  // type at the lookup site.
+  return nodeKinds[node.type].hitTestOwnBody(scratchCtx, node as never, scenePoint.x, scenePoint.y);
 }

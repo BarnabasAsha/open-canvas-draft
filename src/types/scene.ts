@@ -1,6 +1,7 @@
 // ─── Core scene types ───────────────────────────────────────────────
 export type NodeId = string;
 export type VariableId = string;
+export type ComponentId = string;
 
 export interface BaseNode {
   id: NodeId;
@@ -177,6 +178,20 @@ export interface GroupNode extends BaseNode {
   children: NodeId[];
 }
 
+// A reusable, saved composition of other nodes (see componentsStore.ts) —
+// placed on canvas as one of these rather than the definition itself.
+// `overrides` is keyed by the DEFINITION-LOCAL node id, storing only the
+// changed fields (e.g. { label: "Submit" }), never a full subtree copy —
+// which fields are valid there is enforced at the UI layer per the
+// definition node's own type, not by TypeScript (same convention BaseNode's
+// own `bindings` comment already documents for the same reason: keyof a
+// union type only exposes fields common to every member).
+export interface InstanceNode extends BaseNode {
+  type: "instance";
+  componentId: ComponentId;
+  overrides: Record<NodeId, Partial<SceneNode>>;
+}
+
 export type SceneNode =
   | RectNode
   | EllipseNode
@@ -187,7 +202,8 @@ export type SceneNode =
   | PathNode
   | FrameNode
   | SectionNode
-  | GroupNode;
+  | GroupNode
+  | InstanceNode;
 
 // The node types that can hold children — resize/hit-test/reparent logic
 // that needs to walk into children checks against this, not against

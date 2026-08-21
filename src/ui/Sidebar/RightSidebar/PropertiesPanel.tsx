@@ -7,7 +7,9 @@ import { AppearanceSection } from "./sections/AppearanceSection";
 import { CornerRadiusSection } from "./sections/CornerRadiusSection";
 import { DocumentSection } from "./sections/DocumentSection";
 import { PositionSection } from "./sections/PositionSection";
+import { SemanticsSection } from "./sections/SemanticsSection";
 import { StrokeSection } from "./sections/StrokeSection";
+import { TextContentSection } from "./sections/TextContentSection";
 import { TypographySection } from "./sections/TypographySection";
 
 interface PropertiesPanelProps {
@@ -18,6 +20,18 @@ interface PropertiesPanelProps {
   // one of them, standing in for "the shared style fields that whole set
   // can be batch-edited through" (see SharedPropertySections below).
   uniformNode: SceneNode | null;
+  // True when `node` is synthesized from a node INSIDE a component
+  // instance's definition, addressed via a virtual id (see
+  // instanceVirtualId.ts) rather than a real graph node. Position edits DO
+  // work (they become an override, same as any other field) — only the
+  // container Align section stays hidden, since aligning a virtual
+  // container's children against ITSELF isn't wired up. One known caveat,
+  // not fixed here: an override that sets a child's x/y/width/height is
+  // stored in the definition's authored coordinate space, so resizing the
+  // INSTANCE as a whole after overriding a child's position can scale that
+  // override oddly — fine for the common case of styling without also
+  // resizing the whole instance in the same session.
+  isInstanceChild: boolean;
   backgroundColor: string | null;
   onBackgroundColorChange: (color: string | null) => void;
   gridVisible: boolean;
@@ -86,6 +100,7 @@ export function PropertiesPanel({
   node,
   selectionCount,
   uniformNode,
+  isInstanceChild,
   backgroundColor,
   onBackgroundColorChange,
   gridVisible,
@@ -124,7 +139,7 @@ export function PropertiesPanel({
         />
       ) : selectionCount === 1 && node ? (
         <>
-          {isAlignableContainer(node) && (
+          {!isInstanceChild && isAlignableContainer(node) && (
             <PanelSection title="Align">
               <AlignmentToolbar onAlign={onAlign} />
             </PanelSection>
@@ -181,6 +196,8 @@ function PropertySections({ node, onFocus, onChange, onCommit }: PropertySection
     <>
       <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>{node.name}</div>
       <PositionSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      {node.semantics && <SemanticsSection semantics={node.semantics} />}
+      {node.type === "text" && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {cornerRadiusNode && (
@@ -201,6 +218,8 @@ function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertyS
 
   return (
     <>
+      {node.semantics && <SemanticsSection semantics={node.semantics} />}
+      {node.type === "text" && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {cornerRadiusNode && (

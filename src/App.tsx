@@ -5,6 +5,8 @@ import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import type { AlignKind } from "./canvas/tools/alignment";
 import { computeAlignedNodes, computeAlignedToContainer, isAlignableContainer } from "./canvas/tools/alignment";
+import type { UiPrimitiveKind } from "./canvas/primitives/builtInComponents";
+import { BUILT_IN_COMPONENT_IDS } from "./canvas/primitives/builtInComponents";
 import type { FramePreset } from "./canvas/tools/framePresets";
 import { buildFrameNode } from "./canvas/tools/frameTool";
 import { toolManager } from "./canvas/tools/toolManager";
@@ -28,16 +30,20 @@ import {
   switchToPage as switchActivePage,
   type PageId,
 } from "./store/pagesStore";
+import { createInstanceNode, getComponent } from "./store/componentsStore";
+import { parseVirtualId } from "./store/instanceVirtualId";
+import type { VirtualId } from "./store/instanceVirtualId";
 import { reconcileGroupBounds } from "./store/reconcileGroupBounds";
 import { sceneStore } from "./store/sceneStore";
 import { selectionStore } from "./store/selectionStore";
 import { viewportStore } from "./store/viewportStore";
-import type { NodeId, SceneNode } from "./types/scene";
+import type { NodeId, SceneGraph, SceneNode } from "./types/scene";
 import { INITIAL_VIEWPORT, screenToScene } from "./utils/coordinates";
 import { generateId } from "./utils/id";
 import { nextDefaultName } from "./utils/nodeNaming";
 import { LeftSidebar } from "./ui/Sidebar/LeftSidebar/LeftSidebar";
 import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
+import { useInstanceOverrideEdit } from "./ui/Sidebar/RightSidebar/useInstanceOverrideEdit";
 import { useMultiNodeEdit } from "./ui/Sidebar/RightSidebar/useMultiNodeEdit";
 import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
 import { Toolbar } from "./ui/Toolbar/Toolbar";
@@ -58,6 +64,29 @@ function toggleVisible(id: NodeId): void {
   const node = sceneStore.getState().nodes[id];
   if (!node) return;
   historyManager.execute(createSetNodeCommand(id, node, { ...node, visible: !node.visible }));
+}
+
+// Same idea as toggleVisible, but for a node INSIDE a component instance's
+// definition — there's no real graph node to flip, so this writes a
+// `visible` override on the owning instance instead. This is how a
+// Checkbox/Radio/Toggle's "on" state actually works now: showing the
+// Check/Dot/moved Thumb is just toggling that one child's visibility, the
+// same interaction as any other layer.
+function toggleInstanceChildVisible(instanceId: NodeId, defNodeId: NodeId): void {
+  const instance = sceneStore.getState().nodes[instanceId];
+  if (!instance || instance.type !== "instance") return;
+
+  const definition = getComponent(instance.componentId);
+  const defNode = definition?.nodes[defNodeId];
+  if (!defNode) return;
+
+  const currentOverride = instance.overrides[defNodeId] as { visible?: boolean } | undefined;
+  const currentVisible = currentOverride?.visible ?? defNode.visible;
+  const nextInstance = {
+    ...instance,
+    overrides: { ...instance.overrides, [defNodeId]: { ...instance.overrides[defNodeId], visible: !currentVisible } },
+  };
+  historyManager.execute(createSetNodeCommand(instanceId, instance, nextInstance));
 }
 
 function toggleLocked(id: NodeId): void {
@@ -148,8 +177,54 @@ function placeFramePreset(preset: FramePreset): void {
   toolManager.setActiveTool("select");
 }
 
+// Same "fixed size, centered on the visible canvas" placement as
+// placeFramePreset above, generalized across every UI primitive kind via
+// the UI_PRIMITIVES table instead of one function per kind.
+// Placing "Button" creates an instance of the SAME built-in Button
+// component every other placed Button instances too — not a one-off node —
+// so it gets exactly the editing story any other component/instance pair
+// already has (see builtInComponents.ts).
+function placeUiPrimitive(kind: UiPrimitiveKind): void {
+  const definition = getComponent(BUILT_IN_COMPONENT_IDS[kind]);
+  if (!definition) return;
+
+  const { width: canvasWidth, height: canvasHeight } = canvasSizeStore.getState();
+  const sceneCenter = screenToScene({ x: canvasWidth / 2, y: canvasHeight / 2 }, viewportStore.getState());
+  const graph = sceneStore.getState();
+
+  const instance = createInstanceNode(
+    generateId(),
+    nextDefaultName(graph, definition.name),
+    sceneCenter.x - definition.width / 2,
+    sceneCenter.y - definition.height / 2,
+    definition.width,
+    definition.height,
+    definition,
+  );
+
+  historyManager.execute(createAddNodeCommand(instance));
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([instance.id]) }));
+  toolManager.setActiveTool("select");
+}
+
 function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
+}
+
+// A selected id inside a component instance (see instanceVirtualId.ts)
+// doesn't name a real graph node — this synthesizes one for display, by
+// merging the instance's override on top of whatever the definition
+// itself authored, the same precedence resolveInstance.ts uses to render it.
+function resolveVirtualSelection(virtual: VirtualId, scene: SceneGraph): SceneNode | null {
+  const instance = scene.nodes[virtual.instanceId];
+  if (!instance || instance.type !== "instance") return null;
+
+  const definition = getComponent(instance.componentId);
+  const defNode = definition?.nodes[virtual.defNodeId];
+  if (!defNode) return null;
+
+  const override = instance.overrides[virtual.defNodeId] as Record<string, unknown> | undefined;
+  return { ...defNode, ...override } as SceneNode;
 }
 
 // Blurring first flushes an in-progress text edit through its existing
@@ -172,7 +247,13 @@ export default function App() {
   const zoomIndicatorVisible = useZoomIndicatorVisible(viewport.zoom);
 
   const selectedIdList = [...selectedIds];
-  const soleSelectedNode = selectedIdList.length === 1 ? (scene.nodes[selectedIdList[0]] ?? null) : null;
+  const soleSelectedId = selectedIdList.length === 1 ? selectedIdList[0] : null;
+  const virtualSelection = soleSelectedId ? parseVirtualId(soleSelectedId) : null;
+  const soleSelectedNode = virtualSelection
+    ? resolveVirtualSelection(virtualSelection, scene)
+    : soleSelectedId
+      ? (scene.nodes[soleSelectedId] ?? null)
+      : null;
 
   // A same-type multi-selection (e.g. two Text nodes) can share style
   // fields — see the PropertiesPanel doc comment for what's shown and why
@@ -200,11 +281,13 @@ export default function App() {
   const uniformNode = directUniformNode ?? containerUniformNode;
   const uniformNodeIds = directUniformNode ? selectedIdList : containerChildIds;
 
-  // Hooks can't be called conditionally, so both are always instantiated;
-  // whichever one applies is picked below. Neither does anything when
-  // handed an empty id (single) or id list (multi/shared).
-  const singleNodeEdit = useNodeEdit(soleSelectedNode?.id ?? "");
+  // Hooks can't be called conditionally, so all three are always
+  // instantiated; whichever applies is picked below. Neither does anything
+  // when handed an empty id (single/instance-child) or id list (multi/shared).
+  const singleNodeEdit = useNodeEdit(!virtualSelection && soleSelectedId ? soleSelectedId : "");
+  const instanceChildEdit = useInstanceOverrideEdit(virtualSelection?.instanceId ?? "", virtualSelection?.defNodeId ?? "");
   const multiNodeEdit = useMultiNodeEdit(uniformNode ? uniformNodeIds : []);
+  const activeSingleEdit = virtualSelection ? instanceChildEdit : singleNodeEdit;
 
   const rulerSize = documentSettings.rulerVisible ? RULER_SIZE : 0;
 
@@ -222,6 +305,7 @@ export default function App() {
         onSelect={selectLayer}
         onToggleVisible={toggleVisible}
         onToggleLocked={toggleLocked}
+        onToggleInstanceChildVisible={toggleInstanceChildVisible}
         onRename={renameLayer}
       />
       <div
@@ -242,7 +326,12 @@ export default function App() {
           <Canvas />
           <SelectionOverlay />
           <TextEditOverlay />
-          <Toolbar activeToolId={activeToolId} onSelectTool={toolManager.setActiveTool} onSelectFramePreset={placeFramePreset} />
+          <Toolbar
+            activeToolId={activeToolId}
+            onSelectTool={toolManager.setActiveTool}
+            onSelectFramePreset={placeFramePreset}
+            onSelectPrimitive={placeUiPrimitive}
+          />
           <ZoomIndicator zoom={viewport.zoom} visible={zoomIndicatorVisible} onReset={resetViewport} />
         </div>
       </div>
@@ -250,15 +339,16 @@ export default function App() {
         node={soleSelectedNode}
         selectionCount={selectedIdList.length}
         uniformNode={uniformNode}
+        isInstanceChild={virtualSelection !== null}
         backgroundColor={documentSettings.backgroundColor}
         onBackgroundColorChange={setBackgroundColor}
         gridVisible={documentSettings.gridVisible}
         onGridVisibleChange={setGridVisible}
         rulerVisible={documentSettings.rulerVisible}
         onRulerVisibleChange={setRulerVisible}
-        onFieldFocus={singleNodeEdit.onFieldFocus}
-        onFieldChange={singleNodeEdit.onFieldChange}
-        onFieldCommit={singleNodeEdit.onFieldCommit}
+        onFieldFocus={activeSingleEdit.onFieldFocus}
+        onFieldChange={activeSingleEdit.onFieldChange}
+        onFieldCommit={activeSingleEdit.onFieldCommit}
         onSharedFieldFocus={multiNodeEdit.onFieldFocus}
         onSharedFieldChange={multiNodeEdit.onFieldChange}
         onSharedFieldCommit={multiNodeEdit.onFieldCommit}
