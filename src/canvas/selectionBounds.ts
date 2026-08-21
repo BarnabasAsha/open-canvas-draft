@@ -1,3 +1,6 @@
+import { getComponent } from "../store/componentsStore";
+import { parseVirtualId } from "../store/instanceVirtualId";
+import { resolveInstance } from "../store/resolveInstance";
 import type { ArrowNode, LineNode, NodeId, SceneNode } from "../types/scene";
 import type { Point } from "../utils/coordinates";
 import { getWorldMatrix } from "../utils/worldTransform";
@@ -6,6 +9,9 @@ export function getSceneCorners(
   nodeId: NodeId,
   nodes: Record<NodeId, SceneNode>,
 ): [Point, Point, Point, Point] | null {
+  const virtual = parseVirtualId(nodeId);
+  if (virtual) return getVirtualChildCorners(nodeId, virtual.instanceId, nodes);
+
   const node = nodes[nodeId];
   if (!node) return null;
 
@@ -13,12 +19,41 @@ export function getSceneCorners(
     return getEndpointBoxCorners(node, nodes);
   }
 
-  const matrix = getWorldMatrix(nodeId, nodes);
+  return cornersFromMatrix(getWorldMatrix(nodeId, nodes), node.width, node.height);
+}
+
+// A node INSIDE a component instance has no entry in the real graph — its
+// corners come from resolving the instance (same as drawInstance.ts does
+// to render it) and composing two matrices: the instance's own world
+// transform, then the resolved child's transform WITHIN that instance
+// (walking the resolved tree exactly the way getWorldMatrix already walks
+// a real parentId chain, since a ResolvedSubtree is shaped just like one).
+function getVirtualChildCorners(
+  virtualId: NodeId,
+  instanceId: NodeId,
+  nodes: Record<NodeId, SceneNode>,
+): [Point, Point, Point, Point] | null {
+  const instance = nodes[instanceId];
+  if (!instance || instance.type !== "instance") return null;
+
+  const definition = getComponent(instance.componentId);
+  if (!definition) return null;
+
+  const resolved = resolveInstance(instance, definition);
+  const childNode = resolved.nodes[virtualId];
+  if (!childNode) return null;
+
+  const instanceMatrix = getWorldMatrix(instanceId, nodes);
+  const localMatrix = getWorldMatrix(virtualId, resolved.nodes);
+  return cornersFromMatrix(instanceMatrix.multiply(localMatrix), childNode.width, childNode.height);
+}
+
+function cornersFromMatrix(matrix: DOMMatrix, width: number, height: number): [Point, Point, Point, Point] {
   const localCorners: Point[] = [
     { x: 0, y: 0 },
-    { x: node.width, y: 0 },
-    { x: node.width, y: node.height },
-    { x: 0, y: node.height },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height },
   ];
 
   return localCorners.map((corner) => {

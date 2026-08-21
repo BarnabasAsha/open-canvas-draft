@@ -1,15 +1,6 @@
 import type { NodeId, SceneNode } from "../../types/scene";
 import { applyNodeTransform } from "./applyNodeTransform";
-import { drawArrow } from "./shapes/drawArrow";
-import { drawEllipse } from "./shapes/drawEllipse";
-import { drawFrame } from "./shapes/drawFrame";
-import { drawGroup } from "./shapes/drawGroup";
-import { drawImage } from "./shapes/drawImage";
-import { drawLine } from "./shapes/drawLine";
-import { drawPath } from "./shapes/drawPath";
-import { drawRect } from "./shapes/drawRect";
-import { drawSection } from "./shapes/drawSection";
-import { drawText } from "./shapes/drawText";
+import { nodeKinds } from "./nodeKinds";
 
 export function drawNode(
   ctx: CanvasRenderingContext2D,
@@ -20,40 +11,11 @@ export function drawNode(
 
   ctx.save();
   applyTransform(ctx, node);
-
-  switch (node.type) {
-    case "rect":
-      drawRect(ctx, node);
-      break;
-    case "ellipse":
-      drawEllipse(ctx, node);
-      break;
-    case "line":
-      drawLine(ctx, node);
-      break;
-    case "arrow":
-      drawArrow(ctx, node);
-      break;
-    case "image":
-      drawImage(ctx, node);
-      break;
-    case "text":
-      drawText(ctx, node);
-      break;
-    case "path":
-      drawPath(ctx, node);
-      break;
-    case "frame":
-      drawFrame(ctx, node, nodes);
-      break;
-    case "section":
-      drawSection(ctx, node, nodes);
-      break;
-    case "group":
-      drawGroup(ctx, node, nodes);
-      break;
-  }
-
+  // nodeKinds is keyed by SceneNode["type"], so TS can't correlate the
+  // lookup back to node's already-narrowed type on its own — one cast here
+  // stands in for what used to be zero safety across every case of a
+  // switch statement with no exhaustiveness check.
+  nodeKinds[node.type].draw(ctx, node as never, nodes);
   ctx.restore();
 }
 

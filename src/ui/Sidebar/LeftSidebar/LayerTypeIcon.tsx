@@ -4,6 +4,7 @@ import {
   FrameCornersIcon,
   ImageIcon,
   LineSegmentIcon,
+  PackageIcon,
   PenNibIcon,
   RectangleIcon,
   RowsIcon,
@@ -27,6 +28,7 @@ const ICON_BY_TYPE: Record<SceneNode["type"], typeof RectangleIcon> = {
   frame: FrameCornersIcon,
   section: RowsIcon,
   group: SelectionIcon,
+  instance: PackageIcon,
 };
 
 export function LayerTypeIcon({ type }: { type: SceneNode["type"] }) {

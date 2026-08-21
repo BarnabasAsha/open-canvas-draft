@@ -297,6 +297,37 @@
   padding-right: 4px;
 }
 
+/* A block layout, not the shared field-box row shape — multi-line content
+   needs real width and height, not a compact single-line row. */
+.textarea-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.textarea-field-label {
+  padding-right: 0;
+}
+
+.textarea-field-input {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.textarea-field-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* BaseNumberField.Root renders an unstyled block div with no flex-grow of
    its own — left alone it shrinks-to-fit the input's intrinsic ~20ch
    width instead of stretching, which happened to look right in narrow
@@ -330,6 +361,19 @@
 
 .number-field-input:focus {
   outline: none;
+}
+
+.semantics-value {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 8px 8px 0;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .field-box.select-trigger {

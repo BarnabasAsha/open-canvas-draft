@@ -1,7 +1,9 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { CaretRightIcon, EyeClosedIcon, EyeIcon, LockSimpleIcon, LockSimpleOpenIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { getComponent } from "../../../store/componentsStore";
 import type { NodeId, SceneGraph } from "../../../types/scene";
+import { InstanceChildRow } from "./InstanceChildRow";
 import { LayerTypeIcon } from "./LayerTypeIcon";
 
 interface LayerItemProps {
@@ -12,6 +14,7 @@ interface LayerItemProps {
   onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
+  onToggleInstanceChildVisible: (instanceId: NodeId, defNodeId: NodeId) => void;
   onRename: (id: NodeId, name: string) => void;
 }
 
@@ -26,6 +29,7 @@ export function LayerItem({
   onSelect,
   onToggleVisible,
   onToggleLocked,
+  onToggleInstanceChildVisible,
   onRename,
 }: LayerItemProps) {
   const [expanded, setExpanded] = useState(true);
@@ -48,6 +52,20 @@ export function LayerItem({
   // the topmost layer reads first, matching every other layers panel.
   const childIds = isContainer ? [...node.children].reverse() : [];
 
+  // An instance's "children" aren't real graph nodes — they're whatever the
+  // definition it references is built from. Skip past the synthetic
+  // wrapper frame componentMutations.ts builds (an implementation detail,
+  // not something the user drew) straight to ITS children, so what shows
+  // here is exactly the nodes originally selected when the component was
+  // created.
+  const definition = node.type === "instance" ? getComponent(node.componentId) : undefined;
+  const definitionRoot = definition?.nodes[definition.rootId];
+  const definitionRootChildIds =
+    definitionRoot && (definitionRoot.type === "frame" || definitionRoot.type === "section" || definitionRoot.type === "group")
+      ? [...definitionRoot.children].reverse()
+      : [];
+  const isExpandable = isContainer || definitionRootChildIds.length > 0;
+
   return (
     <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
       <div
@@ -58,7 +76,7 @@ export function LayerItem({
         data-locked={node.locked || undefined}
         style={{ paddingLeft: 8 + depth * 14 }}
       >
-        {isContainer ? (
+        {isExpandable ? (
           <Collapsible.Trigger
             className="icon-button"
             aria-label={expanded ? "Collapse" : "Expand"}
@@ -136,7 +154,25 @@ export function LayerItem({
               onSelect={onSelect}
               onToggleVisible={onToggleVisible}
               onToggleLocked={onToggleLocked}
+              onToggleInstanceChildVisible={onToggleInstanceChildVisible}
               onRename={onRename}
+            />
+          ))}
+        </Collapsible.Panel>
+      )}
+      {definition && definitionRootChildIds.length > 0 && (
+        <Collapsible.Panel>
+          {definitionRootChildIds.map((childId) => (
+            <InstanceChildRow
+              key={childId}
+              instanceId={nodeId}
+              defNode={definition.nodes[childId]}
+              definitionNodes={definition.nodes}
+              overrides={node.type === "instance" ? node.overrides : {}}
+              depth={depth + 1}
+              selectedIds={selectedIds}
+              onSelect={onSelect}
+              onToggleVisible={onToggleInstanceChildVisible}
             />
           ))}
         </Collapsible.Panel>

@@ -83,6 +83,38 @@ export function NumberField({ label, value, onFocus, onChange, onCommit, min, ma
   );
 }
 
+interface TextAreaFieldProps {
+  label: string;
+  value: string;
+  onFocus: () => void;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+}
+
+// Live-preview-then-commit, same as NumberField, but for a text node's
+// actual string content — the one field TypographySection deliberately
+// doesn't cover (that section is style only: font/size/color, never the
+// text itself). Multi-line since content can be, same as the canvas's own
+// inline double-click editor (TextEditOverlay.tsx) — this is a second,
+// independent way to reach the same field, needed because that overlay
+// only knows how to address a real top-level node, not one living inside
+// a component instance.
+export function TextAreaField({ label, value, onFocus, onChange, onCommit }: TextAreaFieldProps) {
+  return (
+    <div className="textarea-field">
+      <span className="field-box-label textarea-field-label">{label}</span>
+      <textarea
+        className="textarea-field-input"
+        value={value}
+        rows={3}
+        onFocus={onFocus}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onCommit}
+      />
+    </div>
+  );
+}
+
 interface ColorFieldProps {
   label: string;
   value: string | null;
