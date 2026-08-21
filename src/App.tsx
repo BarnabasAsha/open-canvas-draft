@@ -15,20 +15,28 @@ import { useSelection } from "./canvas/useSelection";
 import { useDocumentSettings } from "./canvas/useDocumentSettings";
 import { useViewport } from "./canvas/useViewport";
 import { useZoomIndicatorVisible } from "./canvas/useZoomIndicatorVisible";
+import { usePages } from "./canvas/usePages";
 import { createAddNodeCommand } from "./commands/AddNodeCommand";
 import { createMoveNodeCommand } from "./commands/MoveNodeCommand";
 import { createSetNodeCommand } from "./commands/SetNodeCommand";
 import { documentStore } from "./store/documentStore";
 import { historyManager } from "./store/historyManager";
+import {
+  addPage,
+  deletePage,
+  renamePage,
+  switchToPage as switchActivePage,
+  type PageId,
+} from "./store/pagesStore";
 import { reconcileGroupBounds } from "./store/reconcileGroupBounds";
 import { sceneStore } from "./store/sceneStore";
 import { selectionStore } from "./store/selectionStore";
-import { INITIAL_VIEWPORT, viewportStore } from "./store/viewportStore";
+import { viewportStore } from "./store/viewportStore";
 import type { NodeId, SceneNode } from "./types/scene";
-import { screenToScene } from "./utils/coordinates";
+import { INITIAL_VIEWPORT, screenToScene } from "./utils/coordinates";
 import { generateId } from "./utils/id";
 import { nextDefaultName } from "./utils/nodeNaming";
-import { LayersPanel } from "./ui/Sidebar/LeftSidebar/LayersPanel";
+import { LeftSidebar } from "./ui/Sidebar/LeftSidebar/LeftSidebar";
 import { PropertiesPanel } from "./ui/Sidebar/RightSidebar/PropertiesPanel";
 import { useMultiNodeEdit } from "./ui/Sidebar/RightSidebar/useMultiNodeEdit";
 import { useNodeEdit } from "./ui/Sidebar/RightSidebar/useNodeEdit";
@@ -144,10 +152,19 @@ function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
 }
 
+// Blurring first flushes an in-progress text edit through its existing
+// onBlur commit — the same thing that already happens when you click
+// anywhere else on the page, just triggered here instead of by a real click.
+function switchToPage(id: PageId): void {
+  (document.activeElement as HTMLElement | null)?.blur();
+  switchActivePage(id);
+}
+
 export default function App() {
   useKeyboardShortcuts();
 
   const activeToolId = useActiveTool();
+  const { pages, activePageId } = usePages();
   const scene = useSceneGraph();
   const { selectedIds } = useSelection();
   const documentSettings = useDocumentSettings();
@@ -193,7 +210,13 @@ export default function App() {
 
   return (
     <div style={{ display: "flex", width: "100%", height: "100%" }}>
-      <LayersPanel
+      <LeftSidebar
+        pages={pages.map((page) => ({ id: page.id, name: page.name }))}
+        activePageId={activePageId}
+        onSwitchPage={switchToPage}
+        onAddPage={addPage}
+        onRenamePage={renamePage}
+        onDeletePage={deletePage}
         scene={scene}
         selectedIds={selectedIds}
         onSelect={selectLayer}

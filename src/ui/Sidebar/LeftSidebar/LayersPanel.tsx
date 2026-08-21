@@ -22,12 +22,10 @@ export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onT
       open={expanded}
       onOpenChange={setExpanded}
       style={{
-        flex: "0 0 240px",
+        flex: 1,
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
-        height: "100%",
-        background: "var(--surface-panel)",
-        borderRight: "1px solid var(--border)",
         overflow: "hidden",
       }}
     >
