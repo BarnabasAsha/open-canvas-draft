@@ -10,10 +10,19 @@ interface LayersPanelProps {
   onSelect: (id: NodeId, additive: boolean) => void;
   onToggleVisible: (id: NodeId) => void;
   onToggleLocked: (id: NodeId) => void;
+  onToggleInstanceChildVisible: (instanceId: NodeId, defNodeId: NodeId) => void;
   onRename: (id: NodeId, name: string) => void;
 }
 
-export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onToggleLocked, onRename }: LayersPanelProps) {
+export function LayersPanel({
+  scene,
+  selectedIds,
+  onSelect,
+  onToggleVisible,
+  onToggleLocked,
+  onToggleInstanceChildVisible,
+  onRename,
+}: LayersPanelProps) {
   const [expanded, setExpanded] = useState(true);
   const rootIds = [...scene.rootIds].reverse();
 
@@ -47,6 +56,7 @@ export function LayersPanel({ scene, selectedIds, onSelect, onToggleVisible, onT
               onSelect={onSelect}
               onToggleVisible={onToggleVisible}
               onToggleLocked={onToggleLocked}
+              onToggleInstanceChildVisible={onToggleInstanceChildVisible}
               onRename={onRename}
             />
           ))

@@ -6,7 +6,27 @@ import { useMarquee } from "./useMarquee";
 import { useSceneGraph } from "./useSceneGraph";
 import { useSelection } from "./useSelection";
 import { useViewport } from "./useViewport";
+import { getComponent } from "../store/componentsStore";
+import { parseVirtualId } from "../store/instanceVirtualId";
+import { resolveInstance } from "../store/resolveInstance";
+import type { NodeId, SceneNode } from "../types/scene";
 import { sceneToScreen } from "../utils/coordinates";
+
+// A node inside a component instance has no entry in the real graph — same
+// resolve-then-look-up path selectionBounds.ts's own virtual-id branch
+// uses, just returning the node itself instead of its corners (needed here
+// for the section-label check and the type-based branching below).
+function resolveSelectableNode(id: NodeId, nodes: Record<NodeId, SceneNode>): SceneNode | null {
+  const virtual = parseVirtualId(id);
+  if (!virtual) return nodes[id] ?? null;
+
+  const instance = nodes[virtual.instanceId];
+  if (!instance || instance.type !== "instance") return null;
+  const definition = getComponent(instance.componentId);
+  if (!definition) return null;
+
+  return resolveInstance(instance, definition).nodes[id] ?? null;
+}
 
 // CSS custom properties, not raw colors — read via the `style` prop below
 // (not the plain SVG attribute) since var() only resolves in a CSS
@@ -28,7 +48,11 @@ export function SelectionOverlay() {
   const selectedIdList = [...selectedIds];
   const soleSelectedId = selectedIdList.length === 1 ? selectedIdList[0] : null;
   const groupBounds = selectedIdList.length > 1 ? getGroupBounds(selectedIds, scene.nodes) : null;
-  const handles = soleSelectedId
+  // No drag-to-resize handles for a node inside a component instance yet —
+  // that field still only moves through the properties panel (see
+  // PropertiesPanel.tsx's isInstanceChild comment) — but its outline still
+  // draws below, from the selectedIdList.map pass.
+  const handles = soleSelectedId && !parseVirtualId(soleSelectedId)
     ? getHandles(soleSelectedId, scene.nodes)
     : groupBounds
       ? getGroupHandles(groupBounds)
@@ -41,7 +65,7 @@ export function SelectionOverlay() {
       style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
       {selectedIdList.map((id) => {
-        const node = scene.nodes[id];
+        const node = resolveSelectableNode(id, scene.nodes);
         const corners = getSceneCorners(id, scene.nodes);
         if (!node || !corners) return null;
 
