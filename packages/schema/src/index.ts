@@ -22,7 +22,10 @@ export const SemanticsSchema = z.object({
     .optional(),
 });
 export type SemanticTag = keyof HTMLElementTagNameMap;
-export interface Semantics extends Omit<z.infer<typeof SemanticsSchema>, "tag"> {
+export interface Semantics extends Omit<
+  z.infer<typeof SemanticsSchema>,
+  "tag"
+> {
   tag: SemanticTag;
 }
 
@@ -31,7 +34,10 @@ export interface Semantics extends Omit<z.infer<typeof SemanticsSchema>, "tag"> 
 // the precise `Semantics` type on each concrete node's exported type,
 // rather than just on BaseNode, so `node.semantics` type-checks against
 // `Semantics` everywhere a discriminated SceneNode variant is used.
-type RefineSemantics<T extends { semantics: unknown }> = Omit<T, "semantics"> & {
+type RefineSemantics<T extends { semantics: unknown }> = Omit<
+  T,
+  "semantics"
+> & {
   semantics: Semantics | null;
 };
 
@@ -79,20 +85,47 @@ export const InteractionActionSchema = z.discriminatedUnion("type", [
 export type InteractionAction = z.infer<typeof InteractionActionSchema>;
 
 export const InteractionSchema = z.discriminatedUnion("trigger", [
-  z.object({ trigger: z.literal("click"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("hoverStart"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("hoverEnd"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("pressStart"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("pressEnd"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("focus"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("blur"), actions: z.array(InteractionActionSchema) }),
-  z.object({ trigger: z.literal("change"), actions: z.array(InteractionActionSchema) }),
+  z.object({
+    trigger: z.literal("click"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("hoverStart"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("hoverEnd"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("pressStart"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("pressEnd"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("focus"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("blur"),
+    actions: z.array(InteractionActionSchema),
+  }),
+  z.object({
+    trigger: z.literal("change"),
+    actions: z.array(InteractionActionSchema),
+  }),
   z.object({
     trigger: z.literal("keyPress"),
     key: z.string(),
     actions: z.array(InteractionActionSchema),
   }),
-  z.object({ trigger: z.literal("load"), actions: z.array(InteractionActionSchema) }),
+  z.object({
+    trigger: z.literal("load"),
+    actions: z.array(InteractionActionSchema),
+  }),
   z.object({
     trigger: z.literal("afterDelay"),
     delayMs: z.number(),
@@ -124,7 +157,9 @@ const baseNodeShape = {
 };
 
 export const BaseNodeSchema = z.object(baseNodeShape);
-export type BaseNode = RefineSemantics<z.infer<typeof BaseNodeSchema>> & { type: string };
+export type BaseNode = RefineSemantics<z.infer<typeof BaseNodeSchema>> & {
+  type: string;
+};
 
 export const RectNodeSchema = z.object({
   ...baseNodeShape,
@@ -254,7 +289,9 @@ export const InstanceNodeSchema = z.object({
   componentId: ComponentIdSchema,
   overrides: z.record(NodeIdSchema, z.record(z.string(), z.unknown())),
 });
-export type InstanceNode = RefineSemantics<Omit<z.infer<typeof InstanceNodeSchema>, "overrides">> & {
+export type InstanceNode = RefineSemantics<
+  Omit<z.infer<typeof InstanceNodeSchema>, "overrides">
+> & {
   overrides: Record<NodeId, Partial<SceneNode>>;
 };
 
