@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# apps/api's local JSON-file persistence (Phase 5) — runtime data, not source
+apps/api/data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
