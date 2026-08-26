@@ -1,8 +1,9 @@
 import type { ComponentDefinition } from "./componentTypes";
 import { collectWithDescendants, getParentOrigin, isAncestor, reparentNodeInGraph } from "./graphMutations";
 import { generateId } from "./id";
-import type { Bounds, Point } from "./sceneCorners";
+import type { Bounds } from "./sceneCorners";
 import { getGroupBounds } from "./sceneCorners";
+import type { Point } from "./worldTransform";
 import type { ArrowNode, FrameNode, LineNode, NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
 
 export interface ComponentSnapshot {
@@ -121,12 +122,21 @@ function buildDefinitionRoot(id: NodeId, name: string, bounds: Bounds, width: nu
     locked: false,
     semantics: null,
     interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
     fill: null,
     stroke: null,
     strokeWidth: 0,
     strokeStyle: "solid",
     clipsContent: false,
     cornerRadius: 0,
+    layoutMode: "none",
+    direction: "row",
+    gap: 0,
+    padding: { top: 0, right: 0, bottom: 0, left: 0 },
+    primaryAxisAlign: "start",
+    crossAxisAlign: "start",
     children: [],
   };
 }

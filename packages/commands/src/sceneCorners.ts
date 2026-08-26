@@ -1,10 +1,6 @@
 import type { ArrowNode, LineNode, NodeId, SceneNode } from "@open-canvas/schema";
-import { getWorldMatrix } from "./worldTransform";
-
-export interface Point {
-  x: number;
-  y: number;
-}
+import type { Point } from "./worldTransform";
+import { getWorldMatrix, transformPoint } from "./worldTransform";
 
 export interface Bounds {
   minX: number;
@@ -65,10 +61,7 @@ function cornersFromMatrix(matrix: DOMMatrix, width: number, height: number): [P
     { x: 0, y: height },
   ];
 
-  return localCorners.map((corner) => {
-    const transformed = matrix.transformPoint(new DOMPoint(corner.x, corner.y));
-    return { x: transformed.x, y: transformed.y };
-  }) as [Point, Point, Point, Point];
+  return localCorners.map((corner) => transformPoint(matrix, corner)) as [Point, Point, Point, Point];
 }
 
 function getEndpointBoxCorners(node: LineNode | ArrowNode, nodes: Record<NodeId, SceneNode>): [Point, Point, Point, Point] {
@@ -86,8 +79,5 @@ function getEndpointBoxCorners(node: LineNode | ArrowNode, nodes: Record<NodeId,
     { x: minX, y: maxY },
   ];
 
-  return localCorners.map((corner) => {
-    const transformed = ancestorMatrix.transformPoint(new DOMPoint(corner.x, corner.y));
-    return { x: transformed.x, y: transformed.y };
-  }) as [Point, Point, Point, Point];
+  return localCorners.map((corner) => transformPoint(ancestorMatrix, corner)) as [Point, Point, Point, Point];
 }

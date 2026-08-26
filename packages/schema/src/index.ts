@@ -139,6 +139,22 @@ export type Interaction = z.infer<typeof InteractionSchema>;
 export const StrokeStyleSchema = z.enum(["solid", "dashed", "dotted"]);
 export type StrokeStyle = z.infer<typeof StrokeStyleSchema>;
 
+// Sizing/positioning for a node that happens to be a child of a
+// layoutMode:"flex" container (see FrameNodeSchema/SectionNodeSchema
+// below). Kept on every node, not just container children, since any
+// node could end up inside a flex container — same reasoning as
+// `semantics`/`interactions` already being BaseNode-level fields.
+export const SizingModeSchema = z.enum(["fixed", "hug", "fill"]);
+export type SizingMode = z.infer<typeof SizingModeSchema>;
+
+// "absolute" opts a flex child out of layout entirely — it keeps today's
+// exact free x/y positioning (relative to the container's own local
+// origin), ignored by both the flex measure and place passes. The escape
+// hatch for e.g. a badge overlapping a card corner without forcing the
+// whole card into fighting the layout system.
+export const PositioningModeSchema = z.enum(["flow", "absolute"]);
+export type PositioningMode = z.infer<typeof PositioningModeSchema>;
+
 const baseNodeShape = {
   id: NodeIdSchema,
   name: z.string(),
@@ -154,6 +170,9 @@ const baseNodeShape = {
   semantics: SemanticsSchema.nullable(),
   interactions: z.array(InteractionSchema),
   bindings: z.record(z.string(), VariableIdSchema).optional(),
+  sizingHorizontal: SizingModeSchema,
+  sizingVertical: SizingModeSchema,
+  positioning: PositioningModeSchema,
 };
 
 export const BaseNodeSchema = z.object(baseNodeShape);
@@ -249,6 +268,46 @@ export const PathNodeSchema = z.object({
 });
 export type PathNode = RefineSemantics<z.infer<typeof PathNodeSchema>>;
 
+// Layout fields for a container that can arrange its own children —
+// Frame and Section only, since GroupNode is a pure authoring convenience
+// with no real DOM output and deliberately stays outside the layout
+// system (its own bounds are instead continuously re-fit to hug its
+// children — see reconcileGroupBounds.ts — which would fight a flex
+// parent's sizing assignment if Group could opt into layoutMode too).
+export const FlexDirectionSchema = z.enum(["row", "column"]);
+export type FlexDirection = z.infer<typeof FlexDirectionSchema>;
+
+export const LayoutModeSchema = z.enum(["none", "flex"]);
+export type LayoutMode = z.infer<typeof LayoutModeSchema>;
+
+export const PrimaryAxisAlignSchema = z.enum([
+  "start",
+  "center",
+  "end",
+  "spaceBetween",
+]);
+export type PrimaryAxisAlign = z.infer<typeof PrimaryAxisAlignSchema>;
+
+export const CrossAxisAlignSchema = z.enum(["start", "center", "end", "stretch"]);
+export type CrossAxisAlign = z.infer<typeof CrossAxisAlignSchema>;
+
+export const PaddingSchema = z.object({
+  top: z.number(),
+  right: z.number(),
+  bottom: z.number(),
+  left: z.number(),
+});
+export type Padding = z.infer<typeof PaddingSchema>;
+
+const layoutContainerShape = {
+  layoutMode: LayoutModeSchema,
+  direction: FlexDirectionSchema,
+  gap: z.number(),
+  padding: PaddingSchema,
+  primaryAxisAlign: PrimaryAxisAlignSchema,
+  crossAxisAlign: CrossAxisAlignSchema,
+};
+
 export const FrameNodeSchema = z.object({
   ...baseNodeShape,
   type: z.literal("frame"),
@@ -259,6 +318,7 @@ export const FrameNodeSchema = z.object({
   strokeStyle: StrokeStyleSchema,
   clipsContent: z.boolean(),
   cornerRadius: z.number(),
+  ...layoutContainerShape,
 });
 export type FrameNode = RefineSemantics<z.infer<typeof FrameNodeSchema>>;
 
@@ -266,6 +326,7 @@ export const SectionNodeSchema = z.object({
   ...baseNodeShape,
   type: z.literal("section"),
   children: z.array(NodeIdSchema),
+  ...layoutContainerShape,
 });
 export type SectionNode = RefineSemantics<z.infer<typeof SectionNodeSchema>>;
 

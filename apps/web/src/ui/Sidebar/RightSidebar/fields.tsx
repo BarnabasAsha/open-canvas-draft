@@ -47,6 +47,7 @@ interface NumberFieldProps {
   min?: number;
   max?: number;
   step?: number;
+  disabled?: boolean;
 }
 
 // Live-preview-then-commit: Base UI's NumberField fires onValueChange on
@@ -60,7 +61,7 @@ interface NumberFieldProps {
 // than as separate text to its left — the outer <label> still implicitly
 // associates with the nested <input> for accessibility, only the visual
 // shape changed.
-export function NumberField({ label, value, onFocus, onChange, onCommit, min, max, step = 1 }: NumberFieldProps) {
+export function NumberField({ label, value, onFocus, onChange, onCommit, min, max, step = 1, disabled }: NumberFieldProps) {
   return (
     <label className="field-box">
       <span className="field-box-label">{label}</span>
@@ -70,6 +71,7 @@ export function NumberField({ label, value, onFocus, onChange, onCommit, min, ma
         min={min}
         max={max}
         step={step}
+        disabled={disabled}
         onValueChange={(next) => {
           if (next !== null) onChange(next);
         }}

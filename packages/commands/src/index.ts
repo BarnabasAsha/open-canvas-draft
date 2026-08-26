@@ -8,6 +8,7 @@ export * from "./componentTypes";
 export * from "./resolveInstance";
 export * from "./sceneCorners";
 export * from "./componentMutations";
+export * from "./flexLayout";
 
 export * from "./commands/Command";
 export * from "./commands/AddNodeCommand";

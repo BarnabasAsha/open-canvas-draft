@@ -42,6 +42,9 @@ export function createInstanceNode(
     locked: false,
     semantics: definition.nodes[definition.rootId]?.semantics ?? null,
     interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
     componentId: definition.id,
     overrides: {},
   };

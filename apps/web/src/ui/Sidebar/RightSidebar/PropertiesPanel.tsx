@@ -1,11 +1,13 @@
 import { isAlignableContainer } from "../../../canvas/tools/alignment";
 import type { AlignKind } from "../../../canvas/tools/alignment";
-import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode } from "@open-canvas/schema";
+import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode, SectionNode } from "@open-canvas/schema";
 import { AlignmentToolbar } from "./AlignmentToolbar";
 import { PanelSection } from "./fields";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { CornerRadiusSection } from "./sections/CornerRadiusSection";
 import { DocumentSection } from "./sections/DocumentSection";
+import { FlexChildSection } from "./sections/FlexChildSection";
+import { LayoutSection } from "./sections/LayoutSection";
 import { PositionSection } from "./sections/PositionSection";
 import { SemanticsSection } from "./sections/SemanticsSection";
 import { StrokeSection } from "./sections/StrokeSection";
@@ -14,6 +16,12 @@ import { TypographySection } from "./sections/TypographySection";
 
 interface PropertiesPanelProps {
   node: SceneNode | null;
+  // The sole selected node's parent, when there is one — used only to show
+  // the "Flex child" section when that parent is a flex-mode Frame/Section.
+  // null for a virtual (instance-child) selection: which real node stands
+  // in as a virtual child's "flex parent" isn't resolved in v1 (see
+  // isInstanceChild below).
+  parentNode: SceneNode | null;
   selectionCount: number;
   // Set when either 2+ selected nodes share the same type, or exactly one
   // Frame/Section/Group is selected and its own children share a type —
@@ -73,6 +81,10 @@ function asCornerRadiusNode(node: SceneNode): RectNode | FrameNode | null {
   return node.type === "rect" || node.type === "frame" ? node : null;
 }
 
+function asLayoutContainerNode(node: SceneNode): FrameNode | SectionNode | null {
+  return node.type === "frame" || node.type === "section" ? node : null;
+}
+
 // 0 selected: the canvas's own properties (background color), not an
 // empty state — this is now a fixed structural column (see App.tsx), so
 // hiding its content entirely would waste that space every time selection
@@ -98,6 +110,7 @@ function asCornerRadiusNode(node: SceneNode): RectNode | FrameNode | null {
 // well-defined shared schema, so it still falls back to a plain count.
 export function PropertiesPanel({
   node,
+  parentNode,
   selectionCount,
   uniformNode,
   isInstanceChild,
@@ -144,7 +157,14 @@ export function PropertiesPanel({
               <AlignmentToolbar onAlign={onAlign} />
             </PanelSection>
           )}
-          <PropertySections node={node} onFocus={onFieldFocus} onChange={onFieldChange} onCommit={onFieldCommit} />
+          <PropertySections
+            node={node}
+            parentNode={parentNode}
+            isInstanceChild={isInstanceChild}
+            onFocus={onFieldFocus}
+            onChange={onFieldChange}
+            onCommit={onFieldCommit}
+          />
           {uniformNode && (
             <>
               <div className="panel-section">
@@ -187,15 +207,33 @@ interface PropertySectionsProps {
   onCommit: () => void;
 }
 
-function PropertySections({ node, onFocus, onChange, onCommit }: PropertySectionsProps) {
+function PropertySections({
+  node,
+  parentNode,
+  isInstanceChild,
+  onFocus,
+  onChange,
+  onCommit,
+}: PropertySectionsProps & { parentNode: SceneNode | null; isInstanceChild: boolean }) {
   const fillNode = asFillNode(node);
   const strokeNode = asStrokeNode(node);
   const cornerRadiusNode = asCornerRadiusNode(node);
+  // Neither section is wired up for a virtual (instance-child) selection —
+  // component definitions never run through the flex reconciliation
+  // pipeline (they're not backed by a real sceneStore), so toggling auto
+  // layout there would just set an inert override with no visual effect.
+  const layoutContainerNode = isInstanceChild ? null : asLayoutContainerNode(node);
+  const parentLayoutContainer = !isInstanceChild && parentNode ? asLayoutContainerNode(parentNode) : null;
+  const showFlexChildSection = parentLayoutContainer?.layoutMode === "flex";
 
   return (
     <>
       <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>{node.name}</div>
-      <PositionSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      <PositionSection node={node} parentNode={parentNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      {showFlexChildSection && <FlexChildSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {layoutContainerNode && (
+        <LayoutSection node={layoutContainerNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      )}
       {node.semantics && <SemanticsSection semantics={node.semantics} />}
       {node.type === "text" && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />

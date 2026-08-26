@@ -35,6 +35,9 @@ export function createGroupNodesCommand(graph: SceneGraph, memberIds: NodeId[]):
     locked: false,
     semantics: null,
     interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
     children: [],
   };
 

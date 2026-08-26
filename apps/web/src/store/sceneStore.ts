@@ -12,4 +12,5 @@ export const sceneStore: SceneStore = {
   addNode: (node) => getActivePage().scene.addNode(node),
   removeNode: (nodeId) => getActivePage().scene.removeNode(nodeId),
   reparentNode: (nodeId, newParentId) => getActivePage().scene.reparentNode(nodeId, newParentId),
+  reorderNode: (nodeId, newParentId, index) => getActivePage().scene.reorderNode(nodeId, newParentId, index),
 };

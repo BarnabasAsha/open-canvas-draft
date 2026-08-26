@@ -97,6 +97,85 @@ export function reparentNodeInGraph(graph: SceneGraph, nodeId: NodeId, newParent
   return { nodes, rootIds };
 }
 
+// Generalizes reparentNodeInGraph with an explicit insertion index — that
+// function always appends and no-ops on a same-parent move, neither of
+// which can express "drop this node between its own siblings" (needed for
+// flex drag-to-reorder). `index` omitted or out of range appends, matching
+// reparentNodeInGraph's own behavior for everything that doesn't care
+// about order.
+export function reorderChildInGraph(graph: SceneGraph, nodeId: NodeId, newParentId: NodeId | null, index?: number): SceneGraph {
+  const node = graph.nodes[nodeId];
+  if (!node) return graph;
+  if (newParentId === nodeId) return graph;
+  if (newParentId && isAncestor(graph, nodeId, newParentId)) return graph; // would create a cycle
+  if (newParentId && !getContainer(graph, newParentId)) return graph; // can only reparent into a container
+
+  const parentChanged = node.parentId !== newParentId;
+  if (!parentChanged && isNoOpReorder(graph, nodeId, newParentId, index)) return graph;
+
+  const nodes = { ...graph.nodes };
+  let rootIds = graph.rootIds;
+
+  const oldContainer = getContainer(graph, node.parentId);
+  if (oldContainer) {
+    nodes[oldContainer.id] = { ...oldContainer, children: oldContainer.children.filter((id) => id !== nodeId) };
+  } else {
+    rootIds = rootIds.filter((id) => id !== nodeId);
+  }
+
+  // Looked up from the already-updated `nodes`/`rootIds` above (not the
+  // original `graph`) so a same-parent reorder splices into the
+  // just-filtered array instead of duplicating nodeId.
+  const newContainer = getContainer({ nodes, rootIds }, newParentId);
+  if (newContainer) {
+    const children = [...newContainer.children];
+    children.splice(clampIndex(index, children.length), 0, nodeId);
+    nodes[newContainer.id] = { ...newContainer, children };
+  } else {
+    const nextRootIds = [...rootIds];
+    nextRootIds.splice(clampIndex(index, nextRootIds.length), 0, nodeId);
+    rootIds = nextRootIds;
+  }
+
+  if (!parentChanged) return { nodes, rootIds };
+
+  // Same coordinate-space shift as reparentNodeInGraph — only needed when
+  // the parent actually changed; a same-parent reorder is a pure
+  // array-order change with no coordinate implications.
+  const oldOrigin = getParentOrigin(graph, node.parentId);
+  const newOrigin = getParentOrigin(graph, newParentId);
+  const shiftX = oldOrigin.x - newOrigin.x;
+  const shiftY = oldOrigin.y - newOrigin.y;
+
+  nodes[nodeId] =
+    node.type === "line" || node.type === "arrow"
+      ? { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY, x2: node.x2 + shiftX, y2: node.y2 + shiftY }
+      : { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY };
+
+  return { nodes, rootIds };
+}
+
+function clampIndex(index: number | undefined, length: number): number {
+  if (index === undefined) return length;
+  return Math.max(0, Math.min(index, length));
+}
+
+// Same-parent reorder request that would land the node back exactly where
+// it already sits — without this, every call (e.g. one per pointermove
+// while dragging within an already-flex parent) rebuilds the container's
+// children array and churns node references even when nothing actually
+// moved, which downstream reference-equality checks (e.g. commitMove's
+// diff) would otherwise mistake for a real change and push a no-op undo
+// step for.
+function isNoOpReorder(graph: SceneGraph, nodeId: NodeId, parentId: NodeId | null, index: number | undefined): boolean {
+  const siblings = parentId ? (getContainer(graph, parentId)?.children ?? []) : graph.rootIds;
+  const currentIndex = siblings.indexOf(nodeId);
+  if (currentIndex === -1) return false;
+
+  const withoutNode = siblings.filter((id) => id !== nodeId);
+  return clampIndex(index, withoutNode.length) === currentIndex;
+}
+
 export function getParentOrigin(graph: SceneGraph, parentId: NodeId | null): { x: number; y: number } {
   if (!parentId) return { x: 0, y: 0 };
 

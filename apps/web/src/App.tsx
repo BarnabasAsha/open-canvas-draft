@@ -1,6 +1,7 @@
 import { Canvas } from "./canvas/Canvas";
 import { canvasSizeStore } from "./canvas/canvasSizeStore";
 import { RULER_SIZE, Ruler } from "./canvas/Ruler";
+import { FlexInsertionIndicator } from "./canvas/FlexInsertionIndicator";
 import { SelectionOverlay } from "./canvas/SelectionOverlay";
 import { TextEditOverlay } from "./canvas/TextEditOverlay";
 import type { AlignKind } from "./canvas/tools/alignment";
@@ -257,6 +258,11 @@ export default function App() {
     : soleSelectedId
       ? (scene.nodes[soleSelectedId] ?? null)
       : null;
+  // Only resolved for a real (non-virtual) selection — which real node
+  // stands in as a virtual instance-child's "flex parent" isn't wired up
+  // in v1, see PropertiesPanelProps.parentNode's own comment.
+  const soleParentNode =
+    !virtualSelection && soleSelectedNode?.parentId ? (scene.nodes[soleSelectedNode.parentId] ?? null) : null;
 
   // A same-type multi-selection (e.g. two Text nodes) can share style
   // fields — see the PropertiesPanel doc comment for what's shown and why
@@ -328,6 +334,7 @@ export default function App() {
         >
           <Canvas />
           <SelectionOverlay />
+          <FlexInsertionIndicator />
           <TextEditOverlay />
           <Toolbar
             activeToolId={activeToolId}
@@ -340,6 +347,7 @@ export default function App() {
       </div>
       <PropertiesPanel
         node={soleSelectedNode}
+        parentNode={soleParentNode}
         selectionCount={selectedIdList.length}
         uniformNode={uniformNode}
         isInstanceChild={virtualSelection !== null}

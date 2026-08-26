@@ -28,6 +28,9 @@ function buildDraftNode(id: NodeId, start: Point, current: Point, name: string):
     locked: false,
     semantics: null,
     interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
     src: "",
     objectFit: "cover",
   };
