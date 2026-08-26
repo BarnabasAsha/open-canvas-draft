@@ -1,8 +1,9 @@
-import { generateId } from "@open-canvas/commands";
-import type { SceneGraph } from "@open-canvas/schema";
+import { generateId, parseVirtualId } from "@open-canvas/commands";
+import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
 import { INITIAL_VIEWPORT, type Viewport } from "../utils/coordinates";
 import { nextPageName } from "../utils/pageNaming";
 import { seedScene } from "../utils/seedData";
+import { getComponent } from "./componentsStore";
 import { createHistoryManager, type HistoryManager } from "./createHistoryManager";
 import { createSceneStore, type SceneStore } from "./createSceneStore";
 import { createStore, type Store } from "./createStore";
@@ -26,13 +27,46 @@ interface PagesState {
 
 const emptyScene: SceneGraph = { nodes: {}, rootIds: [] };
 
+// A selected id is either a real graph node, or a "virtual" id
+// (`instanceId::defNodeId`, see instanceVirtualId.ts) addressing a node
+// inside a component instance's definition — those never appear as keys in
+// SceneGraph.nodes, so they need their own validity check.
+function isSelectableId(id: NodeId, nodes: Record<NodeId, SceneNode>): boolean {
+  if (id in nodes) return true;
+
+  const virtual = parseVirtualId(id);
+  if (!virtual) return false;
+  const instance = nodes[virtual.instanceId];
+  if (!instance || instance.type !== "instance") return false;
+  const definition = getComponent(instance.componentId);
+  return definition !== undefined && virtual.defNodeId in definition.nodes;
+}
+
 function createPage(name: string, initialScene: SceneGraph): PageBundle {
   const scene = createSceneStore(initialScene);
+  const selection = createStore<SelectionState>({ selectedIds: new Set(), hoveredId: null });
+
+  // Undo/redo (and every other graph mutation) never touch selection
+  // themselves, so a node that's deleted, un-created by undo, or replaced
+  // wholesale (Group/Duplicate/Create Component) can leave a stale id
+  // behind — surfacing as a phantom "N objects selected" in the properties
+  // panel. Pruned reactively here, once, rather than taught to every
+  // individual mutation call site.
+  scene.subscribe(() => {
+    const { nodes } = scene.getState();
+    selection.update((state) => {
+      const selectedIds = new Set([...state.selectedIds].filter((id) => isSelectableId(id, nodes)));
+      const hoveredId = state.hoveredId !== null && isSelectableId(state.hoveredId, nodes) ? state.hoveredId : null;
+      if (selectedIds.size === state.selectedIds.size && hoveredId === state.hoveredId) return state;
+      return { selectedIds, hoveredId };
+    });
+  });
+
   return {
     id: generateId(),
     name,
     scene,
-    selection: createStore<SelectionState>({ selectedIds: new Set(), hoveredId: null }),
+    selection,
     viewport: createStore<Viewport>(INITIAL_VIEWPORT),
     history: createHistoryManager(scene),
   };
