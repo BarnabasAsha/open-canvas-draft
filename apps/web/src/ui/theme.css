@@ -235,6 +235,17 @@
   background: var(--surface-panel-hover);
 }
 
+.menu-item[data-disabled] {
+  color: var(--text-disabled);
+  cursor: default;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
 .select-item {
   justify-content: space-between;
 }

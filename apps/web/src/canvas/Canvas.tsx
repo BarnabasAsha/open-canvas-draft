@@ -2,11 +2,14 @@ import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent }
 import { useEffect, useRef } from "react";
 import { documentStore } from "../store/documentStore";
 import { sceneStore } from "../store/sceneStore";
+import { selectionStore } from "../store/selectionStore";
 import { viewportStore } from "../store/viewportStore";
 import { screenToScene } from "../utils/coordinates";
+import { NodeContextMenu } from "../ui/ContextMenu/NodeContextMenu";
 import { canvasSizeStore } from "./canvasSizeStore";
 import { drawScene } from "./renderer/drawScene";
 import { subscribeImageLoad } from "./renderer/imageCache";
+import { hitTestScene } from "./tools/hitTest";
 import { toolManager } from "./tools/toolManager";
 import type { ToolPointerEvent } from "./tools/toolTypes";
 import { panBy, zoomAtPoint } from "./viewportControls";
@@ -139,15 +142,35 @@ export function Canvas() {
     toolManager.onDoubleClick(toToolEvent(e));
   };
 
+  // Right-clicking a node that isn't selected replaces the selection with
+  // it, same as every other design tool; right-clicking one already
+  // inside a multi-selection leaves the selection as-is, so the menu
+  // applies to the whole set. Right-clicking empty canvas leaves whatever
+  // was selected untouched — the menu still opens (NodeContextMenu greys
+  // out every item when there's no selection) rather than needing to
+  // fight Base UI's own open-on-contextmenu behavior to suppress it.
+  const handleContextMenu = (e: ReactMouseEvent) => {
+    const scenePoint = screenToScene({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY }, viewportStore.getState());
+    const hitId = hitTestScene(scenePoint, sceneStore.getState());
+    if (!hitId) return;
+
+    const { selectedIds } = selectionStore.getState();
+    if (!selectedIds.has(hitId)) {
+      selectionStore.update((state) => ({ ...state, selectedIds: new Set([hitId]) }));
+    }
+  };
+
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ display: "block", width: "100%", height: "100%" }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onDoubleClick={handleDoubleClick}
-    />
+    <NodeContextMenu onContextMenu={handleContextMenu} style={{ width: "100%", height: "100%" }}>
+      <canvas
+        ref={canvasRef}
+        style={{ display: "block", width: "100%", height: "100%" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+      />
+    </NodeContextMenu>
   );
 }
 

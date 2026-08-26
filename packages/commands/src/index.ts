@@ -19,3 +19,5 @@ export * from "./commands/GroupNodesCommand";
 export * from "./commands/UngroupNodesCommand";
 export * from "./commands/CreateComponentInstanceCommand";
 export * from "./commands/DeleteNodesCommand";
+export * from "./commands/DuplicateNodesCommand";
+export * from "./commands/ReorderToEdgeCommand";

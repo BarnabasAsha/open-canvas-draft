@@ -1,5 +1,5 @@
 import type { ComponentDefinition } from "./componentTypes";
-import { collectWithDescendants, getParentOrigin, isAncestor, reparentNodeInGraph } from "./graphMutations";
+import { collectWithDescendants, getParentOrigin, hasAncestorAmongMembers, reparentNodeInGraph } from "./graphMutations";
 import { generateId } from "./id";
 import type { Bounds } from "./sceneCorners";
 import { getGroupBounds } from "./sceneCorners";
@@ -64,15 +64,6 @@ export function createComponentDefinition(graph: SceneGraph, memberIds: NodeId[]
   };
 
   return { definition, bounds };
-}
-
-function hasAncestorAmongMembers(graph: SceneGraph, memberIds: NodeId[]): boolean {
-  for (const a of memberIds) {
-    for (const b of memberIds) {
-      if (a !== b && isAncestor(graph, a, b)) return true;
-    }
-  }
-  return false;
 }
 
 // Where a member's local (0,0) actually sits in scene space today — the

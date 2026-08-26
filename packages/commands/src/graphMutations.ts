@@ -203,6 +203,19 @@ export function isAncestor(graph: SceneGraph, candidateAncestorId: NodeId, nodeI
   return false;
 }
 
+// Shared by GroupNodesCommand, componentMutations, and DuplicateNodesCommand
+// — each needs to reject a member set where one selected node is nested
+// inside another (grouping/extracting/duplicating "a frame and something
+// already inside it" together isn't a well-defined operation).
+export function hasAncestorAmongMembers(graph: SceneGraph, memberIds: readonly NodeId[]): boolean {
+  for (const a of memberIds) {
+    for (const b of memberIds) {
+      if (a !== b && isAncestor(graph, a, b)) return true;
+    }
+  }
+  return false;
+}
+
 function ancestorChain(graph: SceneGraph, nodeId: NodeId): NodeId[] {
   const chain: NodeId[] = [];
   let current = graph.nodes[nodeId]?.parentId ?? null;

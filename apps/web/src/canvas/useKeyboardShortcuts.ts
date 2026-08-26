@@ -1,21 +1,10 @@
 import { useEffect } from "react";
-import {
-  createComponentDefinition,
-  createDeleteNodesCommand,
-  createGroupNodesCommand,
-  createReplaceWithInstanceCommand,
-  createUngroupNodesCommand,
-  generateId,
-  nextDefaultName,
-} from "@open-canvas/commands";
-import { registerComponent } from "../store/componentsStore";
-import { documentStore } from "../store/documentStore";
 import { historyManager } from "../store/historyManager";
-import { sceneStore } from "../store/sceneStore";
-import { selectionStore } from "../store/selectionStore";
+import { documentStore } from "../store/documentStore";
 import { viewportStore } from "../store/viewportStore";
 import { INITIAL_VIEWPORT } from "../utils/coordinates";
 import { canvasSizeStore } from "./canvasSizeStore";
+import { createComponentFromSelection, deleteSelection, groupSelection, ungroupSelection } from "./selectionActions";
 import { toolManager } from "./tools/toolManager";
 import { zoomAtPoint } from "./viewportControls";
 
@@ -36,10 +25,7 @@ export function useKeyboardShortcuts(): void {
 
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        const { selectedIds } = selectionStore.getState();
-        if (selectedIds.size === 0) return;
-        historyManager.execute(createDeleteNodesCommand(sceneStore.getState(), [...selectedIds]));
-        selectionStore.update((state) => ({ ...state, selectedIds: new Set() }));
+        deleteSelection();
         return;
       }
 
@@ -55,48 +41,17 @@ export function useKeyboardShortcuts(): void {
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "g") {
         e.preventDefault();
-        const { selectedIds } = selectionStore.getState();
-
         if (e.shiftKey) {
-          if (selectedIds.size !== 1) return;
-          const [soleId] = selectedIds;
-          const group = sceneStore.getState().nodes[soleId];
-          if (!group || group.type !== "group") return;
-
-          const memberIds = [...group.children];
-          const command = createUngroupNodesCommand(sceneStore.getState(), soleId);
-          if (!command) return;
-          historyManager.execute(command);
-          selectionStore.update((state) => ({ ...state, selectedIds: new Set(memberIds) }));
-          return;
+          ungroupSelection();
+        } else {
+          groupSelection();
         }
-
-        const command = createGroupNodesCommand(sceneStore.getState(), [...selectedIds]);
-        if (!command) return;
-        historyManager.execute(command);
-        // The new group's id isn't returned by the command itself — after
-        // apply(), it's whichever node the members now share as a parent.
-        const [anyMemberId] = selectedIds;
-        const groupId = sceneStore.getState().nodes[anyMemberId]?.parentId;
-        if (groupId) selectionStore.update((state) => ({ ...state, selectedIds: new Set([groupId]) }));
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.altKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        const { selectedIds } = selectionStore.getState();
-        if (selectedIds.size === 0) return;
-
-        const graph = sceneStore.getState();
-        const memberIds = [...selectedIds];
-        const snapshot = createComponentDefinition(graph, memberIds, nextDefaultName(graph, "Component"));
-        if (!snapshot) return;
-
-        registerComponent(snapshot.definition);
-        const instanceId = generateId();
-        const command = createReplaceWithInstanceCommand(graph, memberIds, snapshot.definition, snapshot.bounds, instanceId);
-        historyManager.execute(command);
-        selectionStore.update((state) => ({ ...state, selectedIds: new Set([instanceId]) }));
+        createComponentFromSelection();
         return;
       }
 
