@@ -1,4 +1,4 @@
-import { addNodeToGraph, findCommonAncestor, isAncestor, removeNodeFromGraph, reparentNodeInGraph } from "../graphMutations";
+import { addNodeToGraph, findCommonAncestor, hasAncestorAmongMembers, removeNodeFromGraph, reparentNodeInGraph } from "../graphMutations";
 import { generateId } from "../id";
 import { nextDefaultName } from "../nodeNaming";
 import { getGroupBounds } from "../sceneCorners";
@@ -35,6 +35,9 @@ export function createGroupNodesCommand(graph: SceneGraph, memberIds: NodeId[]):
     locked: false,
     semantics: null,
     interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
     children: [],
   };
 
@@ -53,13 +56,4 @@ export function createGroupNodesCommand(graph: SceneGraph, memberIds: NodeId[]):
       return removeNodeFromGraph(next, groupId);
     },
   };
-}
-
-function hasAncestorAmongMembers(graph: SceneGraph, memberIds: NodeId[]): boolean {
-  for (const a of memberIds) {
-    for (const b of memberIds) {
-      if (a !== b && isAncestor(graph, a, b)) return true;
-    }
-  }
-  return false;
 }

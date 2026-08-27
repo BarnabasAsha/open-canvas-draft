@@ -1,16 +1,30 @@
 import { Checkbox } from "@base-ui/react/checkbox";
+import { Collapsible } from "@base-ui/react/collapsible";
 import { NumberField as BaseNumberField } from "@base-ui/react/number-field";
 import { Select as BaseSelect } from "@base-ui/react/select";
-import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { CaretUpDownIcon, CheckIcon, MinusIcon, PlusIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { ColorPicker } from "./ColorPicker";
 
-export function PanelSection({ title, children }: { title: string; children: ReactNode }) {
+interface PanelSectionProps {
+  title: string;
+  children: ReactNode;
+  // Every section starts expanded except ones that opt into starting
+  // collapsed (the CSS inspector — long output, least frequently needed).
+  defaultOpen?: boolean;
+}
+
+export function PanelSection({ title, children, defaultOpen = true }: PanelSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="panel-section">
-      <div className="panel-section-title">{title}</div>
-      <div className="panel-section-fields">{children}</div>
-    </div>
+    <Collapsible.Root className="panel-section" open={open} onOpenChange={setOpen}>
+      <Collapsible.Trigger className="panel-section-title">
+        <span>{title}</span>
+        {open ? <MinusIcon size={10} /> : <PlusIcon size={10} />}
+      </Collapsible.Trigger>
+      <Collapsible.Panel className="panel-section-fields">{children}</Collapsible.Panel>
+    </Collapsible.Root>
   );
 }
 
@@ -47,6 +61,7 @@ interface NumberFieldProps {
   min?: number;
   max?: number;
   step?: number;
+  disabled?: boolean;
 }
 
 // Live-preview-then-commit: Base UI's NumberField fires onValueChange on
@@ -60,7 +75,7 @@ interface NumberFieldProps {
 // than as separate text to its left — the outer <label> still implicitly
 // associates with the nested <input> for accessibility, only the visual
 // shape changed.
-export function NumberField({ label, value, onFocus, onChange, onCommit, min, max, step = 1 }: NumberFieldProps) {
+export function NumberField({ label, value, onFocus, onChange, onCommit, min, max, step = 1, disabled }: NumberFieldProps) {
   return (
     <label className="field-box">
       <span className="field-box-label">{label}</span>
@@ -70,6 +85,7 @@ export function NumberField({ label, value, onFocus, onChange, onCommit, min, ma
         min={min}
         max={max}
         step={step}
+        disabled={disabled}
         onValueChange={(next) => {
           if (next !== null) onChange(next);
         }}

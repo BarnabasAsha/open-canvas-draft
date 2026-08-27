@@ -235,6 +235,17 @@
   background: var(--surface-panel-hover);
 }
 
+.menu-item[data-disabled] {
+  color: var(--text-disabled);
+  cursor: default;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+
 .select-item {
   justify-content: space-between;
 }
@@ -670,12 +681,32 @@
 }
 
 .panel-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   margin-bottom: 10px;
+  text-align: left;
+}
+
+button.panel-section-title:hover {
+  color: var(--text);
+}
+
+/* Only the real Collapsible.Trigger button gets a pointer cursor — the
+   plain "Contents" divider div reuses this class for visual consistency
+   but isn't actually clickable. */
+button.panel-section-title {
+  cursor: pointer;
 }
 
 .panel-section-fields {
@@ -691,6 +722,48 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.css-inspector-block {
+  position: relative;
+}
+
+.css-inspector-pre {
+  margin: 0;
+  padding: 16px 40px 16px 16px;
+  border-radius: 6px;
+  background: var(--surface-panel-active);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.css-inspector-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: var(--surface-panel);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.css-inspector-copy-btn:hover {
+  background: var(--surface-panel-hover);
+  color: var(--text);
+}
+
+.css-inspector-copy-btn[data-copied] {
+  color: var(--accent);
 }
 
 .collapsible-trigger {

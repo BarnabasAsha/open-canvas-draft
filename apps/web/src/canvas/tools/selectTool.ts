@@ -12,6 +12,9 @@ import { viewportStore } from "../../store/viewportStore";
 import type { ArrowNode, LineNode, NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
 import type { Point } from "../../utils/coordinates";
 import { findContainerAt } from "./containment";
+import { findFlexInsertionIndex } from "./flexInsertion";
+import type { FlexInsertionResult } from "./flexInsertion";
+import { flexInsertionStore } from "./flexInsertionStore";
 import { computeGroupScale, getGroupBounds, getGroupHandles, hitTestGroupHandles, resizeNodeInGroup } from "./groupResize";
 import type { Bounds } from "./groupResize";
 import { hitTestScene } from "./hitTest";
@@ -20,7 +23,7 @@ import { marqueeStore } from "./marqueeStore";
 import { getResizeCursor } from "./resizeCursor";
 import { getHandles, hitTestHandles } from "./resizeHandles";
 import type { BBoxHandleId, EndpointHandleId, HandleId } from "./resizeHandles";
-import { getAncestorLocalPoint, getBBoxLocalPoint, resizeBBoxNode, resizeEndpointNode } from "./resizeMath";
+import { getAncestorLocalPoint, getBBoxLocalPoint, HANDLE_AXES, resizeBBoxNode, resizeEndpointNode } from "./resizeMath";
 import { enterTextEdit } from "./textEdit";
 import type { Tool, ToolPointerEvent } from "./toolTypes";
 
@@ -34,13 +37,42 @@ interface MoveDrag {
   // pre-change so the undo command can restore them too. Mutated in place
   // by reparentDraggedNodes as the drag progresses.
   touchedContainers: Map<NodeId, SceneNode>;
+  // Snapshotted nodes that started as flow children of a flex-mode parent —
+  // without intervention, resolveFlexLayout (wired into every sceneStore
+  // update) would snap them straight back into their flex-computed slot on
+  // every pointermove, so the node's own dragged position could never
+  // actually leave its container: findContainerAt would keep re-detecting
+  // the same parent forever. Forced to "absolute" on the first real
+  // pointermove (not at pointerdown — see applyMove/flexOverridesApplied,
+  // a plain click must never touch these) so the drag's own position write
+  // sticks, then restored to "flow" once the drag settles (commitMove).
+  flexOverrides: Set<NodeId>;
+  flexOverridesApplied: boolean;
+  // True once total pointer movement since startPoint has crossed
+  // MOVE_DRAG_THRESHOLD_PX — see applyMove. A real click's natural
+  // sub-pixel jiggle between pointerdown and pointerup otherwise fires at
+  // least one pointermove with a nonzero (if tiny) delta, which used to be
+  // harmless (an imperceptible nudge on an absolutely-positioned node) but
+  // is now a visible, discrete reshuffle for a flex child, since even a
+  // 1px nudge can cross the midpoint between two siblings and reorder them.
+  hasCrossedThreshold: boolean;
 }
 
 interface ResizeDrag {
   kind: "resize";
   nodeId: NodeId;
   handleId: HandleId;
+  // The true pre-drag value — used only as commitResize's undo "before",
+  // so undo restores the original sizing mode too, not just position/size.
   startNode: SceneNode;
+  // Same node, but with sizingHorizontal/Vertical forced to "fixed" on
+  // whichever axis this drag's handle touches, if the node's parent is a
+  // flex container (see startResizeDrag). This is what every pointermove
+  // actually resizes from, so the flip sticks for the whole gesture and
+  // the live flex reconciliation reflows siblings as you drag, matching
+  // Figma's own "manually resizing a hug/fill child converts it to fixed"
+  // behavior.
+  resizeBaseNode: SceneNode;
 }
 
 interface MarqueeDrag {
@@ -57,7 +89,17 @@ interface GroupResizeDrag {
   kind: "group-resize";
   handleId: BBoxHandleId;
   startBounds: Bounds;
+  // The true pre-drag values — used only as commitGroupResize's undo
+  // "before", same split as ResizeDrag.startNode/resizeBaseNode.
   snapshots: Map<NodeId, SceneNode>;
+  // Same nodes, each with sizingHorizontal/Vertical forced to "fixed" on
+  // whichever axis this handle's scale actually touches, for any member
+  // that's a flex flow child — see fixedSizingForHandle. Without this, a
+  // fill/hug member would get resized by resizeNodeInGroup and then
+  // immediately snapped back to its old size by the same update's
+  // resolveFlexLayout pass, since single-node resize's freeze-to-fixed
+  // policy never applied to the multi-select/group-resize path.
+  resizeBaseSnapshots: Map<NodeId, SceneNode>;
   startRootIds: NodeId[];
 }
 
@@ -168,6 +210,7 @@ function onPointerUp({ scenePoint }: ToolPointerEvent): void {
 
   if (dragState) commitDrag(dragState);
   dragState = null;
+  flexInsertionStore.update(() => null);
 }
 
 function didMove(drag: MoveDrag, scenePoint: Point): boolean {
@@ -192,6 +235,8 @@ function commitDrag(drag: DragState): void {
 }
 
 function commitMove(drag: MoveDrag): void {
+  restoreFlexPositioning(drag);
+
   // Containment/reparenting already happened live, per pointermove (see
   // reparentDraggedNodes) — this just gathers everything that changed
   // across the whole gesture (the moved nodes plus any container whose
@@ -220,6 +265,27 @@ function commitMove(drag: MoveDrag): void {
   const before: MoveSnapshot = { nodes: affectedBefore, rootIds: drag.startRootIds };
   const afterSnapshot: MoveSnapshot = { nodes: after, rootIds: finalScene.rootIds };
   historyManager.execute(createMoveNodeCommand(before, afterSnapshot));
+}
+
+// Restores "flow" on whichever nodes applyMove forced to "absolute" for
+// the drag (see MoveDrag.flexOverrides) — skipped entirely if the drag
+// never actually moved (flexOverridesApplied stays false for a plain
+// click), so a bare click on a flex flow child never round-trips its
+// positioning field and never produces a spurious undo entry for it.
+// Runs as one more sceneStore.update() before commitMove reads the
+// "after" state, so the resulting undo snapshot reflects the fully
+// resolved flex placement, not the mid-drag "picked up" state.
+function restoreFlexPositioning(drag: MoveDrag): void {
+  if (!drag.flexOverridesApplied || drag.flexOverrides.size === 0) return;
+
+  sceneStore.update((scene) => {
+    const nodes = { ...scene.nodes };
+    for (const id of drag.flexOverrides) {
+      const node = nodes[id];
+      if (node) nodes[id] = { ...node, positioning: "flow" };
+    }
+    return { ...scene, nodes };
+  });
 }
 
 function captureIfMissing(map: Map<NodeId, SceneNode>, scene: SceneGraph, id: NodeId | null): void {
@@ -332,24 +398,63 @@ function startMoveDrag(scenePoint: Point): void {
     if (node && !node.locked) snapshots.set(id, node);
   }
 
-  dragState = { kind: "move", startPoint: scenePoint, snapshots, startRootIds: rootIds, touchedContainers: new Map() };
+  const flexOverrides = new Set<NodeId>();
+  for (const node of snapshots.values()) {
+    if (node.positioning === "flow" && isFlexModeParent(node.parentId, nodes)) {
+      flexOverrides.add(node.id);
+    }
+  }
+
+  dragState = {
+    kind: "move",
+    startPoint: scenePoint,
+    snapshots,
+    startRootIds: rootIds,
+    touchedContainers: new Map(),
+    flexOverrides,
+    flexOverridesApplied: false,
+    hasCrossedThreshold: false,
+  };
 }
+
+function isFlexModeParent(parentId: NodeId | null, nodes: Record<NodeId, SceneNode>): boolean {
+  if (!parentId) return false;
+  const parent = nodes[parentId];
+  return parent !== undefined && (parent.type === "frame" || parent.type === "section") && parent.layoutMode === "flex";
+}
+
+// Screen pixels, not scene units — matches HANDLE_HIT_RADIUS's own
+// zoom-independent-feel convention elsewhere in this file, so the click
+// vs. drag distinction feels the same regardless of zoom level.
+const MOVE_DRAG_THRESHOLD_PX = 3;
 
 function applyMove(drag: MoveDrag, scenePoint: Point): void {
   const dx = scenePoint.x - drag.startPoint.x;
   const dy = scenePoint.y - drag.startPoint.y;
+
+  if (!drag.hasCrossedThreshold) {
+    const zoom = viewportStore.getState().zoom;
+    if (Math.hypot(dx, dy) * zoom < MOVE_DRAG_THRESHOLD_PX) return;
+    drag.hasCrossedThreshold = true;
+  }
 
   sceneStore.update((scene) => {
     const nodes = { ...scene.nodes };
     for (const [id, start] of drag.snapshots) {
       const current = nodes[id];
       if (!current) continue;
-      nodes[id] = translateNode(scene, start, current, dx, dy);
+      const translated = translateNode(scene, start, current, dx, dy);
+      // Forced here (not at pointerdown, in startMoveDrag) so a plain
+      // click that never actually moves never touches these nodes at
+      // all — see MoveDrag.flexOverrides and restoreFlexPositioning.
+      // Idempotent across every pointermove of the same drag.
+      nodes[id] = drag.flexOverrides.has(id) ? { ...translated, positioning: "absolute" } : translated;
     }
     return { ...scene, nodes };
   });
+  if (drag.flexOverrides.size > 0) drag.flexOverridesApplied = true;
 
-  reparentDraggedNodes(drag);
+  reparentDraggedNodes(drag, scenePoint);
 }
 
 // A dragged node is reparented as soon as it crosses a frame/section
@@ -358,19 +463,37 @@ function applyMove(drag: MoveDrag, scenePoint: Point): void {
 // where a node happens to be drawn. Deferring this made a node visibly
 // vanish for the whole drag the instant it left its old frame's clip
 // bounds, since it was still structurally that frame's child until commit.
-function reparentDraggedNodes(drag: MoveDrag): void {
-  for (const id of drag.snapshots.keys()) {
+//
+// A flex-mode target additionally gets an insertion index (not just a
+// parent) — findFlexInsertionIndex also drives the live indicator line via
+// flexInsertionStore, cleared unconditionally at pointerup (onPointerUp).
+function reparentDraggedNodes(drag: MoveDrag, scenePoint: Point): void {
+  const draggedIds = new Set(drag.snapshots.keys());
+  let insertion: FlexInsertionResult | null = null;
+
+  for (const id of draggedIds) {
     const scene = sceneStore.getState();
     const node = scene.nodes[id];
     if (!node) continue;
 
     const targetParentId = findContainerAt(id, scene);
-    if (targetParentId === node.parentId) continue;
+    const found = targetParentId ? findFlexInsertionIndex(scenePoint, targetParentId, scene, draggedIds) : null;
 
+    if (found) {
+      insertion = found;
+      captureIfMissing(drag.touchedContainers, scene, node.parentId);
+      captureIfMissing(drag.touchedContainers, scene, targetParentId);
+      sceneStore.reorderNode(id, targetParentId, found.index);
+      continue;
+    }
+
+    if (targetParentId === node.parentId) continue;
     captureIfMissing(drag.touchedContainers, scene, node.parentId);
     captureIfMissing(drag.touchedContainers, scene, targetParentId);
     sceneStore.reparentNode(id, targetParentId);
   }
+
+  flexInsertionStore.update(() => insertion);
 }
 
 // x/y (and line/arrow's x2/y2) are relative to the node's parent, which can
@@ -428,7 +551,32 @@ function applyMarqueeSelection(drag: MarqueeDrag, scenePoint: Point): void {
 function startResizeDrag(nodeId: NodeId, handleId: HandleId): void {
   const node = sceneStore.getState().nodes[nodeId];
   if (!node || node.locked) return;
-  dragState = { kind: "resize", nodeId, handleId, startNode: node };
+  dragState = { kind: "resize", nodeId, handleId, startNode: node, resizeBaseNode: fixedSizingForHandle(node, handleId) };
+}
+
+// A flex child manually resized via a bbox handle switches whichever axis
+// that handle touches from hug/fill to fixed — otherwise the very next
+// reconciliation cycle (resolveFlexLayout, wired into every sceneStore
+// update) would just snap the drag's result straight back to its
+// hug/fill-computed size, fighting the user's own gesture. Endpoint
+// handles (line/arrow) have no bbox axes to touch, so this is a no-op for
+// them regardless of parent.
+// Shared by both startResizeDrag (single node) and startGroupResizeDrag
+// (each member independently) — a handle's touched axes are the same
+// either way, only the node being checked differs.
+function fixedSizingForHandle(node: SceneNode, handleId: HandleId): SceneNode {
+  if (!(handleId in HANDLE_AXES)) return node;
+
+  const parent = node.parentId ? sceneStore.getState().nodes[node.parentId] : null;
+  const isFlexParent = parent !== null && (parent.type === "frame" || parent.type === "section") && parent.layoutMode === "flex";
+  if (!isFlexParent) return node;
+
+  const axes = HANDLE_AXES[handleId as BBoxHandleId];
+  return {
+    ...node,
+    sizingHorizontal: axes.horizontal !== null ? "fixed" : node.sizingHorizontal,
+    sizingVertical: axes.vertical !== null ? "fixed" : node.sizingVertical,
+  };
 }
 
 function startGroupResizeDrag(selectedIds: Set<NodeId>, startBounds: Bounds, handleId: BBoxHandleId): void {
@@ -440,7 +588,12 @@ function startGroupResizeDrag(selectedIds: Set<NodeId>, startBounds: Bounds, han
   }
   if (snapshots.size === 0) return;
 
-  dragState = { kind: "group-resize", handleId, startBounds, snapshots, startRootIds: rootIds };
+  const resizeBaseSnapshots = new Map<NodeId, SceneNode>();
+  for (const [id, node] of snapshots) {
+    resizeBaseSnapshots.set(id, fixedSizingForHandle(node, handleId));
+  }
+
+  dragState = { kind: "group-resize", handleId, startBounds, snapshots, resizeBaseSnapshots, startRootIds: rootIds };
 }
 
 function applyGroupResize(drag: GroupResizeDrag, scenePoint: Point): void {
@@ -449,7 +602,7 @@ function applyGroupResize(drag: GroupResizeDrag, scenePoint: Point): void {
 
   sceneStore.update((scene) => {
     const nodes = { ...scene.nodes };
-    for (const [id, startNode] of drag.snapshots) {
+    for (const [id, startNode] of drag.resizeBaseSnapshots) {
       const parentIsAlsoResizing = startNode.parentId !== null && memberIds.has(startNode.parentId);
       nodes[id] = resizeNodeInGroup(startNode, scale, scene, parentIsAlsoResizing);
     }
@@ -458,21 +611,24 @@ function applyGroupResize(drag: GroupResizeDrag, scenePoint: Point): void {
 }
 
 function applyResize(drag: ResizeDrag, scenePoint: Point): void {
-  const { startNode, handleId, nodeId } = drag;
+  const { resizeBaseNode, handleId, nodeId } = drag;
   const { nodes } = sceneStore.getState();
 
-  // startNode.type and handleId are correlated by construction: getHandles()
-  // only ever produces "start"/"end" for line/arrow nodes, and the 8 bbox
-  // handles for every other type — so this pairing always holds at runtime
-  // even though the two variables narrow independently for TypeScript.
+  // resizeBaseNode.type and handleId are correlated by construction:
+  // getHandles() only ever produces "start"/"end" for line/arrow nodes,
+  // and the 8 bbox handles for every other type — so this pairing always
+  // holds at runtime even though the two variables narrow independently
+  // for TypeScript. resizeBaseNode (not startNode) is what every
+  // pointermove resizes from — see the ResizeDrag/fixedSizingForHandle
+  // comments for why.
   const resized =
-    startNode.type === "line" || startNode.type === "arrow"
+    resizeBaseNode.type === "line" || resizeBaseNode.type === "arrow"
       ? resizeEndpointNode(
-          startNode,
+          resizeBaseNode,
           handleId as EndpointHandleId,
-          getAncestorLocalPoint(scenePoint, startNode.parentId, nodes),
+          getAncestorLocalPoint(scenePoint, resizeBaseNode.parentId, nodes),
         )
-      : resizeBBoxNode(startNode, handleId as BBoxHandleId, getBBoxLocalPoint(scenePoint, startNode, nodes));
+      : resizeBBoxNode(resizeBaseNode, handleId as BBoxHandleId, getBBoxLocalPoint(scenePoint, resizeBaseNode, nodes));
 
   sceneStore.update((scene) => ({ ...scene, nodes: { ...scene.nodes, [nodeId]: resized } }));
 }

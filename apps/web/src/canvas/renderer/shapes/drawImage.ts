@@ -1,3 +1,4 @@
+import { buildCssFilterString, isNeutralFilters } from "@open-canvas/commands";
 import type { ImageNode } from "@open-canvas/schema";
 import { getImage } from "../imageCache";
 
@@ -12,6 +13,11 @@ export function drawImage(ctx: CanvasRenderingContext2D, node: ImageNode): void 
   ctx.beginPath();
   ctx.rect(0, 0, width, height);
   ctx.clip();
+  // Scoped to this save/restore, and skipped entirely when every filter
+  // is neutral — ctx.filter isn't limited to drawImage the way
+  // fillStyle/strokeStyle are, so leaving it unset by default avoids any
+  // risk of it leaking into a sibling's own draw call.
+  if (!isNeutralFilters(node.filters)) ctx.filter = buildCssFilterString(node.filters);
   ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
   ctx.restore();
 }

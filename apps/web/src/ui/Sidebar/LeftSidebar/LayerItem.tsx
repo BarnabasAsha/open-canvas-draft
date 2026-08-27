@@ -3,6 +3,7 @@ import { CaretRightIcon, EyeClosedIcon, EyeIcon, LockSimpleIcon, LockSimpleOpenI
 import { useState } from "react";
 import { getComponent } from "../../../store/componentsStore";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
+import { NodeContextMenu } from "../../ContextMenu/NodeContextMenu";
 import { InstanceChildRow } from "./InstanceChildRow";
 import { LayerTypeIcon } from "./LayerTypeIcon";
 
@@ -68,80 +69,82 @@ export function LayerItem({
 
   return (
     <Collapsible.Root open={expanded} onOpenChange={setExpanded}>
-      <div
-        className="layer-row"
-        onClick={(e) => onSelect(nodeId, e.shiftKey)}
-        data-selected={isSelected || undefined}
-        data-hidden={!node.visible || undefined}
-        data-locked={node.locked || undefined}
-        style={{ paddingLeft: 8 + depth * 14 }}
-      >
-        {isExpandable ? (
-          <Collapsible.Trigger
-            className="icon-button"
-            aria-label={expanded ? "Collapse" : "Expand"}
-            title={expanded ? "Collapse" : "Expand"}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CaretRightIcon size={17} className="collapsible-chevron" data-expanded={expanded || undefined} />
-          </Collapsible.Trigger>
-        ) : (
-          <span style={{ width: 26, flexShrink: 0 }} />
-        )}
-        <span className="layer-row-type-icon">
-          <LayerTypeIcon type={node.type} />
-        </span>
-        {editingName !== null ? (
-          <input
-            className="layer-row-name-input"
-            value={editingName}
-            autoFocus
-            onChange={(e) => setEditingName(e.target.value)}
-            onBlur={commitRename}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitRename();
-              else if (e.key === "Escape") setEditingName(null);
-            }}
-          />
-        ) : (
-          <span
-            className="layer-row-name"
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              setEditingName(node.name);
-            }}
-          >
-            {node.name}
+      <NodeContextMenu onContextMenu={() => { if (!isSelected) onSelect(nodeId, false); }}>
+        <div
+          className="layer-row"
+          onClick={(e) => onSelect(nodeId, e.shiftKey)}
+          data-selected={isSelected || undefined}
+          data-hidden={!node.visible || undefined}
+          data-locked={node.locked || undefined}
+          style={{ paddingLeft: 8 + depth * 14 }}
+        >
+          {isExpandable ? (
+            <Collapsible.Trigger
+              className="icon-button"
+              aria-label={expanded ? "Collapse" : "Expand"}
+              title={expanded ? "Collapse" : "Expand"}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CaretRightIcon size={17} className="collapsible-chevron" data-expanded={expanded || undefined} />
+            </Collapsible.Trigger>
+          ) : (
+            <span style={{ width: 26, flexShrink: 0 }} />
+          )}
+          <span className="layer-row-type-icon">
+            <LayerTypeIcon type={node.type} />
           </span>
-        )}
-        <span className="layer-row-actions">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={node.visible ? "Hide" : "Show"}
-            title={node.visible ? "Hide" : "Show"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleVisible(nodeId);
-            }}
-          >
-            {node.visible ? <EyeIcon size={17} /> : <EyeClosedIcon size={17} />}
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={node.locked ? "Unlock" : "Lock"}
-            title={node.locked ? "Unlock" : "Lock"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleLocked(nodeId);
-            }}
-          >
-            {node.locked ? <LockSimpleIcon size={17} /> : <LockSimpleOpenIcon size={17} />}
-          </button>
-        </span>
-      </div>
+          {editingName !== null ? (
+            <input
+              className="layer-row-name-input"
+              value={editingName}
+              autoFocus
+              onChange={(e) => setEditingName(e.target.value)}
+              onBlur={commitRename}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitRename();
+                else if (e.key === "Escape") setEditingName(null);
+              }}
+            />
+          ) : (
+            <span
+              className="layer-row-name"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setEditingName(node.name);
+              }}
+            >
+              {node.name}
+            </span>
+          )}
+          <span className="layer-row-actions">
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={node.visible ? "Hide" : "Show"}
+              title={node.visible ? "Hide" : "Show"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleVisible(nodeId);
+              }}
+            >
+              {node.visible ? <EyeIcon size={17} /> : <EyeClosedIcon size={17} />}
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={node.locked ? "Unlock" : "Lock"}
+              title={node.locked ? "Unlock" : "Lock"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleLocked(nodeId);
+              }}
+            >
+              {node.locked ? <LockSimpleIcon size={17} /> : <LockSimpleOpenIcon size={17} />}
+            </button>
+          </span>
+        </div>
+      </NodeContextMenu>
       {isContainer && (
         <Collapsible.Panel>
           {childIds.map((childId) => (

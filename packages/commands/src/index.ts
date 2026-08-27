@@ -8,6 +8,9 @@ export * from "./componentTypes";
 export * from "./resolveInstance";
 export * from "./sceneCorners";
 export * from "./componentMutations";
+export * from "./flexLayout";
+export * from "./imageFilters";
+export * from "./generateNodeCss";
 
 export * from "./commands/Command";
 export * from "./commands/AddNodeCommand";
@@ -18,3 +21,5 @@ export * from "./commands/GroupNodesCommand";
 export * from "./commands/UngroupNodesCommand";
 export * from "./commands/CreateComponentInstanceCommand";
 export * from "./commands/DeleteNodesCommand";
+export * from "./commands/DuplicateNodesCommand";
+export * from "./commands/ReorderToEdgeCommand";

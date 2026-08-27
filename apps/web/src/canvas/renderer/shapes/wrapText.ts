@@ -1,3 +1,15 @@
+import type { TextNode } from "@open-canvas/schema";
+
+// The exact font state ctx.measureText needs to read to measure a given
+// text node correctly — shared by drawText.ts (draw-time) and
+// textMeasurement.ts (auto-resize's own measurement pass), so both build
+// the identical font string from the identical fields and can never
+// silently disagree about how wide a piece of text is.
+export function applyTextFontState(ctx: CanvasRenderingContext2D, node: TextNode): void {
+  ctx.font = `${node.fontStyle} ${node.fontWeight} ${node.fontSize}px ${node.fontFamily}`;
+  ctx.letterSpacing = `${node.letterSpacing}px`;
+}
+
 // Splits on explicit newlines first (hard breaks), then greedily packs
 // words onto each line up to maxWidth — ctx.font must already be set to
 // the node's font before calling this, since measureText reads it.

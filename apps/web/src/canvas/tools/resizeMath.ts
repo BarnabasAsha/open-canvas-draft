@@ -1,4 +1,4 @@
-import { getWorldMatrix } from "@open-canvas/commands";
+import { getWorldMatrix, transformPoint } from "@open-canvas/commands";
 import type { ArrowNode, LineNode, NodeId, PathPoint, SceneNode } from "@open-canvas/schema";
 import type { Point } from "../../utils/coordinates";
 import type { BBoxHandleId, EndpointHandleId } from "./resizeHandles";
@@ -129,8 +129,7 @@ export function resizeAxis(
 }
 
 function invertMatrixPoint(matrix: DOMMatrix, point: Point): Point {
-  const transformed = matrix.inverse().transformPoint(new DOMPoint(point.x, point.y));
-  return { x: transformed.x, y: transformed.y };
+  return transformPoint(matrix.inverse(), point);
 }
 
 function unrotateAroundCenter(point: Point, center: Point, rotationDegrees: number): Point {
@@ -138,6 +137,5 @@ function unrotateAroundCenter(point: Point, center: Point, rotationDegrees: numb
     .translate(center.x, center.y)
     .rotate(-rotationDegrees)
     .translate(-center.x, -center.y);
-  const transformed = matrix.transformPoint(new DOMPoint(point.x, point.y));
-  return { x: transformed.x, y: transformed.y };
+  return transformPoint(matrix, point);
 }

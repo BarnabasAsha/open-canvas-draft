@@ -1,4 +1,4 @@
-import { getWorldMatrix } from "@open-canvas/commands";
+import { getWorldMatrix, transformPoint } from "@open-canvas/commands";
 import type { NodeId, SceneNode } from "@open-canvas/schema";
 import type { Point } from "../../utils/coordinates";
 
@@ -26,8 +26,8 @@ export function getHandles(nodeId: NodeId, nodes: Record<NodeId, SceneNode>): Ha
     // rotation — see resizeMath.ts for why that rotation is ignored here.
     const ancestorMatrix = node.parentId ? getWorldMatrix(node.parentId, nodes) : new DOMMatrix();
     return [
-      { id: "start", point: transformPoint(ancestorMatrix, node.x, node.y) },
-      { id: "end", point: transformPoint(ancestorMatrix, node.x2, node.y2) },
+      { id: "start", point: transformPoint(ancestorMatrix, { x: node.x, y: node.y }) },
+      { id: "end", point: transformPoint(ancestorMatrix, { x: node.x2, y: node.y2 }) },
     ];
   }
 
@@ -36,7 +36,7 @@ export function getHandles(nodeId: NodeId, nodes: Record<NodeId, SceneNode>): Ha
 
   return (Object.keys(localPoints) as BBoxHandleId[]).map((id) => ({
     id,
-    point: transformPoint(matrix, localPoints[id].x, localPoints[id].y),
+    point: transformPoint(matrix, localPoints[id]),
   }));
 }
 
@@ -66,9 +66,4 @@ export function getLocalHandlePoints(width: number, height: number): Record<BBox
     sw: { x: 0, y: height },
     w: { x: 0, y: height / 2 },
   };
-}
-
-function transformPoint(matrix: DOMMatrix, x: number, y: number): Point {
-  const transformed = matrix.transformPoint(new DOMPoint(x, y));
-  return { x: transformed.x, y: transformed.y };
 }

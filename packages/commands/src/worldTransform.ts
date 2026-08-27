@@ -1,5 +1,19 @@
 import type { NodeId, SceneNode } from "@open-canvas/schema";
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+// The one place `matrix.transformPoint(new DOMPoint(...))` is spelled out —
+// every other file that needs to run a point through a DOMMatrix (scene
+// corners, resize handles, the flex drag-insertion indicator, ...) calls
+// this instead of re-deriving the same three lines locally.
+export function transformPoint(matrix: DOMMatrix, point: Point): Point {
+  const transformed = matrix.transformPoint(new DOMPoint(point.x, point.y));
+  return { x: transformed.x, y: transformed.y };
+}
+
 // Composes a node's full local-to-scene transform by walking its parentId
 // chain root-first (translate then rotate-around-center per ancestor,
 // matching the renderer's own per-node transform). Shared by rendering-
