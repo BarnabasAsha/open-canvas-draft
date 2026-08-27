@@ -12,11 +12,14 @@ type Env = InferdiHonoScopeEnv<RequestContainer>;
 const createProjectSchema = z.object({ name: z.string().min(1) });
 const renameProjectSchema = z.object({ name: z.string().min(1) });
 
+// `attributes` is a speculative internal metadata bag (see AttributeBag's
+// own comment) — never exposed wholesale. If a specific attribute is
+// ever safe/useful for a client to see, pick that one key explicitly
+// here rather than serializing the whole bag by default.
 function serializeProject(project: ProjectModel) {
   return {
     id: project.id,
     name: project.name,
-    attributes: project.attributes.toPlain(),
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
   };

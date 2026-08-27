@@ -13,13 +13,16 @@ const createPageSchema = z.object({ name: z.string().min(1), sceneGraph: SceneGr
 const renamePageSchema = z.object({ name: z.string().min(1) });
 const updateSceneSchema = z.object({ sceneGraph: SceneGraphSchema });
 
+// `attributes` is a speculative internal metadata bag (see AttributeBag's
+// own comment) — never exposed wholesale. If a specific attribute is
+// ever safe/useful for a client to see, pick that one key explicitly
+// here rather than serializing the whole bag by default.
 function serializePage(page: PageModel) {
   return {
     id: page.id,
     projectId: page.projectId,
     name: page.name,
     sceneGraph: page.sceneGraph,
-    attributes: page.attributes.toPlain(),
     createdAt: page.createdAt.toISOString(),
     updatedAt: page.updatedAt.toISOString(),
   };
