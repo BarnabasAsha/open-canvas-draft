@@ -224,11 +224,30 @@ export const ArrowNodeSchema = z.object({
 });
 export type ArrowNode = RefineSemantics<z.infer<typeof ArrowNodeSchema>>;
 
+// Values match the units the CSS `filter` functions themselves take
+// (blur in px, brightness/contrast/saturate as a unitless multiplier
+// where 1 is neutral, grayscale/sepia as a 0-1 fraction, hueRotate in
+// degrees) — a neutral ImageFilters is blur:0, brightness/contrast/
+// saturate:1, grayscale/sepia:0, hueRotate:0. Storing the spec's own
+// units means both the renderer (ctx.filter) and the CSS inspector can
+// format these directly with no conversion layer.
+export const ImageFiltersSchema = z.object({
+  blur: z.number(),
+  brightness: z.number(),
+  contrast: z.number(),
+  grayscale: z.number(),
+  saturate: z.number(),
+  sepia: z.number(),
+  hueRotate: z.number(),
+});
+export type ImageFilters = z.infer<typeof ImageFiltersSchema>;
+
 export const ImageNodeSchema = z.object({
   ...baseNodeShape,
   type: z.literal("image"),
   src: z.string(),
   objectFit: z.enum(["fill", "contain", "cover"]),
+  filters: ImageFiltersSchema,
 });
 export type ImageNode = RefineSemantics<z.infer<typeof ImageNodeSchema>>;
 

@@ -1,16 +1,30 @@
 import { Checkbox } from "@base-ui/react/checkbox";
+import { Collapsible } from "@base-ui/react/collapsible";
 import { NumberField as BaseNumberField } from "@base-ui/react/number-field";
 import { Select as BaseSelect } from "@base-ui/react/select";
-import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { CaretUpDownIcon, CheckIcon, MinusIcon, PlusIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { ColorPicker } from "./ColorPicker";
 
-export function PanelSection({ title, children }: { title: string; children: ReactNode }) {
+interface PanelSectionProps {
+  title: string;
+  children: ReactNode;
+  // Every section starts expanded except ones that opt into starting
+  // collapsed (the CSS inspector — long output, least frequently needed).
+  defaultOpen?: boolean;
+}
+
+export function PanelSection({ title, children, defaultOpen = true }: PanelSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="panel-section">
-      <div className="panel-section-title">{title}</div>
-      <div className="panel-section-fields">{children}</div>
-    </div>
+    <Collapsible.Root className="panel-section" open={open} onOpenChange={setOpen}>
+      <Collapsible.Trigger className="panel-section-title">
+        <span>{title}</span>
+        {open ? <MinusIcon size={10} /> : <PlusIcon size={10} />}
+      </Collapsible.Trigger>
+      <Collapsible.Panel className="panel-section-fields">{children}</Collapsible.Panel>
+    </Collapsible.Root>
   );
 }
 

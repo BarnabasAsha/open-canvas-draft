@@ -1,11 +1,10 @@
 import type { TextNode } from "@open-canvas/schema";
-import { wrapText } from "./wrapText";
+import { applyTextFontState, wrapText } from "./wrapText";
 
 export function drawText(ctx: CanvasRenderingContext2D, node: TextNode): void {
-  const { width, content, fontSize, fontFamily, fontWeight, fontStyle, letterSpacing, lineHeight, textDecoration, color, align } = node;
+  const { width, fontSize, content, color, align, lineHeight, textDecoration } = node;
 
-  ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
-  ctx.letterSpacing = `${letterSpacing}px`;
+  applyTextFontState(ctx, node);
   ctx.fillStyle = color;
   ctx.textBaseline = "top";
   ctx.textAlign = align;

@@ -33,6 +33,7 @@ function buildDraftNode(id: NodeId, start: Point, current: Point, name: string):
     positioning: "flow",
     src: "",
     objectFit: "cover",
+    filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
   };
 }
 

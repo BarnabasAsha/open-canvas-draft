@@ -5,7 +5,9 @@ import { AlignmentToolbar } from "./AlignmentToolbar";
 import { PanelSection } from "./fields";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { CornerRadiusSection } from "./sections/CornerRadiusSection";
+import { CssSection } from "./sections/CssSection";
 import { DocumentSection } from "./sections/DocumentSection";
+import { EffectsSection } from "./sections/EffectsSection";
 import { FlexChildSection } from "./sections/FlexChildSection";
 import { LayoutSection } from "./sections/LayoutSection";
 import { PositionSection } from "./sections/PositionSection";
@@ -242,6 +244,8 @@ function PropertySections({
         <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
       {node.type === "text" && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {node.type === "image" && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      <CssSection node={node} parentNode={parentNode} />
     </>
   );
 }
@@ -264,6 +268,7 @@ function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertyS
         <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
       {node.type === "text" && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {node.type === "image" && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
     </>
   );
 }

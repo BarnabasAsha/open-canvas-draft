@@ -29,11 +29,28 @@ export function useNodeEdit(nodeId: NodeId): NodeEditHandlers {
     beforeRef.current = sceneStore.getState().nodes;
   }
 
+  // A shallow `{...node, ...patch}` merge is correct for plain fields, but
+  // wrong for an object-valued field patched partially (e.g. one filter
+  // out of seven on ImageNode.filters) — replacing the whole sub-object
+  // wholesale would silently drop every OTHER key already on the node,
+  // and doing that replacement from a value the caller built off its own
+  // (possibly stale, pre-render) prop risks losing a second field's edit
+  // that landed in the store between two rapid onChange calls. Merging
+  // one level deep for any patch entry that's a plain object — generic,
+  // not specific to any one field name — means the caller only ever needs
+  // to send the single key that actually changed, and it always lands on
+  // top of whatever's currently in the store, not a stale snapshot.
   function onFieldChange(patch: Record<string, unknown>): void {
     sceneStore.update((graph) => {
       const node = graph.nodes[nodeId];
       if (!node) return graph;
-      return { ...graph, nodes: { ...graph.nodes, [nodeId]: { ...node, ...patch } as SceneNode } };
+
+      const merged: Record<string, unknown> = { ...node };
+      for (const [key, value] of Object.entries(patch)) {
+        const current = (node as Record<string, unknown>)[key];
+        merged[key] = isPlainObject(value) && isPlainObject(current) ? { ...current, ...value } : value;
+      }
+      return { ...graph, nodes: { ...graph.nodes, [nodeId]: merged as SceneNode } };
     });
   }
 
@@ -60,4 +77,8 @@ export function useNodeEdit(nodeId: NodeId): NodeEditHandlers {
   }
 
   return { onFieldFocus, onFieldChange, onFieldCommit };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -27,10 +27,12 @@ const SIZING_OPTIONS: readonly { value: SizingMode; label: string }[] = [
 // as always").
 function sizingOptionsFor(node: SceneNode): readonly { value: SizingMode; label: string }[] {
   if (node.type === "group") return SIZING_OPTIONS.filter((option) => option.value === "fixed");
-  // "Hug" only means something for a node with its own content/children
-  // to derive a size from — a leaf shape has nothing to hug.
-  if (!("children" in node)) return SIZING_OPTIONS.filter((option) => option.value !== "hug");
-  return SIZING_OPTIONS;
+  // "Hug" means "derive size from content" — a container derives it from
+  // its children (flex layout), a text node derives it from its own
+  // rendered text (textMeasurement.ts's resolveTextSizing). Any other
+  // leaf (rect, ellipse, image, ...) has nothing to hug.
+  if (node.type === "text" || "children" in node) return SIZING_OPTIONS;
+  return SIZING_OPTIONS.filter((option) => option.value !== "hug");
 }
 
 // Shown for a node whose parent is a flex-mode Frame/Section, letting it
