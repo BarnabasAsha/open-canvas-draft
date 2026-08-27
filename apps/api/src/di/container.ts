@@ -3,21 +3,17 @@ import { auth } from "../lib/auth";
 import { db } from "../db/client";
 import { logger } from "../lib/logger";
 import type { RequestContext } from "../lib/request-context";
-import { CreateProjectCommand } from "../modules/projects/commands/create-project.command";
-import { DeleteProjectCommand } from "../modules/projects/commands/delete-project.command";
-import { RenameProjectCommand } from "../modules/projects/commands/rename-project.command";
-import { GetProjectQuery } from "../modules/projects/queries/get-project.query";
-import { ListProjectsQuery } from "../modules/projects/queries/list-projects.query";
-import { DrizzleProjectRepository, type ProjectRepository } from "../modules/projects/repositories/project.repository";
-import { CreatePageCommand } from "../modules/projects/pages/commands/create-page.command";
-import { DeletePageCommand } from "../modules/projects/pages/commands/delete-page.command";
-import { RenamePageCommand } from "../modules/projects/pages/commands/rename-page.command";
-import { UpdatePageSceneCommand } from "../modules/projects/pages/commands/update-page-scene.command";
-import { GetPageQuery } from "../modules/projects/pages/queries/get-page.query";
-import { ListPagesQuery } from "../modules/projects/pages/queries/list-pages.query";
-import { DrizzlePageRepository, type PageRepository } from "../modules/projects/pages/repositories/page.repository";
+import { projectsModule } from "../modules/projects/projects.module";
+import { pagesModule } from "../modules/projects/pages/pages.module";
 import type { ScopeInput } from "./request-scope";
 
+// Cross-cutting registrations only — db, logger, and the lazily-resolved
+// requestContext every module depends on. Everything module-specific
+// (repositories, commands, queries) lives in that module's own
+// `*.module.ts` file and gets pulled in with `.use(...)` below — adding a
+// new module later means one new file + one new `.use()` line here,
+// nothing existing gets touched.
+//
 // `db` (`postgres` npm package / postgres.js) connects lazily on first
 // query — no explicit "await pool ready" step needed, so it's a plain
 // value, not an async factory. `requestContext` is the one genuinely
@@ -42,49 +38,11 @@ export function buildRootContainer() {
       ["request"],
       "scoped",
     )
-    .registerFactory<"projectRepository", ProjectRepository>("projectRepository", (c) => new DrizzleProjectRepository(c.get("db")))
-    .registerFactory<"pageRepository", PageRepository>("pageRepository", (c) => new DrizzlePageRepository(c.get("db")))
-    .registerClass("createProjectCommand", CreateProjectCommand, ["projectRepository", "requestContext"], "transient")
-    .registerClass("renameProjectCommand", RenameProjectCommand, ["projectRepository", "requestContext"], "transient")
-    .registerClass("deleteProjectCommand", DeleteProjectCommand, ["projectRepository", "requestContext"], "transient")
-    .registerClass("listProjectsQuery", ListProjectsQuery, ["projectRepository", "requestContext"], "transient")
-    .registerClass("getProjectQuery", GetProjectQuery, ["projectRepository", "requestContext"], "transient")
-    .registerClass(
-      "createPageCommand",
-      CreatePageCommand,
-      ["pageRepository", "projectRepository", "requestContext"],
-      "transient",
-    )
-    .registerClass(
-      "renamePageCommand",
-      RenamePageCommand,
-      ["pageRepository", "projectRepository", "requestContext"],
-      "transient",
-    )
-    .registerClass(
-      "updatePageSceneCommand",
-      UpdatePageSceneCommand,
-      ["pageRepository", "projectRepository", "requestContext"],
-      "transient",
-    )
-    .registerClass(
-      "deletePageCommand",
-      DeletePageCommand,
-      ["pageRepository", "projectRepository", "requestContext"],
-      "transient",
-    )
-    .registerClass(
-      "listPagesQuery",
-      ListPagesQuery,
-      ["pageRepository", "projectRepository", "requestContext"],
-      "transient",
-    )
-    .registerClass(
-      "getPageQuery",
-      GetPageQuery,
-      ["pageRepository", "projectRepository", "requestContext"],
-      "transient",
-    );
+    // pagesModule depends on projectRepository (every Page operation
+    // verifies ownership through its parent Project), so this order
+    // matters — projectsModule must register first.
+    .use(projectsModule)
+    .use(pagesModule);
 }
 
 export type RootContainer = ReturnType<typeof buildRootContainer>;
