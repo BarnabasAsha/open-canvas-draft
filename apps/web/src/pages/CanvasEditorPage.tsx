@@ -1,10 +1,19 @@
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { authClient } from "../lib/authClient";
+import { fetchJson } from "../lib/api";
+import { type Asset, deleteAsset, listAssets, uploadAsset } from "../lib/assets";
+import { createPage as createPageOnServer, listPages } from "../lib/pages";
+import { initPageAutosave } from "../store/pageAutosave";
+import { initPageEventLog } from "../store/pageEventLog";
 import { setThemePreference } from "../store/themeStore";
 import { useTheme } from "../store/useTheme";
+import { useSaveStatus } from "../store/useSaveStatus";
+import type { Project } from "../ui/ProjectList/ProjectList";
 import { Canvas } from "../canvas/Canvas";
 import { canvasSizeStore } from "../canvas/canvasSizeStore";
 import { RULER_SIZE, Ruler } from "../canvas/Ruler/Ruler";
+import { setCurrentProjectId } from "../store/currentProject";
 import { FlexInsertionIndicator } from "../canvas/FlexInsertionIndicator";
 import { SelectionOverlay } from "../canvas/SelectionOverlay";
 import { TextEditOverlay } from "../canvas/TextEditOverlay";
@@ -38,6 +47,8 @@ import { historyManager } from "../store/historyManager";
 import {
   addPage,
   deletePage,
+  EMPTY_SCENE,
+  hydratePages,
   renamePage,
   switchToPage as switchActivePage,
   type PageId,
@@ -47,7 +58,7 @@ import { reconcileGroupBounds } from "../store/reconcileGroupBounds";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
 import { viewportStore } from "../store/viewportStore";
-import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import type { ImageNode, NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
 import { INITIAL_VIEWPORT, screenToScene } from "../utils/coordinates";
 import { LeftSidebar } from "../ui/Sidebar/LeftSidebar/LeftSidebar";
 import { PropertiesPanel } from "../ui/Sidebar/RightSidebar/PropertiesPanel/PropertiesPanel";
@@ -215,6 +226,45 @@ function placeUiPrimitive(kind: UiPrimitiveKind): void {
   toolManager.setActiveTool("select");
 }
 
+// Same "fixed size, centered on the visible canvas" placement as
+// placeFramePreset/placeUiPrimitive above — a default box big enough to
+// see the image, left to the user to resize afterward rather than
+// probing the image's natural dimensions before placing it.
+const DEFAULT_ASSET_IMAGE_SIZE = 240;
+
+function placeImageFromAsset(asset: Asset): void {
+  const { width: canvasWidth, height: canvasHeight } = canvasSizeStore.getState();
+  const sceneCenter = screenToScene({ x: canvasWidth / 2, y: canvasHeight / 2 }, viewportStore.getState());
+  const graph = sceneStore.getState();
+
+  const node: ImageNode = {
+    id: generateId(),
+    type: "image",
+    name: nextDefaultName(graph, "Image"),
+    parentId: null,
+    x: sceneCenter.x - DEFAULT_ASSET_IMAGE_SIZE / 2,
+    y: sceneCenter.y - DEFAULT_ASSET_IMAGE_SIZE / 2,
+    width: DEFAULT_ASSET_IMAGE_SIZE,
+    height: DEFAULT_ASSET_IMAGE_SIZE,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    semantics: null,
+    interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
+    src: asset.url,
+    objectFit: "cover",
+    filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
+  };
+
+  historyManager.execute(createAddNodeCommand(node));
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([node.id]) }));
+  toolManager.setActiveTool("select");
+}
+
 function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
 }
@@ -247,8 +297,86 @@ export function CanvasEditorPage() {
   useKeyboardShortcuts();
 
   const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
   const { data: session } = authClient.useSession();
   const theme = useTheme();
+
+  const [assets, setAssets] = useState<Asset[] | null>(null);
+  const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [projectName, setProjectName] = useState("Untitled Project");
+  const saveStatus = useSaveStatus();
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    setCurrentProjectId(projectId);
+    // Guards against a slow-resolving fetch for a project the user has
+    // since navigated away from (e.g. browser back/forward between two
+    // /design/:id URLs, which doesn't unmount this component) overwriting
+    // the new project's asset list with stale data — same race the
+    // sibling effect below already guards against.
+    listAssets(projectId).then((fetched) => {
+      if (!cancelled) setAssets(fetched);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  // Loads the real project + its pages once, then swaps pagesStore's
+  // placeholder page for the real ones and starts debounced autosave.
+  // `cancelled` guards against a project switch (or unmount) resolving
+  // this fetch after a newer one has already started.
+  useEffect(() => {
+    if (!projectId) return;
+    const id = projectId;
+    let cancelled = false;
+    let teardownAutosave: (() => void) | null = null;
+    let teardownEventLog: (() => void) | null = null;
+
+    async function load(): Promise<void> {
+      const [project, existingPages] = await Promise.all([fetchJson<Project>(`/api/projects/${id}`), listPages(id)]);
+      if (cancelled) return;
+      setProjectName(project.name);
+
+      const pages = existingPages.length > 0 ? existingPages : [await createPageOnServer(id, "Page 1", EMPTY_SCENE)];
+      if (cancelled) return;
+
+      hydratePages(pages);
+      teardownAutosave = initPageAutosave(id);
+      teardownEventLog = initPageEventLog(id);
+    }
+
+    // A project that doesn't exist (or isn't yours — both collapse to the
+    // same 404 server-side) has nothing to hydrate into; without this,
+    // the rejection was silently swallowed and pagesStore's placeholder
+    // page just sat there looking like a normal, if empty, project.
+    load().catch(() => {
+      if (!cancelled) navigate("/", { replace: true });
+    });
+    return () => {
+      cancelled = true;
+      teardownAutosave?.();
+      teardownEventLog?.();
+    };
+  }, [projectId, navigate]);
+
+  async function handleUploadAsset(file: File): Promise<void> {
+    if (!projectId) return;
+    setIsUploadingAsset(true);
+    try {
+      const asset = await uploadAsset(projectId, file);
+      setAssets((current) => [asset, ...(current ?? [])]);
+    } finally {
+      setIsUploadingAsset(false);
+    }
+  }
+
+  async function handleDeleteAsset(assetId: string): Promise<void> {
+    if (!projectId) return;
+    await deleteAsset(projectId, assetId);
+    setAssets((current) => current?.filter((asset) => asset.id !== assetId) ?? null);
+  }
 
   const activeToolId = useActiveTool();
   const { pages, activePageId } = usePages();
@@ -336,8 +464,14 @@ export function CanvasEditorPage() {
         onThemeChange={setThemePreference}
         onOpenProjects={() => navigate("/")}
         onLogout={handleLogout}
-        projectName="Untitled Project"
+        projectName={projectName}
         zoomPercent={Math.round(viewport.zoom * 100)}
+        saveStatus={saveStatus}
+        assets={assets}
+        isUploadingAsset={isUploadingAsset}
+        onUploadAsset={handleUploadAsset}
+        onDeleteAsset={handleDeleteAsset}
+        onInsertAsset={placeImageFromAsset}
       />
       <div
         style={{
