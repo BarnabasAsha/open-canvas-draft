@@ -1,0 +1,245 @@
+.root {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 560px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 16px 44px oklch(30% 0.02 265 / 20%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 12px 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 590;
+  color: var(--text);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scopeChip {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 11px;
+  font-weight: 590;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: var(--surface-panel-hover);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.userBubble {
+  align-self: flex-end;
+  max-width: 74%;
+  background: var(--accent);
+  color: white;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 9px 12px;
+  border-radius: 14px 14px 4px 14px;
+}
+
+.assistantBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 84%;
+}
+
+.assistantText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.receiptHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 11px;
+  background: var(--surface-panel-hover);
+}
+
+.receiptName {
+  font-size: 12px;
+  font-weight: 590;
+  color: var(--text);
+}
+
+.receiptMeta {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.receiptActions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 11px;
+  background: var(--surface-panel-hover);
+}
+
+.keepButton {
+  font-size: 11.5px;
+  font-weight: 590;
+  color: white;
+  background: var(--accent);
+  border: none;
+  padding: 5px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.keepButton:hover {
+  background: var(--accent-hover);
+}
+
+.undoButton {
+  font-size: 11.5px;
+  font-weight: 590;
+  color: var(--text);
+  background: var(--surface-panel-active);
+  border: none;
+  padding: 5px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.undoButton:hover {
+  background: var(--surface-selected);
+}
+
+.tryAgainButton {
+  font-size: 11.5px;
+  font-weight: 590;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.tryAgainButton:hover {
+  color: var(--text);
+}
+
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.statusLine strong {
+  font-weight: 590;
+  color: var(--text);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-input);
+}
+
+.footerInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.footerInput::placeholder {
+  color: var(--text-muted);
+}
+
+.footerSend {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 16px;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+
+.footerSend:hover {
+  background: var(--accent-hover);
+}
