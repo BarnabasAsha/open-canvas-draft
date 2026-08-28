@@ -14,8 +14,10 @@
     "@open-canvas/commands": "workspace:*",
     "@open-canvas/schema": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
+    "better-auth": "^1.7.2",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
