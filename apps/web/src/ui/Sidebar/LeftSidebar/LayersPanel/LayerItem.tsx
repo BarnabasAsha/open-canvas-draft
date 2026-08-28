@@ -1,9 +1,9 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { CaretRightIcon, EyeClosedIcon, EyeIcon, LockSimpleIcon, LockSimpleOpenIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { getComponent } from "../../../store/componentsStore";
+import { getComponent } from "../../../../store/componentsStore";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
-import { NodeContextMenu } from "../../ContextMenu/NodeContextMenu";
+import { NodeContextMenu } from "../../../ContextMenu/NodeContextMenu";
 import { InstanceChildRow } from "./InstanceChildRow";
 import { LayerTypeIcon } from "./LayerTypeIcon";
 

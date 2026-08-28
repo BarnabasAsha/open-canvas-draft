@@ -3,6 +3,7 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
 import { LayerItem } from "./LayerItem";
+import styles from "./LayersPanel.module.css";
 
 interface LayersPanelProps {
   scene: SceneGraph;
@@ -27,24 +28,14 @@ export function LayersPanel({
   const rootIds = [...scene.rootIds].reverse();
 
   return (
-    <Collapsible.Root
-      open={expanded}
-      onOpenChange={setExpanded}
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
-      <Collapsible.Trigger className="collapsible-trigger">
-        <CaretRightIcon size={14} className="collapsible-chevron" data-expanded={expanded || undefined} />
+    <Collapsible.Root open={expanded} onOpenChange={setExpanded} className={styles.root}>
+      <Collapsible.Trigger className={styles.trigger}>
+        <CaretRightIcon size={12} className="collapsible-chevron" data-expanded={expanded || undefined} />
         Layers
       </Collapsible.Trigger>
-      <Collapsible.Panel style={{ flex: 1, overflowY: "auto", paddingBottom: 6 }}>
+      <Collapsible.Panel className={styles.panel}>
         {rootIds.length === 0 ? (
-          <div style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-muted)" }}>No layers yet</div>
+          <div className={styles.empty}>No layers yet</div>
         ) : (
           rootIds.map((id) => (
             <LayerItem
