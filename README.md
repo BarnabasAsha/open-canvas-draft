@@ -111,3 +111,7 @@ pnpm lint         # eslint across the whole repo
 ```
 
 Each app can also be run from its own directory (`apps/web`, `apps/api`) with the same script names.
+
+## License
+
+[MIT](./LICENSE)
