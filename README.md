@@ -6,9 +6,13 @@ It's also a learning project. The `docs/` folder has a short "walkthrough" write
 
 ## Current state
 
-The canvas stands on its own — no AI, no export yet (see [What's not here yet](#whats-not-here-yet)).
+The canvas stands on its own — no AI, no export yet (see [What's not here yet](#whats-not-here-yet)) — but it's no longer a local-only demo: signing in, your projects, and everything you draw are real and persisted.
 
-The app always loads a seed scene (`apps/web/src/utils/seedData.ts`) — a small marketing-page mockup exercising most node types and the flex layout system — rather than starting blank. There's no persistence wired up yet (see the Backend note below), so this is also the *only* state: edits live in memory for the session and a refresh discards them and reloads the same seed scene.
+**Accounts & projects** — Google sign-in (Better Auth), a dashboard listing your projects, and a create-project flow. Every new signup automatically gets an example project (a small hero-section demo scene) so there's something real to open immediately, instead of an empty list.
+
+**Persistence** — Each project's pages autosave to the backend (debounced, per page) as you edit — refreshing or coming back later picks up exactly where you left off. Pages can be added, renamed, and deleted, all backed by the API.
+
+**Assets** — Images are uploaded to Cloudflare R2 (not inlined as base64) and tracked per project, with a small asset library (upload/insert/delete) in the canvas's left rail.
 
 **Shapes & drawing** — Rectangle, Ellipse, Line, Arrow, Text, Image, and a Pen tool for freeform bezier paths. Frame and Section as containers, plus a Group for ad-hoc bagging of a selection. Frame has device-size presets (Desktop, iPad, iPhone, etc.) alongside free drag-to-draw.
 
@@ -30,6 +34,8 @@ The app always loads a seed scene (`apps/web/src/utils/seedData.ts`) — a small
 
 **Canvas fundamentals** — Zoom/pan, rulers, a toggleable grid, and a properties panel with collapsible sections per node type.
 
+**Edit history log** — Every command (add/move/resize/delete/group/…) now also carries a serializable description of itself and is logged per page (`packages/commands`'s `SceneEvent`/`replaySceneEvents`, a `page_events` table). This is groundwork, not a shipped feature yet — see below.
+
 ## What's not here yet
 
 Deliberately deferred until the canvas itself is fully solid, per the project's own stated phasing:
@@ -38,7 +44,7 @@ Deliberately deferred until the canvas itself is fully solid, per the project's 
 - **AI / chat-driven editing** — not started.
 - **Icon library** — icons are planned to decompose into native path nodes (not raster images), not yet built.
 - **Editable semantic tags** — every node already carries a semantic tag/role in its data (currently read-only in the UI); this becomes editable once export is built and actually consumes it.
-- **A real backend** — `apps/api` is a Hono skeleton backed by a single local JSON file, not wired into the web app's UI at all. Real persistence, auth, and file storage (Drizzle, Better Auth, Cloudflare R2 — see Tech stack below) haven't been built yet.
+- **Version history UI / undo-depth gating for paid plans** — the event log above captures and persists the data this would need, but there's no UI to browse or restore from it, and no plan-tier/billing system yet to gate it by. Live undo/redo (Cmd+Z) stays exactly as fast and fully client-local as it's always been — this is about a future *read-only* history browser, not live editing.
 
 ## Tech stack
 
@@ -49,44 +55,56 @@ Deliberately deferred until the canvas itself is fully solid, per the project's 
 - **Linting**: ESLint (flat config) + oxlint
 - **Package manager**: pnpm workspaces
 
-**Backend** — [Hono](https://hono.dev) is the API framework, in place today. Everything else is intended but not built yet: `apps/api`'s document store is currently a single local JSON file, explicitly a placeholder (see the comment in `apps/api/src/documentStore.ts`) for:
-- **[Drizzle](https://orm.drizzle.team)** as the ORM, replacing the JSON file with a real database.
-- **[Better Auth](https://www.better-auth.com)** for authentication.
-- **[Cloudflare R2](https://developers.cloudflare.com/r2/)** for asset/file storage (images, exports).
+**Backend** — [Hono](https://hono.dev), [Drizzle](https://orm.drizzle.team) + Postgres, [Better Auth](https://www.better-auth.com) (Google sign-in), and [Cloudflare R2](https://developers.cloudflare.com/r2/) for asset storage — all in place and wired into the web app today, following a small DDD-ish pattern (domain model → mapper → repository → command/query → route) per resource (Projects, Pages, Assets, page-events).
 
 ## Project structure
 
 ```
 apps/
-  web/        the canvas app itself (Vite + React)
-  api/        a small Hono API for saving/loading documents, backed by a
-              single local JSON file for now (Drizzle/Better Auth/R2 are
-              the intended stack — see Tech stack below) — not yet wired
-              into the web app's UI (no persistence flow calls it today)
+  web/        the canvas app itself (Vite + React) — auth, dashboard,
+              and the canvas editor, all backed by real API calls
+  api/        Hono + Drizzle/Postgres backend: auth (Better Auth),
+              projects, pages (with autosave + a per-page event log),
+              and R2-backed asset uploads
 packages/
   schema/     Zod schemas + inferred types for every scene-graph node type
   commands/   pure, DOM-free graph logic — layout, mutations, undo/redo
-              commands, CSS generation — shared by (and testable outside)
-              the web app (see packages/commands/README.md)
+              commands, serializable SceneEvents + replay, CSS generation
+              — shared by (and testable outside) the web app (see
+              packages/commands/README.md)
 docs/         one write-up per shipped feature: design decisions, code
               walkthrough, bugs found and fixed
 ```
 
 ## Getting started
 
-**Prerequisites**: Node 20+, and [pnpm](https://pnpm.io) 10 (`corepack enable` will pick up the pinned version automatically, or install manually — `npm i -g pnpm`).
+**Prerequisites**: Node 20+, [pnpm](https://pnpm.io) 10 (`corepack enable` will pick up the pinned version automatically, or install manually — `npm i -g pnpm`), and a local Postgres database.
 
-```bash
-pnpm install
-pnpm dev:web
-```
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+2. Copy the env templates and fill them in:
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env
+   ```
+   `apps/api/.env` needs a real `DATABASE_URL`, a `BETTER_AUTH_SECRET`, Google OAuth credentials (sign-in only works with these set — Google is currently the only auth method), and Cloudflare R2 credentials (asset uploads and the signup-time example project both need these). `apps/web/.env` just needs `VITE_API_URL` pointed at the API.
+3. Push the schema to your database:
+   ```bash
+   pnpm --filter api db:push
+   ```
+4. Run both apps (from the repo root, in separate terminals):
+   ```bash
+   pnpm dev:api      # the backend API on :5005
+   pnpm dev:web      # the canvas app on :5173
+   ```
 
-Open the URL Vite prints (defaults to `http://localhost:5173`) — the canvas loads with a seeded demo design.
+Open the URL Vite prints (defaults to `http://localhost:5173`) and sign in with Google — you'll land in a dashboard with an auto-provisioned example project ready to open.
 
 Other useful commands, run from the repo root:
 
 ```bash
-pnpm dev:api      # the backend API on :3001 (optional — see note above)
 pnpm build        # build every package/app
 pnpm typecheck    # typecheck every package/app
 pnpm lint         # eslint across the whole repo

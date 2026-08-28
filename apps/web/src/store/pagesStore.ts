@@ -1,12 +1,18 @@
 import { generateId, parseVirtualId } from "@open-canvas/commands";
 import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import {
+  createPage as createPageOnServer,
+  deletePage as deletePageOnServer,
+  renamePage as renamePageOnServer,
+} from "../lib/pages";
 import { INITIAL_VIEWPORT, type Viewport } from "../utils/coordinates";
 import { nextPageName } from "../utils/pageNaming";
-import { seedScene } from "../utils/seedData";
 import { getComponent } from "./componentsStore";
 import { createHistoryManager, type HistoryManager } from "./createHistoryManager";
 import { createSceneStore, type SceneStore } from "./createSceneStore";
 import { createStore, type Store } from "./createStore";
+import { getCurrentProjectId } from "./currentProject";
+import { setSaveStatus } from "./saveStatusStore";
 import type { SelectionState } from "./selectionStore";
 
 export type PageId = string;
@@ -25,7 +31,13 @@ interface PagesState {
   activePageId: PageId;
 }
 
-const emptyScene: SceneGraph = { nodes: {}, rootIds: [] };
+export const EMPTY_SCENE: SceneGraph = { nodes: {}, rootIds: [] };
+
+function requireCurrentProjectId(): string {
+  const projectId = getCurrentProjectId();
+  if (!projectId) throw new Error("pagesStore: no current project id set");
+  return projectId;
+}
 
 // A selected id is either a real graph node, or a "virtual" id
 // (`instanceId::defNodeId`, see instanceVirtualId.ts) addressing a node
@@ -42,7 +54,7 @@ function isSelectableId(id: NodeId, nodes: Record<NodeId, SceneNode>): boolean {
   return definition !== undefined && virtual.defNodeId in definition.nodes;
 }
 
-function createPage(name: string, initialScene: SceneGraph): PageBundle {
+function createPage(name: string, initialScene: SceneGraph, id: PageId = generateId()): PageBundle {
   const scene = createSceneStore(initialScene);
   const selection = createStore<SelectionState>({ selectedIds: new Set(), hoveredId: null });
 
@@ -63,7 +75,7 @@ function createPage(name: string, initialScene: SceneGraph): PageBundle {
   });
 
   return {
-    id: generateId(),
+    id,
     name,
     scene,
     selection,
@@ -72,12 +84,25 @@ function createPage(name: string, initialScene: SceneGraph): PageBundle {
   };
 }
 
-// The file always starts with exactly one page, seeded with the same
-// hero-section demo content the single-scene version of the app used to
-// load directly in main.tsx — every page added after this one starts blank.
-const firstPage = createPage("Page 1", seedScene);
+// Starts with one blank placeholder page so every hook/component that
+// reads pagesStore (LeftSidebar, Canvas, etc.) has something to render
+// immediately, with zero "no pages yet" special-casing. CanvasEditorPage's
+// mount effect replaces this wholesale via hydratePages() once the real
+// project's pages have loaded from the API — so this briefly shows a
+// blank canvas, never seedData.ts's demo shapes (that file is kept only
+// for the separately-deferred "auto-provision an example project for new
+// signups" follow-up, not used as a loading placeholder here).
+const placeholderPage = createPage("Page 1", EMPTY_SCENE);
 
-export const pagesStore = createStore<PagesState>({ pages: [firstPage], activePageId: firstPage.id });
+export const pagesStore = createStore<PagesState>({ pages: [placeholderPage], activePageId: placeholderPage.id });
+
+// Replaces the entire page list with real server data — called once by
+// CanvasEditorPage's mount effect after fetching a project's pages.
+export function hydratePages(pages: { id: PageId; name: string; sceneGraph: SceneGraph }[]): void {
+  if (pages.length === 0) return;
+  const bundles = pages.map((page) => createPage(page.name, page.sceneGraph, page.id));
+  pagesStore.update(() => ({ pages: bundles, activePageId: bundles[0].id }));
+}
 
 export function getActivePage(): PageBundle {
   const { pages, activePageId } = pagesStore.getState();
@@ -89,30 +114,60 @@ export function getActivePage(): PageBundle {
   return active;
 }
 
-export function addPage(): void {
-  pagesStore.update((state) => {
-    const name = nextPageName(state.pages.map((page) => page.name), "Page");
-    const page = createPage(name, emptyScene);
-    return { pages: [...state.pages, page], activePageId: page.id };
-  });
+// Calls the backend first, then mutates local state on success — same
+// ordering ProjectsPage.tsx's handleCreate already uses for project
+// creation. A failed call leaves the local page list untouched rather
+// than showing a page that doesn't actually exist server-side; the
+// shared saveStatusStore (also used by pageAutosave.ts) is how the
+// failure surfaces, since these are all fire-and-forget from onClick
+// handlers with nothing else awaiting or catching them.
+export async function addPage(): Promise<void> {
+  try {
+    const projectId = requireCurrentProjectId();
+    const name = nextPageName(pagesStore.getState().pages.map((page) => page.name), "Page");
+    const created = await createPageOnServer(projectId, name, EMPTY_SCENE);
+
+    pagesStore.update((state) => {
+      const page = createPage(created.name, created.sceneGraph, created.id);
+      return { pages: [...state.pages, page], activePageId: page.id };
+    });
+  } catch {
+    setSaveStatus("error");
+  }
 }
 
-export function renamePage(id: PageId, name: string): void {
-  pagesStore.update((state) => ({
-    ...state,
-    pages: state.pages.map((page) => (page.id === id ? { ...page, name } : page)),
-  }));
+export async function renamePage(id: PageId, name: string): Promise<void> {
+  try {
+    const projectId = requireCurrentProjectId();
+    await renamePageOnServer(projectId, id, name);
+
+    pagesStore.update((state) => ({
+      ...state,
+      pages: state.pages.map((page) => (page.id === id ? { ...page, name } : page)),
+    }));
+  } catch {
+    setSaveStatus("error");
+  }
 }
 
 // Never deletes the last remaining page — the file always has at least one.
-export function deletePage(id: PageId): void {
-  pagesStore.update((state) => {
-    if (state.pages.length <= 1) return state;
+export async function deletePage(id: PageId): Promise<void> {
+  if (pagesStore.getState().pages.length <= 1) return;
 
-    const pages = state.pages.filter((page) => page.id !== id);
-    const activePageId = state.activePageId === id ? pages[0].id : state.activePageId;
-    return { pages, activePageId };
-  });
+  try {
+    const projectId = requireCurrentProjectId();
+    await deletePageOnServer(projectId, id);
+
+    pagesStore.update((state) => {
+      if (state.pages.length <= 1) return state;
+
+      const pages = state.pages.filter((page) => page.id !== id);
+      const activePageId = state.activePageId === id ? pages[0].id : state.activePageId;
+      return { pages, activePageId };
+    });
+  } catch {
+    setSaveStatus("error");
+  }
 }
 
 export function switchToPage(id: PageId): void {

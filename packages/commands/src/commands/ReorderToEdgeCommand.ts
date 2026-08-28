@@ -1,4 +1,5 @@
-import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import { applySceneEvent, invertSceneEvent, ROOT_KEY, type SceneEvent } from "../events";
+import type { NodeId, SceneGraph } from "@open-canvas/schema";
 import type { Command } from "./Command";
 
 // Handles both a single node and a multi-selection uniformly — for a
@@ -11,37 +12,40 @@ import type { Command } from "./Command";
 // single-node reorderChildInGraph calls, so there's no risk of earlier
 // moves shifting the indices later ones depend on.
 export function createReorderToEdgeCommand(graph: SceneGraph, nodeIds: readonly NodeId[], edge: "front" | "back"): Command | null {
-  const byParent = new Map<NodeId | null, NodeId[]>();
+  const byParent = new Map<string, NodeId[]>();
   for (const id of nodeIds) {
     const node = graph.nodes[id];
     if (!node) continue;
-    const list = byParent.get(node.parentId) ?? [];
+    const key = node.parentId ?? ROOT_KEY;
+    const list = byParent.get(key) ?? [];
     list.push(id);
-    byParent.set(node.parentId, list);
+    byParent.set(key, list);
   }
   if (byParent.size === 0) return null;
 
-  const originalArrays = new Map<NodeId | null, readonly NodeId[]>();
-  const newArrays = new Map<NodeId | null, readonly NodeId[]>();
+  const originalArrays: Record<string, NodeId[]> = {};
+  const newArrays: Record<string, NodeId[]> = {};
   let changed = false;
 
-  for (const [parentId, ids] of byParent) {
-    const siblings = siblingIdsOf(graph, parentId);
+  for (const [key, ids] of byParent) {
+    const siblings = siblingIdsOf(graph, key === ROOT_KEY ? null : key);
     const idSet = new Set(ids);
     const rest = siblings.filter((id) => !idSet.has(id));
     const moved = siblings.filter((id) => idSet.has(id)); // preserves their relative order
     const next = edge === "front" ? [...rest, ...moved] : [...moved, ...rest];
 
-    originalArrays.set(parentId, siblings);
-    newArrays.set(parentId, next);
+    originalArrays[key] = [...siblings];
+    newArrays[key] = next;
     if (!arraysEqual(siblings, next)) changed = true;
   }
 
   if (!changed) return null;
 
+  const event: SceneEvent = { type: "reorderToEdge", originalArrays, newArrays };
   return {
-    apply: (g) => applyChildArrays(g, newArrays),
-    invert: (g) => applyChildArrays(g, originalArrays),
+    event,
+    apply: (g) => applySceneEvent(g, event),
+    invert: (g) => invertSceneEvent(g, event),
   };
 }
 
@@ -49,24 +53,6 @@ function siblingIdsOf(graph: SceneGraph, parentId: NodeId | null): readonly Node
   if (!parentId) return graph.rootIds;
   const parent = graph.nodes[parentId];
   return parent && "children" in parent ? parent.children : graph.rootIds;
-}
-
-function applyChildArrays(graph: SceneGraph, arrays: Map<NodeId | null, readonly NodeId[]>): SceneGraph {
-  let nodes: Record<NodeId, SceneNode> = graph.nodes;
-  let rootIds = graph.rootIds;
-
-  for (const [parentId, children] of arrays) {
-    if (parentId === null) {
-      rootIds = [...children];
-      continue;
-    }
-    const parent = nodes[parentId];
-    if (parent && "children" in parent) {
-      nodes = { ...nodes, [parentId]: { ...parent, children: [...children] } };
-    }
-  }
-
-  return { nodes, rootIds };
 }
 
 function arraysEqual(a: readonly NodeId[], b: readonly NodeId[]): boolean {

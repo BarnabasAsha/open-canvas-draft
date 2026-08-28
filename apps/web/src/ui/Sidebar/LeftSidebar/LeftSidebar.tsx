@@ -1,5 +1,7 @@
 import { useState } from "react";
+import type { Asset } from "../../../lib/assets";
 import type { PageId } from "../../../store/pagesStore";
+import type { SaveStatus } from "../../../store/saveStatusStore";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
 import type { ThemePreference } from "../../../store/themeStore";
 import { AvatarButton } from "../../AvatarButton/AvatarButton";
@@ -37,7 +39,20 @@ interface LeftSidebarProps {
   onLogout: () => void;
   projectName: string;
   zoomPercent: number;
+  saveStatus: SaveStatus;
+  assets: Asset[] | null;
+  isUploadingAsset: boolean;
+  onUploadAsset: (file: File) => void;
+  onDeleteAsset: (assetId: string) => void;
+  onInsertAsset: (asset: Asset) => void;
 }
+
+const SAVE_STATUS_LABEL: Record<SaveStatus, string | null> = {
+  idle: null,
+  saving: "Saving…",
+  saved: "Saved",
+  error: "Couldn't save",
+};
 
 // Owns the fixed-width bordered column that used to belong solely to
 // LayersPanel — account row, project name/zoom, Pages, and a Layers/
@@ -67,6 +82,12 @@ export function LeftSidebar({
   onLogout,
   projectName,
   zoomPercent,
+  saveStatus,
+  assets,
+  isUploadingAsset,
+  onUploadAsset,
+  onDeleteAsset,
+  onInsertAsset,
 }: LeftSidebarProps) {
   const [railTab, setRailTab] = useState<RailTab>("layers");
 
@@ -87,7 +108,14 @@ export function LeftSidebar({
       </div>
       <div className={styles.projectRow}>
         <span className={styles.projectName}>{projectName}</span>
-        <span className={styles.zoom}>{zoomPercent}%</span>
+        <div className={styles.projectRowTrailing}>
+          {SAVE_STATUS_LABEL[saveStatus] && (
+            <span className={styles.saveStatus} data-error={saveStatus === "error" || undefined}>
+              {SAVE_STATUS_LABEL[saveStatus]}
+            </span>
+          )}
+          <span className={styles.zoom}>{zoomPercent}%</span>
+        </div>
       </div>
       <PagesPanel
         pages={pages}
@@ -109,7 +137,13 @@ export function LeftSidebar({
           onRename={onRename}
         />
       ) : (
-        <ElementsPanel />
+        <ElementsPanel
+          assets={assets}
+          isUploading={isUploadingAsset}
+          onUpload={onUploadAsset}
+          onDelete={onDeleteAsset}
+          onInsert={onInsertAsset}
+        />
       )}
     </div>
   );

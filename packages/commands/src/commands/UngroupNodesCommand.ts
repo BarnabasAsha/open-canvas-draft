@@ -1,4 +1,4 @@
-import { addNodeToGraph, removeNodeFromGraph, reparentNodeInGraph } from "../graphMutations";
+import { applySceneEvent, invertSceneEvent, type SceneEvent } from "../events";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
 import type { Command } from "./Command";
 
@@ -11,23 +11,10 @@ export function createUngroupNodesCommand(graph: SceneGraph, groupId: NodeId): C
   const parentId = group.parentId;
   const capturedGroup = group;
 
+  const event: SceneEvent = { type: "ungroupNodes", groupId, memberIds, parentId, capturedGroup };
   return {
-    apply: (g) => {
-      let next = g;
-      for (const id of memberIds) next = reparentNodeInGraph(next, id, parentId);
-      return removeNodeFromGraph(next, groupId);
-    },
-    invert: (g) => {
-      // Re-added with parentId: null / children: [] regardless of the
-      // captured node's real values — addNodeToGraph always lands a new
-      // node at root, and reparentNodeInGraph no-ops if the node's own
-      // parentId field already matches the target, so both fields have to
-      // start "empty" and get filled by the explicit reparent steps below,
-      // the same way GroupNodesCommand builds a fresh group.
-      let next = addNodeToGraph(g, { ...capturedGroup, parentId: null, children: [] });
-      if (parentId) next = reparentNodeInGraph(next, groupId, parentId);
-      for (const id of memberIds) next = reparentNodeInGraph(next, id, groupId);
-      return next;
-    },
+    event,
+    apply: (g) => applySceneEvent(g, event),
+    invert: (g) => invertSceneEvent(g, event),
   };
 }

@@ -1,4 +1,5 @@
-import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import { applySceneEvent, invertSceneEvent, type MoveSnapshotData, type SceneEvent } from "../events";
+import type { NodeId, SceneNode } from "@open-canvas/schema";
 import type { Command } from "./Command";
 
 // A plain node-value swap (like Phase 4's original version) isn't enough
@@ -12,17 +13,15 @@ export interface MoveSnapshot {
   rootIds: readonly NodeId[];
 }
 
-export function createMoveNodeCommand(before: MoveSnapshot, after: MoveSnapshot): Command {
-  return {
-    apply: (graph) => applySnapshot(graph, after),
-    invert: (graph) => applySnapshot(graph, before),
-  };
+function toSnapshotData(snapshot: MoveSnapshot): MoveSnapshotData {
+  return { nodes: Object.fromEntries(snapshot.nodes), rootIds: [...snapshot.rootIds] };
 }
 
-function applySnapshot(graph: SceneGraph, snapshot: MoveSnapshot): SceneGraph {
-  const nodes = { ...graph.nodes };
-  for (const [id, node] of snapshot.nodes) {
-    if (nodes[id]) nodes[id] = node;
-  }
-  return { nodes, rootIds: [...snapshot.rootIds] };
+export function createMoveNodeCommand(before: MoveSnapshot, after: MoveSnapshot): Command {
+  const event: SceneEvent = { type: "moveNode", before: toSnapshotData(before), after: toSnapshotData(after) };
+  return {
+    event,
+    apply: (graph) => applySceneEvent(graph, event),
+    invert: (graph) => invertSceneEvent(graph, event),
+  };
 }

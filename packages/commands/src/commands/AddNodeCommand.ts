@@ -1,10 +1,12 @@
-import { addNodeToGraph, removeNodeFromGraph } from "../graphMutations";
+import { applySceneEvent, invertSceneEvent, type SceneEvent } from "../events";
 import type { SceneNode } from "@open-canvas/schema";
 import type { Command } from "./Command";
 
 export function createAddNodeCommand(node: SceneNode): Command {
+  const event: SceneEvent = { type: "addNode", node };
   return {
-    apply: (graph) => addNodeToGraph(graph, node),
-    invert: (graph) => removeNodeFromGraph(graph, node.id),
+    event,
+    apply: (graph) => applySceneEvent(graph, event),
+    invert: (graph) => invertSceneEvent(graph, event),
   };
 }
