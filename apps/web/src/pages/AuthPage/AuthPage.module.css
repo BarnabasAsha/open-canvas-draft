@@ -1,0 +1,96 @@
+.screen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--surface-canvas);
+}
+
+.wordmarkPlacement {
+  position: absolute;
+  top: 30px;
+  left: 34px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  width: 316px;
+  gap: 26px;
+  margin-top: -20px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 630;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.footer {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--text-disabled);
+}
+
+.footerEmphasis {
+  color: var(--accent-text);
+  font-weight: 570;
+  text-decoration: none;
+}
+
+.footerEmphasis:hover {
+  text-decoration: underline;
+}
+
+.footerStatic {
+  color: inherit;
+}
+
+.googleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  height: 46px;
+  padding: 0 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  font-size: 14.5px;
+  font-weight: 590;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+
+.googleButton:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.googleButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
