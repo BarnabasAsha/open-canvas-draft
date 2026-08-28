@@ -1,0 +1,74 @@
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 26px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.heading h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 640;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  width: 190px;
+  padding: 0 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text-muted);
+}
+
+.search:focus-within {
+  border-color: var(--accent);
+}
+
+.searchIcon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.search input::placeholder {
+  color: var(--text-muted);
+}
