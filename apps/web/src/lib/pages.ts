@@ -1,3 +1,4 @@
+import type { HistoryEntry } from "@open-canvas/commands";
 import type { SceneGraph } from "@open-canvas/schema";
 import { fetchJson } from "./api";
 
@@ -39,5 +40,14 @@ export function updatePageScene(projectId: string, pageId: string, sceneGraph: S
   return fetchJson<Page>(`/api/projects/${projectId}/pages/${pageId}/scene`, {
     method: "PUT",
     body: JSON.stringify({ sceneGraph }),
+  });
+}
+
+// Best-effort history log, not the source of truth for current state (that's
+// updatePageScene above) — see pageEventLog.ts.
+export function appendPageEvents(projectId: string, pageId: string, entries: HistoryEntry[]): Promise<void> {
+  return fetchJson<void>(`/api/projects/${projectId}/pages/${pageId}/events`, {
+    method: "POST",
+    body: JSON.stringify({ entries }),
   });
 }

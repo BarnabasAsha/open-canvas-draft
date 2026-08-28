@@ -1,21 +1,15 @@
-import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import { applySceneEvent, invertSceneEvent, type SceneEvent } from "../events";
+import type { NodeId, SceneNode } from "@open-canvas/schema";
 import type { Command } from "./Command";
 
 // Plural sibling of SetNodeCommand — one undo step for a field edit applied
 // to every node in a same-type multi-selection, rather than one step per
 // node.
 export function createSetNodesCommand(before: Map<NodeId, SceneNode>, after: Map<NodeId, SceneNode>): Command {
+  const event: SceneEvent = { type: "setNodes", before: Object.fromEntries(before), after: Object.fromEntries(after) };
   return {
-    apply: (graph) => setNodes(graph, after),
-    invert: (graph) => setNodes(graph, before),
+    event,
+    apply: (graph) => applySceneEvent(graph, event),
+    invert: (graph) => invertSceneEvent(graph, event),
   };
-}
-
-function setNodes(graph: SceneGraph, nodes: Map<NodeId, SceneNode>): SceneGraph {
-  let next = graph.nodes;
-  for (const [id, node] of nodes) {
-    if (!next[id]) continue;
-    next = { ...next, [id]: node };
-  }
-  return next === graph.nodes ? graph : { ...graph, nodes: next };
 }

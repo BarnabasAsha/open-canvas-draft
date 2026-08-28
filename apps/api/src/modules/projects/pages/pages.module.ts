@@ -6,6 +6,9 @@ import { CreatePageCommand } from "./commands/create-page.command";
 import { DeletePageCommand } from "./commands/delete-page.command";
 import { RenamePageCommand } from "./commands/rename-page.command";
 import { UpdatePageSceneCommand } from "./commands/update-page-scene.command";
+import { AppendPageEventsCommand } from "./events/commands/append-page-events.command";
+import { ListPageEventsQuery } from "./events/queries/list-page-events.query";
+import { DrizzlePageEventRepository, type PageEventRepository } from "./events/repositories/page-event.repository";
 import { GetPageQuery } from "./queries/get-page.query";
 import { ListPagesQuery } from "./queries/list-pages.query";
 import { DrizzlePageRepository, type PageRepository } from "./repositories/page.repository";
@@ -17,7 +20,7 @@ type PagesRequirements = SpecMap<{ db: Database; projectRepository: ProjectRepos
   requestContext: AsyncSpec<RequestContext, "scoped">;
 };
 
-type PagesProvides = SpecMap<{ pageRepository: PageRepository }, "singleton"> &
+type PagesProvides = SpecMap<{ pageRepository: PageRepository; pageEventRepository: PageEventRepository }, "singleton"> &
   SpecMap<
     {
       createPageCommand: CreatePageCommand;
@@ -26,6 +29,8 @@ type PagesProvides = SpecMap<{ pageRepository: PageRepository }, "singleton"> &
       deletePageCommand: DeletePageCommand;
       listPagesQuery: ListPagesQuery;
       getPageQuery: GetPageQuery;
+      appendPageEventsCommand: AppendPageEventsCommand;
+      listPageEventsQuery: ListPageEventsQuery;
     },
     "transient"
   >;
@@ -33,6 +38,10 @@ type PagesProvides = SpecMap<{ pageRepository: PageRepository }, "singleton"> &
 export const pagesModule: Module<PagesRequirements, PagesProvides> = (c) =>
   c
     .registerFactory<"pageRepository", PageRepository>("pageRepository", (ctx) => new DrizzlePageRepository(ctx.get("db")))
+    .registerFactory<"pageEventRepository", PageEventRepository>(
+      "pageEventRepository",
+      (ctx) => new DrizzlePageEventRepository(ctx.get("db")),
+    )
     .registerClass(
       "createPageCommand",
       CreatePageCommand,
@@ -63,4 +72,16 @@ export const pagesModule: Module<PagesRequirements, PagesProvides> = (c) =>
       ["pageRepository", "projectRepository", "requestContext"],
       "transient",
     )
-    .registerClass("getPageQuery", GetPageQuery, ["pageRepository", "projectRepository", "requestContext"], "transient");
+    .registerClass("getPageQuery", GetPageQuery, ["pageRepository", "projectRepository", "requestContext"], "transient")
+    .registerClass(
+      "appendPageEventsCommand",
+      AppendPageEventsCommand,
+      ["pageEventRepository", "pageRepository", "projectRepository", "requestContext"],
+      "transient",
+    )
+    .registerClass(
+      "listPageEventsQuery",
+      ListPageEventsQuery,
+      ["pageEventRepository", "pageRepository", "projectRepository", "requestContext"],
+      "transient",
+    );

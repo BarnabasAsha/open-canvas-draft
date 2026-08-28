@@ -1,4 +1,5 @@
-import { addNodeToGraph, findCommonAncestor, hasAncestorAmongMembers, removeNodeFromGraph, reparentNodeInGraph } from "../graphMutations";
+import { applySceneEvent, invertSceneEvent, type SceneEvent } from "../events";
+import { findCommonAncestor, hasAncestorAmongMembers } from "../graphMutations";
 import { generateId } from "../id";
 import { nextDefaultName } from "../nodeNaming";
 import { getGroupBounds } from "../sceneCorners";
@@ -41,19 +42,13 @@ export function createGroupNodesCommand(graph: SceneGraph, memberIds: NodeId[]):
     children: [],
   };
 
-  const originalParents = new Map(memberIds.map((id) => [id, graph.nodes[id]?.parentId ?? null]));
+  const originalParents: Record<NodeId, NodeId | null> = {};
+  for (const id of memberIds) originalParents[id] = graph.nodes[id]?.parentId ?? null;
 
+  const event: SceneEvent = { type: "groupNodes", groupId, groupNode, parentId, memberIds, originalParents };
   return {
-    apply: (g) => {
-      let next = addNodeToGraph(g, groupNode);
-      if (parentId) next = reparentNodeInGraph(next, groupId, parentId);
-      for (const id of memberIds) next = reparentNodeInGraph(next, id, groupId);
-      return next;
-    },
-    invert: (g) => {
-      let next = g;
-      for (const id of memberIds) next = reparentNodeInGraph(next, id, originalParents.get(id) ?? null);
-      return removeNodeFromGraph(next, groupId);
-    },
+    event,
+    apply: (g) => applySceneEvent(g, event),
+    invert: (g) => invertSceneEvent(g, event),
   };
 }
