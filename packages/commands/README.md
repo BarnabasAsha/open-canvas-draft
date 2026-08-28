@@ -20,6 +20,15 @@ server-side (an AI proxy driving edits, a collab server replaying a command
 log) — that will need a portable 2D-matrix implementation to replace
 `DOMMatrix` first.
 
+`replay.ts`'s `replaySceneEvents` (added alongside `events.ts`'s
+serializable `SceneEvent`, for the per-page event log — see the root
+README) hits this same limitation for any event built from a command that
+reparents a node (group/ungroup/duplicate/create-component-instance all go
+through `reparentNodeInGraph`, which calls `getWorldMatrix`) — it only runs
+in a DOM-having environment today, same as everything else here. It's not
+called server-side yet (no replay endpoint exists), so this is latent, not
+a live bug.
+
 ## What deliberately stays in `apps/web`
 
 Some code that touches these same node types is NOT here, because it's
