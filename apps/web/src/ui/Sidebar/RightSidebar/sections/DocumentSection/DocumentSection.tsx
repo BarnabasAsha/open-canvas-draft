@@ -1,4 +1,5 @@
-import { CheckboxField, ColorField, PanelSection } from "../fields";
+import { CheckboxField, ColorField, PanelSection } from "../../fields";
+import styles from "./DocumentSection.module.css";
 
 interface DocumentSectionProps {
   backgroundColor: string | null;
@@ -26,7 +27,7 @@ export function DocumentSection({
 }: DocumentSectionProps) {
   return (
     <>
-      <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>Canvas</div>
+      <div className={styles.heading}>Canvas</div>
       <PanelSection title="Appearance">
         <ColorField
           label="Background"

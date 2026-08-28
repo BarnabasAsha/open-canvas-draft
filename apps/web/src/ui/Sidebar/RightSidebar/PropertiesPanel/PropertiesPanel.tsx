@@ -1,20 +1,21 @@
-import { isAlignableContainer } from "../../../canvas/tools/alignment";
-import type { AlignKind } from "../../../canvas/tools/alignment";
+import { isAlignableContainer } from "../../../../canvas/tools/alignment";
+import type { AlignKind } from "../../../../canvas/tools/alignment";
 import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode, SectionNode } from "@open-canvas/schema";
-import { AlignmentToolbar } from "./AlignmentToolbar";
-import { PanelSection } from "./fields";
-import { AppearanceSection } from "./sections/AppearanceSection";
-import { CornerRadiusSection } from "./sections/CornerRadiusSection";
-import { CssSection } from "./sections/CssSection";
-import { DocumentSection } from "./sections/DocumentSection";
-import { EffectsSection } from "./sections/EffectsSection";
-import { FlexChildSection } from "./sections/FlexChildSection";
-import { LayoutSection } from "./sections/LayoutSection";
-import { PositionSection } from "./sections/PositionSection";
-import { SemanticsSection } from "./sections/SemanticsSection";
-import { StrokeSection } from "./sections/StrokeSection";
-import { TextContentSection } from "./sections/TextContentSection";
-import { TypographySection } from "./sections/TypographySection";
+import { AlignmentToolbar } from "../AlignmentToolbar";
+import { PanelSection } from "../fields";
+import { AppearanceSection } from "../sections/AppearanceSection";
+import { CornerRadiusSection } from "../sections/CornerRadiusSection";
+import { CssSection } from "../sections/CssSection/CssSection";
+import { DocumentSection } from "../sections/DocumentSection/DocumentSection";
+import { EffectsSection } from "../sections/EffectsSection";
+import { FlexChildSection } from "../sections/FlexChildSection";
+import { LayoutSection } from "../sections/LayoutSection";
+import { PositionSection } from "../sections/PositionSection";
+import { SemanticsSection } from "../sections/SemanticsSection";
+import { StrokeSection } from "../sections/StrokeSection";
+import { TextContentSection } from "../sections/TextContentSection";
+import { TypographySection } from "../sections/TypographySection";
+import styles from "./PropertiesPanel.module.css";
 
 interface PropertiesPanelProps {
   node: SceneNode | null;
@@ -103,12 +104,12 @@ function asLayoutContainerNode(node: SceneNode): FrameNode | SectionNode | null 
 //
 // 2+ selected: an Align section (relative to each other) always shows.
 // Below it, a same-type selection also gets the shared *style* fields
-// (Appearance/Stroke/Corner radius/Typography) via SharedPropertySections
-// so e.g. two Text nodes can have their font/color set together in one
-// edit. Position is deliberately excluded even then — batch-setting X/Y
-// would collapse every selected node onto the same point, which is never
-// what "set the same font for both" actually means; Align already covers
-// relative positioning. A heterogeneous selection (mixed types) has no
+// (Appearance/Text/Effects) via SharedPropertySections so e.g. two Text
+// nodes can have their font/color set together in one edit. Position is
+// deliberately excluded even then — batch-setting X/Y would collapse
+// every selected node onto the same point, which is never what "set the
+// same font for both" actually means; Align already covers relative
+// positioning. A heterogeneous selection (mixed types) has no
 // well-defined shared schema, so it still falls back to a plain count.
 export function PropertiesPanel({
   node,
@@ -131,18 +132,7 @@ export function PropertiesPanel({
   onAlign,
 }: PropertiesPanelProps) {
   return (
-    <div
-      style={{
-        flex: "0 0 260px",
-        height: "100%",
-        overflowY: "auto",
-        padding: 16,
-        background: "var(--surface-panel)",
-        borderLeft: "1px solid var(--border)",
-        fontSize: 12,
-        color: "var(--text)",
-      }}
-    >
+    <div className={styles.root}>
       {selectionCount === 0 ? (
         <DocumentSection
           backgroundColor={backgroundColor}
@@ -169,9 +159,7 @@ export function PropertiesPanel({
           />
           {uniformNode && (
             <>
-              <div className="panel-section">
-                <div className="panel-section-title">Contents</div>
-              </div>
+              <div className={styles.contentsDivider}>Contents</div>
               <SharedPropertySections
                 node={uniformNode}
                 onFocus={onSharedFieldFocus}
@@ -194,7 +182,7 @@ export function PropertiesPanel({
               onCommit={onSharedFieldCommit}
             />
           ) : (
-            <div style={{ padding: "4px 0", color: "var(--text-muted)" }}>{selectionCount} objects selected</div>
+            <div className={styles.multiSelectHint}>{selectionCount} objects selected</div>
           )}
         </>
       )}
@@ -227,48 +215,53 @@ function PropertySections({
   const layoutContainerNode = isInstanceChild ? null : asLayoutContainerNode(node);
   const parentLayoutContainer = !isInstanceChild && parentNode ? asLayoutContainerNode(parentNode) : null;
   const showFlexChildSection = parentLayoutContainer?.layoutMode === "flex";
+  const isText = node.type === "text";
+  const isImage = node.type === "image";
 
   return (
     <>
-      <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text)" }}>{node.name}</div>
+      <div className={styles.nodeName}>{node.name}</div>
+
       <PositionSection node={node} parentNode={parentNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {showFlexChildSection && <FlexChildSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {layoutContainerNode && (
         <LayoutSection node={layoutContainerNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
       {node.semantics && <SemanticsSection semantics={node.semantics} />}
-      {node.type === "text" && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {cornerRadiusNode && (
         <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
-      {node.type === "text" && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      {node.type === "image" && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {isText && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {isImage && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <CssSection node={node} parentNode={parentNode} />
     </>
   );
 }
 
-// Same section set as PropertySections minus Position (see the "2+
+// Same section set as PropertySections minus Position/Layout (see the "2+
 // selected" comment above PropertiesPanel for why) and the name header,
 // which would misleadingly show only the first selected node's name.
 function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertySectionsProps) {
   const fillNode = asFillNode(node);
   const strokeNode = asStrokeNode(node);
   const cornerRadiusNode = asCornerRadiusNode(node);
+  const isText = node.type === "text";
+  const isImage = node.type === "image";
 
   return (
     <>
       {node.semantics && <SemanticsSection semantics={node.semantics} />}
-      {node.type === "text" && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {cornerRadiusNode && (
         <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
-      {node.type === "text" && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      {node.type === "image" && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {isText && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
+      {isImage && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
     </>
   );
 }

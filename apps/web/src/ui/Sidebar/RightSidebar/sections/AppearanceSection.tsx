@@ -1,5 +1,5 @@
 import type { EllipseNode, FrameNode, PathNode, RectNode, SceneNode } from "@open-canvas/schema";
-import { ColorField, NumberField, PanelSection } from "../fields";
+import { ColorField, PanelSection, SliderField } from "../fields";
 
 interface AppearanceSectionProps {
   node: SceneNode;
@@ -25,19 +25,16 @@ export function AppearanceSection({ node, fillNode, onFocus, onChange, onCommit 
           onChange={(value) => onChange({ fill: value })}
         />
       )}
-      <NumberField
+      <SliderField
         label="Opacity"
-        value={Math.round(node.opacity * 100)}
+        value={node.opacity * 100}
+        displayValue={`${Math.round(node.opacity * 100)}%`}
         min={0}
         max={100}
         onFocus={onFocus}
         onCommit={onCommit}
-        onChange={(value) => onChange({ opacity: clamp(value, 0, 100) / 100 })}
+        onChange={(value) => onChange({ opacity: value / 100 })}
       />
     </PanelSection>
   );
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
