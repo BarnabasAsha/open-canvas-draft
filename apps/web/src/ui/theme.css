@@ -23,71 +23,77 @@
   --violet-600: oklch(54% 0.2 265);
   --violet-700: oklch(45% 0.19 265);
 
-  --surface-canvas: oklch(19% 0.006 265);
-  --surface-panel: oklch(23% 0.007 265);
-  --surface-panel-hover: oklch(27% 0.008 265);
-  --surface-panel-active: oklch(31% 0.009 265);
-  --surface-input: oklch(26% 0.008 265);
-  --surface-selected: oklch(34% 0.008 265);
-  --border: oklch(33% 0.009 265);
-  --text: oklch(89% 0.004 265);
-  --text-muted: oklch(63% 0.012 265);
-  --text-disabled: oklch(45% 0.01 265);
-  --accent: oklch(66% 0.15 265);
-  --accent-hover: oklch(72% 0.13 265);
-  --accent-soft: oklch(66% 0.15 265 / 16%);
-  --accent-text: oklch(82% 0.08 265);
+  --surface-canvas: oklch(15% 0.004 265);
+  --surface-panel: oklch(19% 0.005 265);
+  --surface-panel-hover: oklch(23% 0.006 265);
+  --surface-panel-active: oklch(27% 0.007 265);
+  --surface-input: oklch(22% 0.005 265);
+  --surface-selected: oklch(29% 0.006 265);
+  --border: oklch(24% 0.005 265);
+  --text: oklch(92% 0.003 265);
+  --text-muted: oklch(60% 0.008 265);
+  --text-disabled: oklch(42% 0.007 265);
+  --accent: oklch(64% 0.17 265);
+  --accent-hover: oklch(70% 0.15 265);
+  --accent-soft: oklch(64% 0.17 265 / 16%);
+  --accent-text: oklch(80% 0.09 265);
   --selection: var(--accent);
   --canvas-label: oklch(62% 0.012 265);
+  --danger: oklch(65% 0.18 25);
   /* Not overridden per-theme like the other tokens above — this draws over
      the document's own canvas background, which the user can set to
      anything regardless of app theme, so a mid-tone gray at low opacity
      reads reasonably against either a light or dark page rather than
      tuning for the app chrome's own light/dark surfaces. */
   --grid-line: oklch(60% 0.01 265 / 16%);
-  --shadow: oklch(0% 0 0 / 30%);
+  --shadow: oklch(0% 0 0 / 24%);
 
   --font-ui: "Geist", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  /* Deliberately distinct from --font-ui — the wordmark should read as a
+     mark, not just bold body text set in the same typeface. */
+  --font-wordmark: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
 }
 
 :root[data-theme="light"] {
-  --surface-canvas: oklch(93% 0.004 265);
-  --surface-panel: oklch(99% 0.002 265);
-  --surface-panel-hover: oklch(95% 0.005 265);
-  --surface-panel-active: oklch(91% 0.007 265);
-  --surface-input: oklch(97% 0.004 265);
-  --surface-selected: oklch(87% 0.008 265);
-  --border: oklch(88% 0.007 265);
-  --text: oklch(20% 0.01 265);
-  --text-muted: oklch(46% 0.014 265);
-  --text-disabled: oklch(68% 0.01 265);
-  --accent: oklch(54% 0.2 265);
-  --accent-hover: oklch(48% 0.2 265);
-  --accent-soft: oklch(54% 0.2 265 / 12%);
-  --accent-text: oklch(40% 0.18 265);
-  --canvas-label: oklch(48% 0.014 265);
-  --shadow: oklch(30% 0.02 265 / 18%);
+  --surface-canvas: oklch(97% 0.003 265);
+  --surface-panel: oklch(99.5% 0.001 265);
+  --surface-panel-hover: oklch(96% 0.004 265);
+  --surface-panel-active: oklch(94% 0.005 265);
+  --surface-input: oklch(98% 0.003 265);
+  --surface-selected: oklch(93% 0.006 265);
+  --border: oklch(95% 0.003 265);
+  --text: oklch(24% 0.006 265);
+  --text-muted: oklch(52% 0.008 265);
+  --text-disabled: oklch(72% 0.006 265);
+  --accent: oklch(46% 0.17 265);
+  --accent-hover: oklch(40% 0.17 265);
+  --accent-soft: oklch(46% 0.17 265 / 12%);
+  --accent-text: oklch(38% 0.16 265);
+  --canvas-label: oklch(50% 0.008 265);
+  --shadow: oklch(30% 0.015 265 / 14%);
+  --danger: oklch(50% 0.2 25);
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --surface-canvas: oklch(93% 0.004 265);
-    --surface-panel: oklch(99% 0.002 265);
-    --surface-panel-hover: oklch(95% 0.005 265);
-    --surface-panel-active: oklch(91% 0.007 265);
-    --surface-input: oklch(97% 0.004 265);
-    --surface-selected: oklch(87% 0.008 265);
-    --border: oklch(88% 0.007 265);
-    --text: oklch(20% 0.01 265);
-    --text-muted: oklch(46% 0.014 265);
-    --text-disabled: oklch(68% 0.01 265);
-    --accent: oklch(54% 0.2 265);
-    --accent-hover: oklch(48% 0.2 265);
-    --accent-soft: oklch(54% 0.2 265 / 12%);
-    --accent-text: oklch(40% 0.18 265);
-    --canvas-label: oklch(48% 0.014 265);
-    --shadow: oklch(30% 0.02 265 / 18%);
+    --surface-canvas: oklch(97% 0.003 265);
+    --surface-panel: oklch(99.5% 0.001 265);
+    --surface-panel-hover: oklch(96% 0.004 265);
+    --surface-panel-active: oklch(94% 0.005 265);
+    --surface-input: oklch(98% 0.003 265);
+    --surface-selected: oklch(93% 0.006 265);
+    --border: oklch(95% 0.003 265);
+    --text: oklch(24% 0.006 265);
+    --text-muted: oklch(52% 0.008 265);
+    --text-disabled: oklch(72% 0.006 265);
+    --accent: oklch(46% 0.17 265);
+    --accent-hover: oklch(40% 0.17 265);
+    --accent-soft: oklch(46% 0.17 265 / 12%);
+    --accent-text: oklch(38% 0.16 265);
+    --canvas-label: oklch(50% 0.008 265);
+    --shadow: oklch(30% 0.015 265 / 14%);
+    --danger: oklch(50% 0.2 25);
   }
 }
 
@@ -95,96 +101,6 @@
    own by design — everything below is us defining the design language on
    top, targeting the data-attributes Base UI puts on each part for state
    (data-pressed, data-highlighted, data-popup-open, etc). */
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 6px;
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
-  border-right: none;
-  box-shadow: 0 4px 16px var(--shadow);
-}
-
-.toolbar[data-orientation="vertical"] {
-  flex-direction: column;
-}
-
-.toolbar-group {
-  display: flex;
-  gap: 2px;
-}
-
-.toolbar-group[data-orientation="vertical"] {
-  flex-direction: column;
-}
-
-.toolbar-separator {
-  width: 1px;
-  height: 20px;
-  margin: 0 4px;
-  background: var(--border);
-}
-
-/* A separator's own orientation is perpendicular to the toolbar's, so a
-   vertical toolbar (see Toolbar.tsx) gets horizontal dividers here. */
-.toolbar-separator[data-orientation="horizontal"] {
-  width: 20px;
-  height: 1px;
-  margin: 4px 0;
-}
-
-.toolbar-button {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-}
-
-/* Pinned to the button's own corner, independent of the icon's size or
-   position — signals "opens a menu" the same way Figma's own toolbar
-   flyouts do. A pure CSS triangle rather than a scaled-down SVG icon glyph
-   — an 8px icon doesn't render crisply (anti-aliasing turns it into a
-   fuzzy smudge at that size), while a border-trick triangle stays crisp
-   at any size and inherits currentColor for free. */
-.menu-trigger-caret {
-  position: absolute;
-  bottom: 5px;
-  right: 5px;
-  width: 0;
-  height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-top: 4px solid currentColor;
-  opacity: 0.55;
-}
-
-.toolbar-button:hover:not([data-disabled]) {
-  background: var(--surface-panel-hover);
-}
-
-/* Neutral, not accent-tinted: "this is the active tool" is a persistent
-   current-item state, not a meaningful status — same distinction Linear
-   draws between a plain selected nav row and an actual colored status
-   dot. --accent stays reserved for things that carry real meaning (the
-   canvas selection outline, focus rings, checked states). */
-.toolbar-button[data-pressed],
-.toolbar-button[data-popup-open] {
-  background: var(--surface-selected);
-  color: var(--text);
-}
-
-.toolbar-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
 
 .menu-positioner {
   outline: none;
@@ -206,10 +122,6 @@
   overflow-y: auto;
 }
 
-.shape-menu-popup {
-  flex-direction: row;
-}
-
 .menu-item,
 .select-item {
   display: flex;
@@ -223,11 +135,6 @@
   outline: none;
   user-select: none;
   white-space: nowrap;
-}
-
-.shape-menu-item {
-  padding: 8px;
-  border-radius: 8px;
 }
 
 .menu-item[data-highlighted],
@@ -571,6 +478,30 @@
   outline-offset: 1px;
 }
 
+.slider-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 26px;
+}
+
+.slider-field-label {
+  width: 62px;
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.slider-field-value {
+  width: 42px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
 .color-hex-row {
   display: flex;
   align-items: center;
@@ -683,17 +614,16 @@
 .panel-section-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
   padding: 0;
   border: none;
   background: transparent;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   margin-bottom: 10px;
   text-align: left;
 }
@@ -722,63 +652,6 @@ button.panel-section-title {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-
-.css-inspector-block {
-  position: relative;
-}
-
-.css-inspector-pre {
-  margin: 0;
-  padding: 16px 40px 16px 16px;
-  border-radius: 6px;
-  background: var(--surface-panel-active);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.css-inspector-copy-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: var(--surface-panel);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.css-inspector-copy-btn:hover {
-  background: var(--surface-panel-hover);
-  color: var(--text);
-}
-
-.css-inspector-copy-btn[data-copied] {
-  color: var(--accent);
-}
-
-.collapsible-trigger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .collapsible-chevron {
@@ -902,21 +775,12 @@ button.panel-section-title {
     -10px 0px;
 }
 
-.ruler-corner {
-  background: var(--surface-panel);
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
+/* ─── Shared across auth + dashboard chrome ─────────────────────────────── */
 
-.ruler {
-  background: var(--surface-panel);
-  overflow: hidden;
-}
-
-.ruler-horizontal {
-  border-bottom: 1px solid var(--border);
-}
-
-.ruler-vertical {
-  border-right: 1px solid var(--border);
+.wordmark {
+  font-size: 11px;
+  font-weight: 650;
+  font-family: var(--font-wordmark);
+  letter-spacing: 0.06em;
+  color: var(--text);
 }

@@ -1,0 +1,99 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px var(--shadow);
+}
+
+.toolbar[data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+.toolbarGroup {
+  display: flex;
+  gap: 2px;
+}
+
+.toolbarGroup[data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+.toolbarSeparator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+/* A separator's own orientation is perpendicular to the toolbar's, so a
+   vertical toolbar (see Toolbar.tsx) gets horizontal dividers here. */
+.toolbarSeparator[data-orientation="horizontal"] {
+  width: 20px;
+  height: 1px;
+  margin: 4px 0;
+}
+
+.toolbarButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Pinned to the button's own corner, independent of the icon's size or
+   position — signals "opens a menu" the same way Figma's own toolbar
+   flyouts do. A pure CSS triangle rather than a scaled-down SVG icon glyph
+   — an 8px icon doesn't render crisply (anti-aliasing turns it into a
+   fuzzy smudge at that size), while a border-trick triangle stays crisp
+   at any size and inherits currentColor for free. */
+.menuTriggerCaret {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.55;
+}
+
+.toolbarButton:hover:not([data-disabled]) {
+  background: var(--surface-panel-hover);
+}
+
+/* Neutral, not accent-tinted: "this is the active tool" is a persistent
+   current-item state, not a meaningful status — same distinction Linear
+   draws between a plain selected nav row and an actual colored status
+   dot. --accent stays reserved for things that carry real meaning (the
+   canvas selection outline, focus rings, checked states). */
+.toolbarButton[data-pressed],
+.toolbarButton[data-popup-open] {
+  background: var(--surface-selected);
+  color: var(--text);
+}
+
+.toolbarButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.shapeMenuPopup {
+  flex-direction: row;
+}
+
+.shapeMenuItem {
+  padding: 8px;
+  border-radius: 8px;
+}

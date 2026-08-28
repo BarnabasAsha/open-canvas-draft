@@ -1,5 +1,5 @@
 import type { ImageNode } from "@open-canvas/schema";
-import { NumberField, PanelSection } from "../fields";
+import { PanelSection, SliderField } from "../fields";
 
 interface EffectsSectionProps {
   node: ImageNode;
@@ -19,20 +19,24 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
     onChange({ filters: { [key]: value } });
   }
 
+  const { blur, brightness, contrast, saturate, grayscale, sepia, hueRotate } = node.filters;
+
   return (
     <PanelSection title="Effects">
-      <NumberField
+      <SliderField
         label="Blur"
-        value={node.filters.blur}
+        value={blur}
+        displayValue={String(Math.round(blur))}
         min={0}
         max={40}
         onFocus={onFocus}
         onCommit={onCommit}
         onChange={(value) => setFilter("blur", value)}
       />
-      <NumberField
+      <SliderField
         label="Brightness"
-        value={node.filters.brightness}
+        value={brightness}
+        displayValue={`${Math.round(brightness * 100)}%`}
         min={0}
         max={2}
         step={0.05}
@@ -40,9 +44,10 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
         onCommit={onCommit}
         onChange={(value) => setFilter("brightness", value)}
       />
-      <NumberField
+      <SliderField
         label="Contrast"
-        value={node.filters.contrast}
+        value={contrast}
+        displayValue={`${Math.round(contrast * 100)}%`}
         min={0}
         max={2}
         step={0.05}
@@ -50,9 +55,10 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
         onCommit={onCommit}
         onChange={(value) => setFilter("contrast", value)}
       />
-      <NumberField
+      <SliderField
         label="Saturate"
-        value={node.filters.saturate}
+        value={saturate}
+        displayValue={`${Math.round(saturate * 100)}%`}
         min={0}
         max={2}
         step={0.05}
@@ -60,9 +66,10 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
         onCommit={onCommit}
         onChange={(value) => setFilter("saturate", value)}
       />
-      <NumberField
+      <SliderField
         label="Grayscale"
-        value={node.filters.grayscale}
+        value={grayscale}
+        displayValue={`${Math.round(grayscale * 100)}%`}
         min={0}
         max={1}
         step={0.05}
@@ -70,9 +77,10 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
         onCommit={onCommit}
         onChange={(value) => setFilter("grayscale", value)}
       />
-      <NumberField
+      <SliderField
         label="Sepia"
-        value={node.filters.sepia}
+        value={sepia}
+        displayValue={`${Math.round(sepia * 100)}%`}
         min={0}
         max={1}
         step={0.05}
@@ -80,9 +88,10 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
         onCommit={onCommit}
         onChange={(value) => setFilter("sepia", value)}
       />
-      <NumberField
-        label="Hue rotate"
-        value={node.filters.hueRotate}
+      <SliderField
+        label="Hue"
+        value={hueRotate}
+        displayValue={`${Math.round(hueRotate)}°`}
         min={0}
         max={360}
         onFocus={onFocus}

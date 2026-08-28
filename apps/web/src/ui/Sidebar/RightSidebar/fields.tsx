@@ -2,9 +2,10 @@ import { Checkbox } from "@base-ui/react/checkbox";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { NumberField as BaseNumberField } from "@base-ui/react/number-field";
 import { Select as BaseSelect } from "@base-ui/react/select";
-import { CaretUpDownIcon, CheckIcon, MinusIcon, PlusIcon } from "@phosphor-icons/react";
+import { CaretRightIcon, CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { Slider } from "../../primitives/Slider/Slider";
 import { ColorPicker } from "./ColorPicker";
 
 interface PanelSectionProps {
@@ -20,8 +21,8 @@ export function PanelSection({ title, children, defaultOpen = true }: PanelSecti
   return (
     <Collapsible.Root className="panel-section" open={open} onOpenChange={setOpen}>
       <Collapsible.Trigger className="panel-section-title">
+        <CaretRightIcon size={11} className="collapsible-chevron" data-expanded={open || undefined} />
         <span>{title}</span>
-        {open ? <MinusIcon size={10} /> : <PlusIcon size={10} />}
       </Collapsible.Trigger>
       <Collapsible.Panel className="panel-section-fields">{children}</Collapsible.Panel>
     </Collapsible.Root>
@@ -96,6 +97,32 @@ export function NumberField({ label, value, onFocus, onChange, onCommit, min, ma
         </BaseNumberField.Group>
       </BaseNumberField.Root>
     </label>
+  );
+}
+
+interface SliderFieldProps {
+  label: string;
+  value: number;
+  displayValue: string;
+  min: number;
+  max: number;
+  step?: number;
+  onFocus: () => void;
+  onChange: (value: number) => void;
+  onCommit: () => void;
+}
+
+// Same live-preview-then-commit contract as NumberField (onValueChange on
+// every drag step, onValueCommitted once at the end) — used where a value
+// is more naturally scrubbed than typed (image filters), never as a
+// replacement for NumberField elsewhere.
+export function SliderField({ label, value, displayValue, min, max, step = 1, onFocus, onChange, onCommit }: SliderFieldProps) {
+  return (
+    <div className="slider-field">
+      <span className="slider-field-label">{label}</span>
+      <Slider value={value} min={min} max={max} step={step} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
+      <span className="slider-field-value">{displayValue}</span>
+    </div>
   );
 }
 

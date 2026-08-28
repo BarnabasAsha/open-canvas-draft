@@ -4,6 +4,7 @@ import { ArrowUpRightIcon, CircleIcon, ImageIcon, LineSegmentIcon, RectangleIcon
 import type { ReactNode } from "react";
 import type { ToolId } from "../../canvas/tools/toolManager";
 import { MenuTriggerIcon } from "./MenuTriggerIcon";
+import styles from "./Toolbar.module.css";
 
 interface ShapeMenuProps {
   activeToolId: ToolId;
@@ -38,20 +39,20 @@ export function ShapeMenu({ activeToolId, onSelectTool }: ShapeMenuProps) {
         render={<Menu.Trigger />}
         aria-label="Shape tools"
         title="Shape tools"
-        className="toolbar-button"
+        className={styles.toolbarButton}
         data-pressed={activeShape ? "" : undefined}
       >
         <MenuTriggerIcon icon={(activeShape ?? SHAPE_TOOLS[0]).icon} />
       </BaseToolbar.Button>
       <Menu.Portal>
         <Menu.Positioner side="left" sideOffset={8} className="menu-positioner">
-          <Menu.Popup className="menu-popup shape-menu-popup">
+          <Menu.Popup className={`menu-popup ${styles.shapeMenuPopup}`}>
             {SHAPE_TOOLS.map((tool) => (
               <Menu.Item
                 key={tool.id}
                 aria-label={tool.label}
                 title={tool.label}
-                className="menu-item shape-menu-item"
+                className={`menu-item ${styles.shapeMenuItem}`}
                 onClick={() => onSelectTool(tool.id)}
               >
                 {tool.icon}

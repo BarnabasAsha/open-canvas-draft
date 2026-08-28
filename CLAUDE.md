@@ -12,9 +12,11 @@ Work happens in phases. Don't build ahead of the current phase — no scaffoldin
 
 Vite + React 19 + TypeScript, oxlint. No router, no state library, no canvas library yet — these get added deliberately, not by default, when a phase needs them.
 
-**UI components:** [Base UI](https://base-ui.com) (`@base-ui/react`, the MUI/Radix team's headless component library) for interactive primitives — Toolbar, ToggleGroup, Menu, NumberField, Select, Checkbox, Collapsible, Tooltip. It ships zero visual style by design; we style every part ourselves (see `src/ui/theme.css`) rather than adopting Base UI's own look, so the design language stays ours. Reach for it whenever a UI need matches one of its primitives instead of hand-rolling the interaction/accessibility logic again.
+**UI components:** [Base UI](https://base-ui.com) (`@base-ui/react`, the MUI/Radix team's headless component library) for interactive primitives — Toolbar, ToggleGroup, Menu, NumberField, Select, Checkbox, Collapsible, Tooltip, Dialog, Tabs. It ships zero visual style by design; we style every part ourselves rather than adopting Base UI's own look, so the design language stays ours. Reach for it whenever a UI need matches one of its primitives instead of hand-rolling the interaction/accessibility logic again.
 
 **Icons:** [Phosphor Icons](https://phosphoricons.com) (`@phosphor-icons/react`). Import each icon by its `<Name>Icon` export (e.g. `CursorIcon`), not the deprecated unsuffixed alias. Only hand-draw a custom SVG icon when nothing in the set fits.
+
+**Styling — colocated, not one shared file.** `src/ui/theme.css` holds only two things: design tokens (the `:root` color/spacing/radius/shadow/font custom properties, including the light/dark/system theme blocks) and primitives genuinely shared across many unrelated components (the `.menu-popup`/`.menu-item`/`.menu-separator` family every popup/menu uses, `.field-box`, `.icon-button`, `.panel-section*`, `.toolbar*`, `.wordmark`). Everything specific to one component — a page's layout, a single widget's look — belongs in a CSS Module colocated next to it: `ComponentName.module.css` alongside `ComponentName.tsx`, imported as `import styles from "./ComponentName.module.css"` and referenced as `styles.someClass`. Before adding a rule to theme.css, ask whether a second, unrelated component actually needs it — if not, it belongs in that component's own module file, not the shared one.
 
 ## Code philosophy
 
@@ -35,7 +37,7 @@ Vite + React 19 + TypeScript, oxlint. No router, no state library, no canvas lib
 - Can have local UI state (`useState`) for things like hover, open/closed, controlled inputs — nothing that belongs to the rest of the app.
 
 **Container components (pages)**
-- Live in `src/pages/`, one per top-level view. Right now that's effectively a single editor view; don't introduce a router or multi-page structure until a phase actually needs a second view.
+- Live in `src/pages/`, one per top-level view, wired together in `src/App.tsx` via `react-router`.
 - Own the data: hold state (or read it from the store), pass it down to presentational children.
 - Handle navigation and global state interactions.
 - As thin as possible — delegate all rendering to children. A page component should read like a wiring diagram, not a template.
