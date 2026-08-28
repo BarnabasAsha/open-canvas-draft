@@ -2,9 +2,11 @@ import { Container } from "@inferdi/inferdi";
 import { auth } from "../lib/auth";
 import { db } from "../db/client";
 import { logger } from "../lib/logger";
+import { createR2ClientFromEnv } from "../lib/r2-client";
 import type { RequestContext } from "../lib/request-context";
 import { projectsModule } from "../modules/projects/projects.module";
 import { pagesModule } from "../modules/projects/pages/pages.module";
+import { assetsModule } from "../modules/projects/assets/assets.module";
 import type { ScopeInput } from "./request-scope";
 
 // Cross-cutting registrations only — db, logger, and the lazily-resolved
@@ -24,6 +26,12 @@ export function buildRootContainer() {
   return new Container()
     .registerValue("db", db)
     .registerValue("logger", logger)
+    // Stateless external client, same category as `db`/`logger`, but
+    // registered as a lazy factory (not `registerValue`) rather than
+    // built eagerly here — otherwise a missing R2 env var would crash the
+    // ENTIRE api on startup (auth, projects, everything), not just asset
+    // uploads. It only throws once something actually resolves it.
+    .registerFactory("r2Client", () => createR2ClientFromEnv())
     .declareScopeInputs<{ request: ScopeInput }>()
     // Lazy: only actually resolves (and pays the session-lookup DB round
     // trip) when something downstream asks for it — requireAuth
@@ -38,11 +46,12 @@ export function buildRootContainer() {
       ["request"],
       "scoped",
     )
-    // pagesModule depends on projectRepository (every Page operation
-    // verifies ownership through its parent Project), so this order
-    // matters — projectsModule must register first.
+    // pagesModule and assetsModule both depend on projectRepository (every
+    // Page/Asset operation verifies ownership through its parent Project),
+    // so this order matters — projectsModule must register first.
     .use(projectsModule)
-    .use(pagesModule);
+    .use(pagesModule)
+    .use(assetsModule);
 }
 
 export type RootContainer = ReturnType<typeof buildRootContainer>;

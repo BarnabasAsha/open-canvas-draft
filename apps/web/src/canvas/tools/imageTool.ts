@@ -1,4 +1,6 @@
 import { createAddNodeCommand, generateId, nextDefaultName } from "@open-canvas/commands";
+import { uploadAsset } from "../../lib/assets";
+import { getCurrentProjectId } from "../../store/currentProject";
 import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
 import { selectionStore } from "../../store/selectionStore";
@@ -84,7 +86,7 @@ function pickImageFile(nodeId: NodeId): void {
       sceneStore.removeNode(nodeId);
       return;
     }
-    readAsDataUrl(file, (dataUrl) => commitImage(nodeId, dataUrl));
+    void uploadAndCommit(nodeId, file);
   });
 
   // Supported in Chromium-based browsers; if it doesn't fire in some other
@@ -97,12 +99,21 @@ function pickImageFile(nodeId: NodeId): void {
   input.click();
 }
 
-function readAsDataUrl(file: File, onLoad: (dataUrl: string) => void): void {
-  const reader = new FileReader();
-  reader.onload = () => {
-    if (typeof reader.result === "string") onLoad(reader.result);
-  };
-  reader.readAsDataURL(file);
+async function uploadAndCommit(nodeId: NodeId, file: File): Promise<void> {
+  const projectId = getCurrentProjectId();
+  if (!projectId) {
+    sceneStore.removeNode(nodeId);
+    return;
+  }
+
+  try {
+    const asset = await uploadAsset(projectId, file);
+    commitImage(nodeId, asset.url);
+  } catch {
+    // Upload failed (network error, over the size limit, etc.) — same
+    // "leave no broken draft behind" behavior as cancelling the picker.
+    sceneStore.removeNode(nodeId);
+  }
 }
 
 function commitImage(nodeId: NodeId, src: string): void {

@@ -6,6 +6,7 @@ import { requireAuth } from "../../middleware/auth.middleware";
 import { requireUuidParam } from "../../lib/require-uuid-param";
 import type { RequestContainer } from "../../di/container";
 import { pageRoutes } from "./pages/routes";
+import { assetRoutes } from "./assets/routes";
 import type { ProjectModel } from "./domain/project.model";
 
 type Env = InferdiHonoScopeEnv<RequestContainer>;
@@ -56,4 +57,5 @@ export const projectRoutes = new Hono<Env>()
     await command.execute({ projectId: requireUuidParam(c.req.param("projectId"), "projectId") });
     return c.body(null, 204);
   })
-  .route("/:projectId/pages", pageRoutes);
+  .route("/:projectId/pages", pageRoutes)
+  .route("/:projectId/assets", assetRoutes);
