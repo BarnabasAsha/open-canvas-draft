@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import type { InferdiHonoScopeEnv } from "@inferdi/hono";
 import { z } from "zod";
 import { requireAuth } from "../../middleware/auth.middleware";
+import { requireUuidParam } from "../../lib/require-uuid-param";
 import type { RequestContainer } from "../../di/container";
 import { pageRoutes } from "./pages/routes";
 import type { ProjectModel } from "./domain/project.model";
@@ -39,17 +40,20 @@ export const projectRoutes = new Hono<Env>()
   })
   .get("/:projectId", async (c) => {
     const query = await c.var.di.getAsync("getProjectQuery");
-    const project = await query.execute({ projectId: c.req.param("projectId") });
+    const project = await query.execute({ projectId: requireUuidParam(c.req.param("projectId"), "projectId") });
     return c.json(serializeProject(project));
   })
   .patch("/:projectId", zValidator("json", renameProjectSchema), async (c) => {
     const command = await c.var.di.getAsync("renameProjectCommand");
-    const { data } = await command.execute({ projectId: c.req.param("projectId"), ...c.req.valid("json") });
+    const { data } = await command.execute({
+      projectId: requireUuidParam(c.req.param("projectId"), "projectId"),
+      ...c.req.valid("json"),
+    });
     return c.json(serializeProject(data));
   })
   .delete("/:projectId", async (c) => {
     const command = await c.var.di.getAsync("deleteProjectCommand");
-    await command.execute({ projectId: c.req.param("projectId") });
+    await command.execute({ projectId: requireUuidParam(c.req.param("projectId"), "projectId") });
     return c.body(null, 204);
   })
   .route("/:projectId/pages", pageRoutes);

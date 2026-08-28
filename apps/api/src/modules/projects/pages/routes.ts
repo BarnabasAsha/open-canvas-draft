@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { InferdiHonoScopeEnv } from "@inferdi/hono";
 import { z } from "zod";
 import { requireAuth } from "../../../middleware/auth.middleware";
+import { requireUuidParam } from "../../../lib/require-uuid-param";
 import type { RequestContainer } from "../../../di/container";
 import type { PageModel } from "./domain/page.model";
 
@@ -49,7 +50,7 @@ export const pageRoutes = new Hono<Env>()
     const command = await c.var.di.getAsync("createPageCommand");
     const body = c.req.valid("json");
     const { data } = await command.execute({
-      projectId: c.req.param("projectId") as string,
+      projectId: requireUuidParam(c.req.param("projectId"), "projectId"),
       name: body.name,
       sceneGraph: body.sceneGraph as SceneGraph,
     });
@@ -57,17 +58,20 @@ export const pageRoutes = new Hono<Env>()
   })
   .get("/", async (c) => {
     const query = await c.var.di.getAsync("listPagesQuery");
-    const pages = await query.execute({ projectId: c.req.param("projectId") as string });
+    const pages = await query.execute({ projectId: requireUuidParam(c.req.param("projectId"), "projectId") });
     return c.json(pages.map(serializePage));
   })
   .get("/:pageId", async (c) => {
     const query = await c.var.di.getAsync("getPageQuery");
-    const page = await query.execute({ pageId: c.req.param("pageId") });
+    const page = await query.execute({ pageId: requireUuidParam(c.req.param("pageId"), "pageId") });
     return c.json(serializePage(page));
   })
   .patch("/:pageId", zValidator("json", renamePageSchema), async (c) => {
     const command = await c.var.di.getAsync("renamePageCommand");
-    const { data } = await command.execute({ pageId: c.req.param("pageId"), ...c.req.valid("json") });
+    const { data } = await command.execute({
+      pageId: requireUuidParam(c.req.param("pageId"), "pageId"),
+      ...c.req.valid("json"),
+    });
     return c.json(serializePage(data));
   })
   // Separate from PATCH (metadata) — the hot path for frequent, potentially
@@ -76,13 +80,13 @@ export const pageRoutes = new Hono<Env>()
     const command = await c.var.di.getAsync("updatePageSceneCommand");
     const body = c.req.valid("json");
     const { data } = await command.execute({
-      pageId: c.req.param("pageId"),
+      pageId: requireUuidParam(c.req.param("pageId"), "pageId"),
       sceneGraph: body.sceneGraph as SceneGraph,
     });
     return c.json(serializePage(data));
   })
   .delete("/:pageId", async (c) => {
     const command = await c.var.di.getAsync("deletePageCommand");
-    await command.execute({ pageId: c.req.param("pageId") });
+    await command.execute({ pageId: requireUuidParam(c.req.param("pageId"), "pageId") });
     return c.body(null, 204);
   });
