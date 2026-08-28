@@ -5,6 +5,7 @@ import type { FramePreset } from "../../canvas/tools/framePresets";
 import { FRAME_PRESET_CATEGORIES } from "../../canvas/tools/framePresets";
 import type { ToolId } from "../../canvas/tools/toolManager";
 import { MenuTriggerIcon } from "./MenuTriggerIcon";
+import styles from "./Toolbar.module.css";
 
 interface StructureMenuProps {
   activeToolId: ToolId;
@@ -30,16 +31,16 @@ export function StructureMenu({ activeToolId, onSelectTool, onSelectFramePreset 
         render={<Menu.Trigger />}
         aria-label="Structure tools"
         title="Structure tools"
-        className="toolbar-button"
+        className={styles.toolbarButton}
         data-pressed={isFrameActive || isSectionActive ? "" : undefined}
       >
         <MenuTriggerIcon icon={activeIcon} />
       </BaseToolbar.Button>
       <Menu.Portal>
         <Menu.Positioner side="left" sideOffset={8} className="menu-positioner">
-          <Menu.Popup className="menu-popup shape-menu-popup">
+          <Menu.Popup className={`menu-popup ${styles.shapeMenuPopup}`}>
             <Menu.SubmenuRoot>
-              <Menu.SubmenuTrigger aria-label="Frame (F)" title="Frame (F)" className="menu-item shape-menu-item">
+              <Menu.SubmenuTrigger aria-label="Frame (F)" title="Frame (F)" className={`menu-item ${styles.shapeMenuItem}`}>
                 {FRAME_ICON}
               </Menu.SubmenuTrigger>
               <Menu.Portal>
@@ -72,7 +73,7 @@ export function StructureMenu({ activeToolId, onSelectTool, onSelectFramePreset 
             <Menu.Item
               aria-label="Section (Shift+S)"
               title="Section (Shift+S)"
-              className="menu-item shape-menu-item"
+              className={`menu-item ${styles.shapeMenuItem}`}
               onClick={() => onSelectTool("section")}
             >
               {SECTION_ICON}

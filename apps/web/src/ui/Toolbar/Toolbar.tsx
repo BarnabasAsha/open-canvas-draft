@@ -8,6 +8,7 @@ import type { ToolId } from "../../canvas/tools/toolManager";
 import { PrimitivesMenu } from "./PrimitivesMenu";
 import { ShapeMenu } from "./ShapeMenu";
 import { StructureMenu } from "./StructureMenu";
+import styles from "./Toolbar.module.css";
 
 interface ToolbarProps {
   activeToolId: ToolId;
@@ -31,35 +32,35 @@ export function Toolbar({ activeToolId, onSelectTool, onSelectFramePreset, onSel
   return (
     <BaseToolbar.Root
       orientation="vertical"
-      className="toolbar"
-      style={{ position: "absolute", top: "50%", right: 0, transform: "translateY(-50%)" }}
+      className={styles.toolbar}
+      style={{ position: "absolute", top: "50%", right: 18, transform: "translateY(-50%)" }}
     >
       <BaseToolbar.Button
         render={<Toggle pressed={activeToolId === "select"} onPressedChange={() => onSelectTool("select")} />}
         aria-label="Select (V)"
         title="Select (V)"
-        className="toolbar-button"
+        className={styles.toolbarButton}
       >
         <CursorIcon size={18} />
       </BaseToolbar.Button>
-      <BaseToolbar.Separator className="toolbar-separator" />
+      <BaseToolbar.Separator className={styles.toolbarSeparator} />
       <StructureMenu activeToolId={activeToolId} onSelectTool={onSelectTool} onSelectFramePreset={onSelectFramePreset} />
-      <BaseToolbar.Separator className="toolbar-separator" />
+      <BaseToolbar.Separator className={styles.toolbarSeparator} />
       <ShapeMenu activeToolId={activeToolId} onSelectTool={onSelectTool} />
-      <BaseToolbar.Separator className="toolbar-separator" />
+      <BaseToolbar.Separator className={styles.toolbarSeparator} />
       <PrimitivesMenu onSelectPrimitive={onSelectPrimitive} />
-      <BaseToolbar.Separator className="toolbar-separator" />
+      <BaseToolbar.Separator className={styles.toolbarSeparator} />
       <ToggleGroup
         orientation="vertical"
-        className="toolbar-group"
+        className={styles.toolbarGroup}
         aria-label="Pen and text tools"
         value={TRAILING_TOOL_IDS.includes(activeToolId) ? [activeToolId] : []}
         onValueChange={handleGroupChange}
       >
-        <BaseToolbar.Button render={<Toggle />} value="pen" aria-label="Pen (P)" title="Pen (P)" className="toolbar-button">
+        <BaseToolbar.Button render={<Toggle />} value="pen" aria-label="Pen (P)" title="Pen (P)" className={styles.toolbarButton}>
           <PenNibIcon size={18} />
         </BaseToolbar.Button>
-        <BaseToolbar.Button render={<Toggle />} value="text" aria-label="Text (T)" title="Text (T)" className="toolbar-button">
+        <BaseToolbar.Button render={<Toggle />} value="text" aria-label="Text (T)" title="Text (T)" className={styles.toolbarButton}>
           <TextTIcon size={18} />
         </BaseToolbar.Button>
       </ToggleGroup>

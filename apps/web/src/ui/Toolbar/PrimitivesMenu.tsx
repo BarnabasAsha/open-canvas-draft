@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type { UiPrimitiveKind } from "../../canvas/primitives/builtInComponents";
+import styles from "./Toolbar.module.css";
 
 interface PrimitivesMenuProps {
   onSelectPrimitive: (kind: UiPrimitiveKind) => void;
@@ -43,18 +44,18 @@ const PRIMITIVE_ITEMS: PrimitiveMenuItem[] = [
 export function PrimitivesMenu({ onSelectPrimitive }: PrimitivesMenuProps) {
   return (
     <Menu.Root orientation="horizontal">
-      <BaseToolbar.Button render={<Menu.Trigger />} aria-label="Component primitives" title="Component primitives" className="toolbar-button">
+      <BaseToolbar.Button render={<Menu.Trigger />} aria-label="Component primitives" title="Component primitives" className={styles.toolbarButton}>
         <SquaresFourIcon size={18} />
       </BaseToolbar.Button>
       <Menu.Portal>
         <Menu.Positioner side="left" sideOffset={8} className="menu-positioner">
-          <Menu.Popup className="menu-popup shape-menu-popup">
+          <Menu.Popup className={`menu-popup ${styles.shapeMenuPopup}`}>
             {PRIMITIVE_ITEMS.map((item) => (
               <Menu.Item
                 key={item.kind}
                 aria-label={item.label}
                 title={item.label}
-                className="menu-item shape-menu-item"
+                className={`menu-item ${styles.shapeMenuItem}`}
                 onClick={() => onSelectPrimitive(item.kind)}
               >
                 {item.icon}

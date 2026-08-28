@@ -1,0 +1,11 @@
+.gutter {
+  background: var(--surface-panel);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.strip {
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
