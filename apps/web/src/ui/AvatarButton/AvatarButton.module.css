@@ -1,0 +1,145 @@
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.buttonCompact {
+  width: 26px;
+  height: 26px;
+  font-size: 10.5px;
+}
+
+.caret {
+  display: flex;
+  color: var(--text-disabled);
+  transition: transform 100ms;
+}
+
+.trigger[data-popup-open] .button {
+  background: var(--accent-hover);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent);
+}
+
+.trigger[data-popup-open] .caret {
+  transform: rotate(180deg);
+}
+
+.menuPopup {
+  width: 232px;
+}
+
+.menuHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+}
+
+.menuHeaderAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 620;
+  flex-shrink: 0;
+}
+
+.menuHeaderAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.menuHeaderText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menuName {
+  font-size: 13px;
+  font-weight: 590;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuEmail {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuAppearance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 10px;
+}
+
+.menuAppearanceLabel {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.appearanceSwitch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-panel-active);
+  border-radius: 8px;
+}
+
+.appearanceSwitchOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 23px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.appearanceSwitchOption[data-active] {
+  background: var(--surface-panel);
+  color: var(--text);
+  box-shadow: 0 1px 2px var(--shadow), 0 0 0 0.5px var(--border);
+}
