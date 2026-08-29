@@ -13,8 +13,9 @@
   z-index: 41;
   width: 480px;
   background: var(--surface-panel);
-  border-radius: 18px;
-  box-shadow: 0 30px 70px oklch(20% 0.02 265 / 22%);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--shadow);
   overflow: hidden;
   outline: none;
 }
@@ -80,5 +81,5 @@
   padding: 14px 22px;
   border-top: 1px solid var(--border);
   background: var(--surface-input);
-  border-radius: 0 0 18px 18px;
+  border-radius: 0 0 10px 10px;
 }
