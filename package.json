@@ -2,6 +2,7 @@
   "name": "open-canvas-draft",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.6.4",
   "scripts": {
