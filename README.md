@@ -4,6 +4,8 @@ An AI-native design tool — think Figma/Canva-class canvas editing, usable full
 
 It's also a learning project. The `docs/` folder has a short "walkthrough" write-up for most features — what was built, the trade-offs, and the bugs found along the way — rather than just a changelog.
 
+**Live**: [opencanvas.barnabas.lol](https://opencanvas.barnabas.lol) — sign in with Google, you'll land with an example project ready to open.
+
 ## Current state
 
 The canvas stands on its own — no AI, no export yet (see [What's not here yet](#whats-not-here-yet)) — but it's no longer a local-only demo: signing in, your projects, and everything you draw are real and persisted.

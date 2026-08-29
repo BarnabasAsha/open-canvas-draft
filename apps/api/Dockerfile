@@ -20,4 +20,9 @@ ENV NODE_ENV=production
 # what actually controls the bound port.
 EXPOSE 5005
 
-CMD ["pnpm", "--filter", "api", "start"]
+# Applies any pending drizzle/*.sql migrations, then starts the server —
+# && means a failed migration fails the container's startup instead of
+# serving traffic against a schema it doesn't match. Safe to run on every
+# boot: drizzle-kit migrate only applies migrations not already recorded
+# in its own tracking table, so an already-up-to-date DB is a fast no-op.
+CMD ["sh", "-c", "pnpm --filter api db:migrate && pnpm --filter api start"]
