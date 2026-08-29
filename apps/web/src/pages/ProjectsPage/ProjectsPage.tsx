@@ -26,12 +26,12 @@ export function ProjectsPage() {
     return projects.filter((project) => project.name.toLowerCase().includes(trimmed));
   }, [projects, query]);
 
-  async function handleCreate(name: string): Promise<void> {
+  async function handleCreate(name: string, description: string): Promise<void> {
     setIsCreating(true);
     try {
       const project = await fetchJson<Project>("/api/projects", {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(description ? { name, description } : { name }),
       });
       navigate(`/design/${project.id}`);
     } finally {

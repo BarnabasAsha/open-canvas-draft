@@ -7,6 +7,7 @@ export class ProjectMapper extends Mapper<ProjectModel, ProjectRow> {
     return ProjectModel.reconstitute(
       {
         name: row.name,
+        description: row.description,
         ownerId: row.ownerId,
         attributes: AttributeBag.from((row.attributes as Record<string, unknown>) ?? {}),
         createdAt: row.createdAt,
@@ -20,6 +21,7 @@ export class ProjectMapper extends Mapper<ProjectModel, ProjectRow> {
     return {
       id: domain.id,
       name: domain.name,
+      description: domain.description,
       ownerId: domain.ownerId,
       attributes: domain.attributes.toPlain(),
       createdAt: domain.createdAt,
