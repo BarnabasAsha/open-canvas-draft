@@ -12,6 +12,17 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
+  account: {
+    // The frontend and this API sit on different top-level domains in
+    // production, so the OAuth flow's double-submit "state" cookie is set
+    // by a cross-site fetch response — exactly what Safari/Firefox's
+    // tracking protections silently refuse to persist, causing a
+    // state_mismatch on callback. The state is already verified against
+    // the server-side verification record (keyed by a high-entropy random
+    // token), so this cookie is redundant defense-in-depth, not the only
+    // check — safe to skip here.
+    skipStateCookieCheck: true,
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,

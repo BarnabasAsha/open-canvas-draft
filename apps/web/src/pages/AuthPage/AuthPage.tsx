@@ -18,10 +18,16 @@ export function AuthPage({ mode }: AuthPageProps) {
 
   async function handleGoogleSignIn(): Promise<void> {
     setIsPending(true);
-    // Must be absolute: authClient's baseURL points at the API, so a
+    // Both must be absolute: authClient's baseURL points at the API, so a
     // relative "/" resolves against the API's own origin instead of the
-    // frontend's.
-    await authClient.signIn.social({ provider: "google", callbackURL: `${window.location.origin}/` });
+    // frontend's. errorCallbackURL matters specifically because without it,
+    // any OAuth failure falls back to Better Auth's default error redirect —
+    // this API's own bare domain, which serves nothing but a 404.
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: `${window.location.origin}/`,
+      errorCallbackURL: `${window.location.origin}/${mode}`,
+    });
   }
 
   return (
