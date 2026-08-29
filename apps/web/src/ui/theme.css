@@ -52,7 +52,7 @@
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   /* Deliberately distinct from --font-ui — the wordmark should read as a
      mark, not just bold body text set in the same typeface. */
-  --font-wordmark: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --font-wordmark: "Ojuju", -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
 }
 
 :root[data-theme="light"] {
@@ -778,9 +778,10 @@ button.panel-section-title {
 /* ─── Shared across auth + dashboard chrome ─────────────────────────────── */
 
 .wordmark {
-  font-size: 11px;
+  font-size: 22px;
   font-weight: 650;
   font-family: var(--font-wordmark);
-  letter-spacing: 0.06em;
+  letter-spacing: -0.143em;
   color: var(--text);
+  text-decoration: none;
 }

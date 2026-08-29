@@ -65,8 +65,12 @@ export function AuthPage({ mode }: AuthPageProps) {
             </>
           )}
         </span>
-        <span className={styles.footerStatic}>Terms</span>
-        <span className={styles.footerStatic}>Privacy</span>
+        <Link to="/terms" className={styles.footerStatic}>
+          Terms
+        </Link>
+        <Link to="/privacy" className={styles.footerStatic}>
+          Privacy
+        </Link>
       </div>
     </div>
   );
