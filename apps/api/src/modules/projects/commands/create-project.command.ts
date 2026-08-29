@@ -6,6 +6,7 @@ import type { ProjectRepository } from "../repositories/project.repository";
 
 export interface CreateProjectInput {
   name: string;
+  description?: string | null;
 }
 
 export class CreateProjectCommand extends BaseCommand<CreateProjectInput, ProjectModel> {
@@ -20,7 +21,7 @@ export class CreateProjectCommand extends BaseCommand<CreateProjectInput, Projec
 
   async execute(input: CreateProjectInput): Promise<CommandResult<ProjectModel>> {
     const ownerId = requireUserId(this.requestContext);
-    const project = ProjectModel.create({ id: uuidv7(), name: input.name, ownerId });
+    const project = ProjectModel.create({ id: uuidv7(), name: input.name, ownerId, description: input.description });
     await this.projectRepository.save(project);
     return ok(project);
   }

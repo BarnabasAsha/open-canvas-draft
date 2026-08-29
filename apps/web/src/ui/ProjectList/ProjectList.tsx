@@ -4,6 +4,7 @@ import styles from "./ProjectList.module.css";
 export interface Project {
   id: string;
   name: string;
+  description: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +45,7 @@ export function ProjectList({ projects, hasUnfilteredProjects, onOpen }: Project
           <div className={styles.tileFooter}>
             <div className={styles.tileInfo}>
               <span className={styles.tileName}>{project.name}</span>
+              {project.description && <span className={styles.tileDescription}>{project.description}</span>}
               <span className={styles.tileMeta}>Edited {formatUpdatedAt(project.updatedAt)}</span>
             </div>
             <DotsThreeVerticalIcon size={15} className={styles.tileKebab} />

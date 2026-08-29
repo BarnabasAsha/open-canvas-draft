@@ -26,10 +26,9 @@ interface PropertiesPanelProps {
   // isInstanceChild below).
   parentNode: SceneNode | null;
   selectionCount: number;
-  // Set when either 2+ selected nodes share the same type, or exactly one
-  // Frame/Section/Group is selected and its own children share a type —
-  // one of them, standing in for "the shared style fields that whole set
-  // can be batch-edited through" (see SharedPropertySections below).
+  // Set when 2+ selected nodes share the same type — one of them, standing
+  // in for "the shared style fields that whole set can be batch-edited
+  // through" (see SharedPropertySections below).
   uniformNode: SceneNode | null;
   // True when `node` is synthesized from a node INSIDE a component
   // instance's definition, addressed via a virtual id (see
@@ -96,11 +95,7 @@ function asLayoutContainerNode(node: SceneNode): FrameNode | SectionNode | null 
 //
 // Exactly 1 node selected: the full set of sections relevant to that
 // node's type, plus an Align section on top if it's a Frame/Section/Group
-// with children (aligning them to itself, Figma-style). If it's a
-// container whose children are all the same type, a "Contents" shared
-// section is also appended below — selecting the "Nav Links" group and
-// setting one font for all three link texts inside it, without needing
-// to select those texts directly first.
+// with children (aligning them to itself, Figma-style).
 //
 // 2+ selected: an Align section (relative to each other) always shows.
 // Below it, a same-type selection also gets the shared *style* fields
@@ -157,17 +152,6 @@ export function PropertiesPanel({
             onChange={onFieldChange}
             onCommit={onFieldCommit}
           />
-          {uniformNode && (
-            <>
-              <div className={styles.contentsDivider}>Contents</div>
-              <SharedPropertySections
-                node={uniformNode}
-                onFocus={onSharedFieldFocus}
-                onChange={onSharedFieldChange}
-                onCommit={onSharedFieldCommit}
-              />
-            </>
-          )}
         </>
       ) : (
         <>

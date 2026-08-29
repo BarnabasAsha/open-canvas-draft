@@ -11,7 +11,7 @@ import type { ProjectModel } from "./domain/project.model";
 
 type Env = InferdiHonoScopeEnv<RequestContainer>;
 
-const createProjectSchema = z.object({ name: z.string().min(1) });
+const createProjectSchema = z.object({ name: z.string().min(1), description: z.string().max(500).optional() });
 const renameProjectSchema = z.object({ name: z.string().min(1) });
 
 // `attributes` is a speculative internal metadata bag (see AttributeBag's
@@ -22,6 +22,7 @@ function serializeProject(project: ProjectModel) {
   return {
     id: project.id,
     name: project.name,
+    description: project.description,
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
   };

@@ -6,13 +6,10 @@ import styles from "./CreateProjectModal.module.css";
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string, description: string) => void;
   isSubmitting: boolean;
 }
 
-// Description is collected here but never sent anywhere — there's no
-// backend field for it yet. Only `name` reaches onSubmit, matching what
-// POST /api/projects actually accepts today.
 export function CreateProjectModal({ isOpen, onClose, onSubmit, isSubmitting }: CreateProjectModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -21,7 +18,7 @@ export function CreateProjectModal({ isOpen, onClose, onSubmit, isSubmitting }: 
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    onSubmit(trimmed);
+    onSubmit(trimmed, description.trim());
   }
 
   return (

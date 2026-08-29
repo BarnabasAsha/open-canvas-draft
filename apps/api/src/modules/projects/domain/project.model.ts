@@ -2,6 +2,7 @@ import { AttributeBag, DomainModel, NotFoundError } from "../../../core";
 
 export interface ProjectProps {
   name: string;
+  description: string | null;
   ownerId: string;
   attributes: AttributeBag;
   createdAt: Date;
@@ -11,6 +12,10 @@ export interface ProjectProps {
 export class ProjectModel extends DomainModel<ProjectProps> {
   get name(): string {
     return this._props.name;
+  }
+
+  get description(): string | null {
+    return this._props.description;
   }
 
   get ownerId(): string {
@@ -29,10 +34,17 @@ export class ProjectModel extends DomainModel<ProjectProps> {
     return this._props.updatedAt;
   }
 
-  static create(input: { id: string; name: string; ownerId: string }): ProjectModel {
+  static create(input: { id: string; name: string; ownerId: string; description?: string | null }): ProjectModel {
     const now = new Date();
     return new ProjectModel(
-      { name: input.name, ownerId: input.ownerId, attributes: AttributeBag.empty(), createdAt: now, updatedAt: now },
+      {
+        name: input.name,
+        description: input.description ?? null,
+        ownerId: input.ownerId,
+        attributes: AttributeBag.empty(),
+        createdAt: now,
+        updatedAt: now,
+      },
       input.id,
     );
   }
