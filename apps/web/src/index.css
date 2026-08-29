@@ -6,6 +6,14 @@
   src: url("./assets/fonts/Geist-Variable.woff2") format("woff2-variations");
 }
 
+@font-face {
+  font-family: "Ojuju";
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Ojuju-Variable.woff2") format("woff2-variations");
+}
+
 :root {
   color-scheme: light dark;
 }
