@@ -18,7 +18,7 @@ import { FlexInsertionIndicator } from "../canvas/FlexInsertionIndicator";
 import { SelectionOverlay } from "../canvas/SelectionOverlay";
 import { TextEditOverlay } from "../canvas/TextEditOverlay";
 import type { AlignKind } from "../canvas/tools/alignment";
-import { computeAlignedNodes, computeAlignedToContainer, isAlignableContainer } from "../canvas/tools/alignment";
+import { computeAlignedNodes, computeAlignedToContainer } from "../canvas/tools/alignment";
 import type { UiPrimitiveKind } from "../canvas/primitives/builtInComponents";
 import { BUILT_IN_COMPONENT_IDS } from "../canvas/primitives/builtInComponents";
 import type { FramePreset } from "../canvas/tools/framePresets";
@@ -409,34 +409,19 @@ export function CanvasEditorPage() {
   // fields — see the PropertiesPanel doc comment for what's shown and why
   // Position isn't. uniformNode is just the first one, standing in for
   // "what type/shape of fields to render"; the actual values written come
-  // from useMultiNodeEdit applying to every id in uniformNodeIds.
+  // from useMultiNodeEdit applying to every id in selectedIdList.
   const directSelectedNodes = selectedIdList.map((id) => scene.nodes[id]).filter((n): n is SceneNode => n !== undefined);
-  const directUniformNode =
+  const uniformNode =
     directSelectedNodes.length > 1 && directSelectedNodes.every((n) => n.type === directSelectedNodes[0].type)
       ? directSelectedNodes[0]
       : null;
-
-  // Same idea, one level down: a single selected Frame/Section/Group whose
-  // own children are all the same type can have THEIR shared style edited
-  // too (e.g. selecting the "Nav Links" group and setting one font/color
-  // for all three link texts inside it) — the same "operate on a lone
-  // container's children" pattern Align already uses.
-  const containerChildIds = soleSelectedNode && isAlignableContainer(soleSelectedNode) ? soleSelectedNode.children : [];
-  const containerChildNodes = containerChildIds.map((id) => scene.nodes[id]).filter((n): n is SceneNode => n !== undefined);
-  const containerUniformNode =
-    containerChildNodes.length > 0 && containerChildNodes.every((n) => n.type === containerChildNodes[0].type)
-      ? containerChildNodes[0]
-      : null;
-
-  const uniformNode = directUniformNode ?? containerUniformNode;
-  const uniformNodeIds = directUniformNode ? selectedIdList : containerChildIds;
 
   // Hooks can't be called conditionally, so all three are always
   // instantiated; whichever applies is picked below. Neither does anything
   // when handed an empty id (single/instance-child) or id list (multi/shared).
   const singleNodeEdit = useNodeEdit(!virtualSelection && soleSelectedId ? soleSelectedId : "");
   const instanceChildEdit = useInstanceOverrideEdit(virtualSelection?.instanceId ?? "", virtualSelection?.defNodeId ?? "");
-  const multiNodeEdit = useMultiNodeEdit(uniformNode ? uniformNodeIds : []);
+  const multiNodeEdit = useMultiNodeEdit(uniformNode ? selectedIdList : []);
   const activeSingleEdit = virtualSelection ? instanceChildEdit : singleNodeEdit;
 
   const rulerSize = documentSettings.rulerVisible ? RULER_SIZE : 0;
