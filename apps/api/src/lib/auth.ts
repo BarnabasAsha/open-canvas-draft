@@ -23,6 +23,17 @@ export const auth = betterAuth({
     // check — safe to skip here.
     skipStateCookieCheck: true,
   },
+  advanced: {
+    // Same cross-domain situation applies to the session cookie itself:
+    // the web app reads it via a cross-origin fetch (getSession), and
+    // SameSite=Lax (Better Auth's default) is never sent on cross-site
+    // fetch/XHR — only on top-level navigations. Without this, session
+    // reads always come back empty in production even after a successful
+    // login. `secure` is required alongside SameSite=None and Better Auth
+    // already derives it from baseURL being https, so this only takes
+    // effect in production, not local http dev.
+    defaultCookieAttributes: process.env.BETTER_AUTH_URL?.startsWith("https://") ? { sameSite: "none" } : undefined,
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
