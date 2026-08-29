@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/dist-ssr
+.git
+.env
+.env.local
+.env.production
+**/.env
+**/.env.local
+apps/api/data
+.vscode
+.idea
+*.log
