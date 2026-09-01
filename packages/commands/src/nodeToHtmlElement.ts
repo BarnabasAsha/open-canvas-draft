@@ -12,6 +12,7 @@ import type {
   SectionNode,
   TextNode,
 } from "@open-canvas/schema";
+import { resolveSemanticTag } from "@open-canvas/schema";
 
 export interface HtmlElementSpec {
   tag: string;
@@ -75,7 +76,7 @@ type ContainerLike = FrameNode | SectionNode | GroupNode;
 
 function containerElement(node: ContainerLike): HtmlElementSpec {
   const extraCss = node.type === "frame" && node.clipsContent ? ["overflow: hidden;"] : [];
-  return { tag: node.semantics?.tag ?? "div", attrs: {}, extraCss };
+  return { tag: resolveSemanticTag(node), attrs: {}, extraCss };
 }
 
 // A mapped type over the discriminant, not a plain object literal type —
@@ -88,9 +89,9 @@ type NodeHtmlTable = {
 };
 
 export const nodeToHtmlElement: NodeHtmlTable = {
-  rect: (node: RectNode): HtmlElementSpec => ({ tag: node.semantics?.tag ?? "div", attrs: {}, extraCss: [] }),
+  rect: (node: RectNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
   ellipse: (node: EllipseNode): HtmlElementSpec => ({
-    tag: node.semantics?.tag ?? "div",
+    tag: resolveSemanticTag(node),
     attrs: {},
     extraCss: ["border-radius: 50%;"],
   }),
@@ -98,15 +99,15 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   // shaft (see its own generateLineCss) — arrows have no arrowhead yet
   // (documented there as a named v1 scope limit), so both need nothing
   // beyond that.
-  line: (node: LineNode): HtmlElementSpec => ({ tag: node.semantics?.tag ?? "div", attrs: {}, extraCss: [] }),
-  arrow: (node: ArrowNode): HtmlElementSpec => ({ tag: node.semantics?.tag ?? "div", attrs: {}, extraCss: [] }),
+  line: (node: LineNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
+  arrow: (node: ArrowNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
   image: (node: ImageNode): HtmlElementSpec => ({
-    tag: node.semantics?.tag ?? "img",
+    tag: resolveSemanticTag(node),
     attrs: { src: node.src, alt: escapeHtml(node.name) },
     extraCss: [`object-fit: ${node.objectFit};`],
   }),
   text: (node: TextNode): HtmlElementSpec => ({
-    tag: node.semantics?.tag ?? "div",
+    tag: resolveSemanticTag(node),
     attrs: {},
     extraCss: [],
     innerHtml: escapeHtml(node.content),

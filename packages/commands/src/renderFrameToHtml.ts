@@ -202,10 +202,17 @@ export function renderFrameToHtml(
     fontLink ? `<link rel="stylesheet" href="${fontLink}">` : "",
     // The frame's own width/height is already the literal pixel size
     // authored on the canvas (a fixed-size artboard, not a fluid
-    // container) — this only strips the browser's own default body
-    // margin/box-sizing, which would otherwise add extra width/height on
-    // top of that rather than actually making the page responsive.
-    "<style>\nbody { margin: 0; }\n* { box-sizing: border-box; }\n</style>",
+    // container) — this only strips the browser's own default margins/box
+    // model, which would otherwise add extra spacing on top of that rather
+    // than actually making the page responsive. Margin is reset on every
+    // element, not just body: every node's own spacing is already fully
+    // explicit (gap/padding/position), so a UA default margin on whatever
+    // element a node resolves to — most commonly <p> for text, but
+    // semantics.tag can be authored as any tag — would only ever add
+    // unwanted extra space, never a wanted one. (Caught exactly this: a
+    // text node's default tag became <p> once DEFAULT_SEMANTIC_TAG shipped,
+    // and its default 1em margin pushed it outside its parent's bounds.)
+    "<style>\n* { margin: 0; box-sizing: border-box; }\n</style>",
     `<style>\n${ctx.classes.css}\n</style>`,
     "</head>",
     `<body>\n${body}\n</body>`,

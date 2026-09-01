@@ -228,7 +228,7 @@ function PropertySections({
       {layoutContainerNode && (
         <LayoutSection node={layoutContainerNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
-      {node.semantics && <SemanticsSection semantics={node.semantics} />}
+      <SemanticsSection node={node} />
       {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection
         node={node}
@@ -259,7 +259,7 @@ function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertyS
 
   return (
     <>
-      {node.semantics && <SemanticsSection semantics={node.semantics} />}
+      <SemanticsSection node={node} />
       {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection
         node={node}
