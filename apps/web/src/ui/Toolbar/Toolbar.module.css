@@ -13,15 +13,6 @@
   flex-direction: column;
 }
 
-.toolbarGroup {
-  display: flex;
-  gap: 2px;
-}
-
-.toolbarGroup[data-orientation="vertical"] {
-  flex-direction: column;
-}
-
 .toolbarSeparator {
   width: 1px;
   height: 20px;

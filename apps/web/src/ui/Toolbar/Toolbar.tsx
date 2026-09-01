@@ -1,7 +1,6 @@
 import { Toggle } from "@base-ui/react/toggle";
-import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toolbar as BaseToolbar } from "@base-ui/react/toolbar";
-import { CursorIcon, PenNibIcon, TextTIcon } from "@phosphor-icons/react";
+import { CursorIcon, TextTIcon } from "@phosphor-icons/react";
 import type { UiPrimitiveKind } from "../../canvas/primitives/builtInComponents";
 import type { FramePreset } from "../../canvas/tools/framePresets";
 import type { ToolId } from "../../canvas/tools/toolManager";
@@ -17,18 +16,11 @@ interface ToolbarProps {
   onSelectPrimitive: (kind: UiPrimitiveKind) => void;
 }
 
-const TRAILING_TOOL_IDS: ToolId[] = ["pen", "text"];
-
 // Vertical, floated against the right edge of the canvas (right next to
 // the properties panel) rather than centered along the bottom — leaves
 // room to grow: a horizontal strip runs out of width fast once you start
 // adding more tools, a vertical one just gets taller.
 export function Toolbar({ activeToolId, onSelectTool, onSelectFramePreset, onSelectPrimitive }: ToolbarProps) {
-  const handleGroupChange = (values: string[]) => {
-    const id = values[0] as ToolId | undefined;
-    if (id) onSelectTool(id);
-  };
-
   return (
     <BaseToolbar.Root
       orientation="vertical"
@@ -50,20 +42,19 @@ export function Toolbar({ activeToolId, onSelectTool, onSelectFramePreset, onSel
       <BaseToolbar.Separator className={styles.toolbarSeparator} />
       <PrimitivesMenu onSelectPrimitive={onSelectPrimitive} />
       <BaseToolbar.Separator className={styles.toolbarSeparator} />
-      <ToggleGroup
-        orientation="vertical"
-        className={styles.toolbarGroup}
-        aria-label="Pen and text tools"
-        value={TRAILING_TOOL_IDS.includes(activeToolId) ? [activeToolId] : []}
-        onValueChange={handleGroupChange}
+      {/* Pen intentionally left off the toolbar for now — the tool itself
+          (penTool.ts, ToolId "pen") is still fully wired up in toolManager,
+          just not reachable through the UI, until its editing quirks are
+          sorted out. Re-add a button here (and the "p" case in
+          useKeyboardShortcuts.ts) once it's ready. */}
+      <BaseToolbar.Button
+        render={<Toggle pressed={activeToolId === "text"} onPressedChange={() => onSelectTool("text")} />}
+        aria-label="Text (T)"
+        title="Text (T)"
+        className={styles.toolbarButton}
       >
-        <BaseToolbar.Button render={<Toggle />} value="pen" aria-label="Pen (P)" title="Pen (P)" className={styles.toolbarButton}>
-          <PenNibIcon size={18} />
-        </BaseToolbar.Button>
-        <BaseToolbar.Button render={<Toggle />} value="text" aria-label="Text (T)" title="Text (T)" className={styles.toolbarButton}>
-          <TextTIcon size={18} />
-        </BaseToolbar.Button>
-      </ToggleGroup>
+        <TextTIcon size={18} />
+      </BaseToolbar.Button>
     </BaseToolbar.Root>
   );
 }
