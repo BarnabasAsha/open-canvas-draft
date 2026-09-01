@@ -7,11 +7,20 @@ import { DEFAULT_REGISTERED_TOOLS } from "./tools/index";
 // shape from the spec. Mirrors initPageAutosave/initPageEventLog's own
 // init-returns-teardown shape exactly (see CanvasEditorPage.tsx).
 export function initWebMcpTools(): () => void {
-  if (!document.modelContext) return () => {};
+  if (!document.modelContext) {
+    console.warn(
+      "[webmcp] document.modelContext is not present — this browser doesn't expose WebMCP (or the flag enabling it isn't on). No tools were registered.",
+    );
+    return () => {};
+  }
 
   const controller = new AbortController();
   for (const tool of DEFAULT_REGISTERED_TOOLS) {
     document.modelContext.registerTool(tool, { signal: controller.signal });
   }
+  console.info(
+    `[webmcp] registered ${DEFAULT_REGISTERED_TOOLS.length} tools:`,
+    DEFAULT_REGISTERED_TOOLS.map((tool) => tool.name),
+  );
   return () => controller.abort();
 }
