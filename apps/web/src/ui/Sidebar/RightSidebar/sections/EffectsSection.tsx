@@ -1,5 +1,5 @@
 import type { ImageNode } from "@open-canvas/schema";
-import { PanelSection, SliderField } from "../fields";
+import { SliderField } from "../fields";
 
 interface EffectsSectionProps {
   node: ImageNode;
@@ -21,8 +21,11 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
 
   const { blur, brightness, contrast, saturate, grayscale, sepia, hueRotate } = node.filters;
 
+  // Rendered inside AppearanceSection's own PanelSection, not its own —
+  // see StrokeSection's own comment on `field-group-title`.
   return (
-    <PanelSection title="Effects">
+    <>
+      <div className="field-group-title">Effects</div>
       <SliderField
         label="Blur"
         value={blur}
@@ -98,6 +101,6 @@ export function EffectsSection({ node, onFocus, onChange, onCommit }: EffectsSec
         onCommit={onCommit}
         onChange={(value) => setFilter("hueRotate", value)}
       />
-    </PanelSection>
+    </>
   );
 }

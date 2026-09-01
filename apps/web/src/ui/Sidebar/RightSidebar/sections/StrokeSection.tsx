@@ -1,5 +1,5 @@
 import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, StrokeStyle } from "@open-canvas/schema";
-import { ColorField, NumberField, PanelSection, SelectField } from "../fields";
+import { ColorField, NumberField, SelectField } from "../fields";
 
 interface StrokeSectionProps {
   node: RectNode | EllipseNode | PathNode | LineNode | ArrowNode | FrameNode;
@@ -23,8 +23,12 @@ export function StrokeSection({ node, onFocus, onChange, onCommit }: StrokeSecti
     onCommit();
   }
 
+  // Rendered inside AppearanceSection's own PanelSection, not its own —
+  // `field-group-title` gives the label matching visual weight to a real
+  // section title without its margin (see that class's own comment).
   return (
-    <PanelSection title="Stroke">
+    <>
+      <div className="field-group-title">Stroke</div>
       <ColorField
         label="Color"
         value={node.stroke}
@@ -41,6 +45,6 @@ export function StrokeSection({ node, onFocus, onChange, onCommit }: StrokeSecti
         onChange={(value) => onChange({ strokeWidth: value })}
       />
       <SelectField label="Style" value={node.strokeStyle} options={STROKE_STYLES} onChange={setStrokeStyle} />
-    </PanelSection>
+    </>
   );
 }
