@@ -7,6 +7,7 @@ import { downloadTextFile } from "../lib/downloadFile";
 import { createPage as createPageOnServer, exportFrameToHtml, listPages } from "../lib/pages";
 import { initPageAutosave } from "../store/pageAutosave";
 import { initPageEventLog } from "../store/pageEventLog";
+import { initWebMcpTools } from "../webmcp/registerTools";
 import { setThemePreference } from "../store/themeStore";
 import { useTheme } from "../store/useTheme";
 import { useSaveStatus } from "../store/useSaveStatus";
@@ -23,7 +24,7 @@ import { computeAlignedNodes, computeAlignedToContainer } from "../canvas/tools/
 import type { UiPrimitiveKind } from "../canvas/primitives/builtInComponents";
 import { BUILT_IN_COMPONENT_IDS } from "../canvas/primitives/builtInComponents";
 import type { FramePreset } from "../canvas/tools/framePresets";
-import { buildFrameNode } from "../canvas/tools/frameTool";
+import { buildFrameNode } from "../canvas/tools/buildFrameNode";
 import { toolManager } from "../canvas/tools/toolManager";
 import { useActiveTool } from "../canvas/useActiveTool";
 import { useKeyboardShortcuts } from "../canvas/useKeyboardShortcuts";
@@ -335,6 +336,7 @@ export function CanvasEditorPage() {
     let cancelled = false;
     let teardownAutosave: (() => void) | null = null;
     let teardownEventLog: (() => void) | null = null;
+    let teardownWebMcp: (() => void) | null = null;
 
     async function load(): Promise<void> {
       const [project, existingPages] = await Promise.all([fetchJson<Project>(`/api/projects/${id}`), listPages(id)]);
@@ -347,6 +349,7 @@ export function CanvasEditorPage() {
       hydratePages(pages);
       teardownAutosave = initPageAutosave(id);
       teardownEventLog = initPageEventLog(id);
+      teardownWebMcp = initWebMcpTools();
     }
 
     // A project that doesn't exist (or isn't yours — both collapse to the
@@ -360,6 +363,7 @@ export function CanvasEditorPage() {
       cancelled = true;
       teardownAutosave?.();
       teardownEventLog?.();
+      teardownWebMcp?.();
     };
   }, [projectId, navigate]);
 
