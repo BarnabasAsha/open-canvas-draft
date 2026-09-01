@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router";
 import { authClient } from "../lib/authClient";
 import { fetchJson } from "../lib/api";
 import { type Asset, deleteAsset, listAssets, uploadAsset } from "../lib/assets";
-import { createPage as createPageOnServer, listPages } from "../lib/pages";
+import { downloadTextFile } from "../lib/downloadFile";
+import { createPage as createPageOnServer, exportFrameToHtml, listPages } from "../lib/pages";
 import { initPageAutosave } from "../store/pageAutosave";
 import { initPageEventLog } from "../store/pageEventLog";
 import { setThemePreference } from "../store/themeStore";
@@ -53,7 +54,7 @@ import {
   switchToPage as switchActivePage,
   type PageId,
 } from "../store/pagesStore";
-import { getComponent } from "../store/componentsStore";
+import { componentsStore, getComponent } from "../store/componentsStore";
 import { reconcileGroupBounds } from "../store/reconcileGroupBounds";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
@@ -303,6 +304,7 @@ export function CanvasEditorPage() {
 
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [isExportingFrame, setIsExportingFrame] = useState(false);
   const [projectName, setProjectName] = useState("Untitled Project");
   const saveStatus = useSaveStatus();
 
@@ -376,6 +378,27 @@ export function CanvasEditorPage() {
     if (!projectId) return;
     await deleteAsset(projectId, assetId);
     setAssets((current) => current?.filter((asset) => asset.id !== assetId) ?? null);
+  }
+
+  // Only ever called while a Frame is the sole selection — see
+  // ExportSection, which is the only thing that renders this button.
+  // Component definitions aren't persisted server-side yet, so whatever
+  // the frame's instance nodes need rides along from componentsStore,
+  // the client's own in-memory registry.
+  async function handleExportFrame(): Promise<void> {
+    if (!projectId || !activePageId || !soleSelectedNode || soleSelectedNode.type !== "frame") return;
+    setIsExportingFrame(true);
+    try {
+      const { html, fileName } = await exportFrameToHtml(
+        projectId,
+        activePageId,
+        soleSelectedNode.id,
+        componentsStore.getState().definitions,
+      );
+      downloadTextFile(fileName, html);
+    } finally {
+      setIsExportingFrame(false);
+    }
   }
 
   const activeToolId = useActiveTool();
@@ -505,6 +528,8 @@ export function CanvasEditorPage() {
         onSharedFieldChange={multiNodeEdit.onFieldChange}
         onSharedFieldCommit={multiNodeEdit.onFieldCommit}
         onAlign={alignSelection}
+        onExportFrame={handleExportFrame}
+        isExportingFrame={isExportingFrame}
       />
     </div>
   );

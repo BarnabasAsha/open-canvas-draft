@@ -51,3 +51,25 @@ export function appendPageEvents(projectId: string, pageId: string, entries: His
     body: JSON.stringify({ entries }),
   });
 }
+
+export interface FrameExportResult {
+  html: string;
+  fileName: string;
+}
+
+// POST despite being a pure read+render on the server — component
+// definitions aren't persisted server-side (componentsStore.ts is
+// client-only), so whatever the exported frame's instance nodes need
+// rides along in the body; the frame/scene data itself is read from the
+// server's own already-persisted copy of the page.
+export function exportFrameToHtml(
+  projectId: string,
+  pageId: string,
+  frameId: string,
+  componentDefinitions: Record<string, unknown>,
+): Promise<FrameExportResult> {
+  return fetchJson<FrameExportResult>(`/api/projects/${projectId}/pages/${pageId}/frames/${frameId}/export/html`, {
+    method: "POST",
+    body: JSON.stringify({ componentDefinitions }),
+  });
+}

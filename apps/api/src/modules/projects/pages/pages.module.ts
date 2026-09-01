@@ -9,6 +9,7 @@ import { UpdatePageSceneCommand } from "./commands/update-page-scene.command";
 import { AppendPageEventsCommand } from "./events/commands/append-page-events.command";
 import { ListPageEventsQuery } from "./events/queries/list-page-events.query";
 import { DrizzlePageEventRepository, type PageEventRepository } from "./events/repositories/page-event.repository";
+import { ExportFrameHtmlQuery } from "./queries/export-frame-html.query";
 import { GetPageQuery } from "./queries/get-page.query";
 import { ListPagesQuery } from "./queries/list-pages.query";
 import { DrizzlePageRepository, type PageRepository } from "./repositories/page.repository";
@@ -31,6 +32,7 @@ type PagesProvides = SpecMap<{ pageRepository: PageRepository; pageEventReposito
       getPageQuery: GetPageQuery;
       appendPageEventsCommand: AppendPageEventsCommand;
       listPageEventsQuery: ListPageEventsQuery;
+      exportFrameHtmlQuery: ExportFrameHtmlQuery;
     },
     "transient"
   >;
@@ -83,5 +85,11 @@ export const pagesModule: Module<PagesRequirements, PagesProvides> = (c) =>
       "listPageEventsQuery",
       ListPageEventsQuery,
       ["pageEventRepository", "pageRepository", "projectRepository", "requestContext"],
+      "transient",
+    )
+    .registerClass(
+      "exportFrameHtmlQuery",
+      ExportFrameHtmlQuery,
+      ["pageRepository", "projectRepository", "requestContext"],
       "transient",
     );

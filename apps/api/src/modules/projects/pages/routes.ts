@@ -1,4 +1,5 @@
-import { SceneGraphSchema, type SceneGraph } from "@open-canvas/schema";
+import type { ComponentDefinition } from "@open-canvas/commands";
+import { SceneGraphSchema, type ComponentId, type SceneGraph } from "@open-canvas/schema";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
@@ -15,6 +16,12 @@ type Env = InferdiHonoScopeEnv<RequestContainer>;
 const createPageSchema = z.object({ name: z.string().min(1), sceneGraph: SceneGraphSchema });
 const renamePageSchema = z.object({ name: z.string().min(1) });
 const updateSceneSchema = z.object({ sceneGraph: SceneGraphSchema });
+
+// Component definitions are never persisted server-side (componentsStore.ts
+// is client-only) — validated loosely here, same convention as `overrides`/
+// `bindings` elsewhere in this schema package, since there's no clean Zod
+// shape for "partial of a recursive discriminated union."
+const exportFrameHtmlSchema = z.object({ componentDefinitions: z.record(z.string(), z.unknown()).optional() });
 
 // `event`'s internal shape (SceneEvent, from @open-canvas/commands) isn't
 // re-validated here — this endpoint treats it as an opaque JSON blob to
@@ -135,4 +142,19 @@ export const pageRoutes = new Hono<Env>()
     const query = await c.var.di.getAsync("listPageEventsQuery");
     const events = await query.execute({ pageId: requireUuidParam(c.req.param("pageId"), "pageId") });
     return c.json(events.map(serializePageEvent));
+  })
+  // POST, not GET, despite being a pure read+render — the frame/scene data
+  // itself is read from the server's own persisted copy, but component
+  // definitions have nowhere to live server-side yet (see the schema
+  // comment above), so the request body carries whatever the client
+  // already has in memory for them.
+  .post("/:pageId/frames/:frameId/export/html", zValidator("json", exportFrameHtmlSchema), async (c) => {
+    const query = await c.var.di.getAsync("exportFrameHtmlQuery");
+    const body = c.req.valid("json");
+    const result = await query.execute({
+      pageId: requireUuidParam(c.req.param("pageId"), "pageId"),
+      frameId: requireUuidParam(c.req.param("frameId"), "frameId"),
+      componentDefinitions: (body.componentDefinitions ?? {}) as Record<ComponentId, ComponentDefinition>,
+    });
+    return c.json(result);
   });

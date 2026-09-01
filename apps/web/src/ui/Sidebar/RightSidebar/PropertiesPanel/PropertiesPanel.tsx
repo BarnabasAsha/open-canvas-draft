@@ -8,6 +8,7 @@ import { CornerRadiusSection } from "../sections/CornerRadiusSection";
 import { CssSection } from "../sections/CssSection/CssSection";
 import { DocumentSection } from "../sections/DocumentSection/DocumentSection";
 import { EffectsSection } from "../sections/EffectsSection";
+import { ExportSection } from "../sections/ExportSection/ExportSection";
 import { FlexChildSection } from "../sections/FlexChildSection";
 import { LayoutSection } from "../sections/LayoutSection";
 import { PositionSection } from "../sections/PositionSection";
@@ -59,6 +60,10 @@ interface PropertiesPanelProps {
   onSharedFieldChange: (patch: Record<string, unknown>) => void;
   onSharedFieldCommit: () => void;
   onAlign: (kind: AlignKind) => void;
+  // Only ever invoked when `node` is a Frame — see ExportSection, shown
+  // for that case alone.
+  onExportFrame: () => void;
+  isExportingFrame: boolean;
 }
 
 type FillNode = RectNode | EllipseNode | PathNode | FrameNode;
@@ -125,6 +130,8 @@ export function PropertiesPanel({
   onSharedFieldChange,
   onSharedFieldCommit,
   onAlign,
+  onExportFrame,
+  isExportingFrame,
 }: PropertiesPanelProps) {
   return (
     <div className={styles.root}>
@@ -151,6 +158,8 @@ export function PropertiesPanel({
             onFocus={onFieldFocus}
             onChange={onFieldChange}
             onCommit={onFieldCommit}
+            onExportFrame={onExportFrame}
+            isExportingFrame={isExportingFrame}
           />
         </>
       ) : (
@@ -188,7 +197,14 @@ function PropertySections({
   onFocus,
   onChange,
   onCommit,
-}: PropertySectionsProps & { parentNode: SceneNode | null; isInstanceChild: boolean }) {
+  onExportFrame,
+  isExportingFrame,
+}: PropertySectionsProps & {
+  parentNode: SceneNode | null;
+  isInstanceChild: boolean;
+  onExportFrame: () => void;
+  isExportingFrame: boolean;
+}) {
   const fillNode = asFillNode(node);
   const strokeNode = asStrokeNode(node);
   const cornerRadiusNode = asCornerRadiusNode(node);
@@ -221,6 +237,7 @@ function PropertySections({
       {isText && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       {isImage && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <CssSection node={node} parentNode={parentNode} />
+      {node.type === "frame" && <ExportSection onExport={onExportFrame} isExporting={isExportingFrame} />}
     </>
   );
 }
