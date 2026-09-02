@@ -8,6 +8,7 @@ import { errorMiddleware } from "./middleware/error.middleware";
 import { loggingMiddleware, type LoggingEnv } from "./middleware/logging.middleware";
 import { authRoutes } from "./modules/auth/routes";
 import { projectRoutes } from "./modules/projects/routes";
+import { unsplashRoutes } from "./modules/unsplash/routes";
 
 const root = buildRootContainer();
 
@@ -48,6 +49,7 @@ app.use(
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/api/auth", authRoutes);
 app.route("/api/projects", projectRoutes);
+app.route("/api/unsplash", unsplashRoutes);
 
 app.onError(errorMiddleware);
 
