@@ -4,6 +4,7 @@ import { authClient } from "../lib/authClient";
 import { fetchJson } from "../lib/api";
 import { type Asset, deleteAsset, listAssets, uploadAsset } from "../lib/assets";
 import { downloadTextFile } from "../lib/downloadFile";
+import { type IconManifestEntry, loadIconManifest } from "../lib/iconManifest";
 import { createPage as createPageOnServer, exportFrameToHtml, listPages } from "../lib/pages";
 import { initPageAutosave } from "../store/pageAutosave";
 import { initPageEventLog } from "../store/pageEventLog";
@@ -41,7 +42,9 @@ import {
   createSetNodeCommand,
   generateId,
   nextDefaultName,
+  parseSvgPath,
   parseVirtualId,
+  scalePathSubpaths,
   type VirtualId,
 } from "@open-canvas/commands";
 import { documentStore } from "../store/documentStore";
@@ -60,7 +63,7 @@ import { reconcileGroupBounds } from "../store/reconcileGroupBounds";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
 import { viewportStore } from "../store/viewportStore";
-import type { ImageNode, NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import type { ImageNode, NodeId, PathNode, SceneGraph, SceneNode } from "@open-canvas/schema";
 import { INITIAL_VIEWPORT, screenToScene } from "../utils/coordinates";
 import { LeftSidebar } from "../ui/Sidebar/LeftSidebar/LeftSidebar";
 import { PropertiesPanel } from "../ui/Sidebar/RightSidebar/PropertiesPanel/PropertiesPanel";
@@ -267,6 +270,53 @@ function placeImageFromAsset(asset: Asset): void {
   toolManager.setActiveTool("select");
 }
 
+// A fixed, standard icon size to insert at — the manifest's native viewBox
+// (typically 256x256) would look huge on the canvas, so every icon's
+// subpaths are scaled down to fit this box, the same way placeImageFromAsset
+// above picks a fixed insertion size rather than probing native dimensions.
+const DEFAULT_ICON_SIZE = 48;
+
+function placeIconFromLibrary(icon: IconManifestEntry): void {
+  const { width: canvasWidth, height: canvasHeight } = canvasSizeStore.getState();
+  const sceneCenter = screenToScene({ x: canvasWidth / 2, y: canvasHeight / 2 }, viewportStore.getState());
+  const graph = sceneStore.getState();
+
+  const [, , viewBoxWidth, viewBoxHeight] = icon.viewBox.split(/\s+/).map(Number);
+  const scaleX = viewBoxWidth === 0 ? 1 : DEFAULT_ICON_SIZE / viewBoxWidth;
+  const scaleY = viewBoxHeight === 0 ? 1 : DEFAULT_ICON_SIZE / viewBoxHeight;
+  const subpaths = scalePathSubpaths(parseSvgPath(icon.d), scaleX, scaleY);
+
+  const node: PathNode = {
+    id: generateId(),
+    type: "path",
+    name: nextDefaultName(graph, icon.pascalName),
+    parentId: null,
+    x: sceneCenter.x - DEFAULT_ICON_SIZE / 2,
+    y: sceneCenter.y - DEFAULT_ICON_SIZE / 2,
+    width: DEFAULT_ICON_SIZE,
+    height: DEFAULT_ICON_SIZE,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    semantics: null,
+    interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
+    subpaths,
+    fillRule: "nonzero",
+    fill: "#111827",
+    stroke: null,
+    strokeWidth: 0,
+    strokeStyle: "solid",
+  };
+
+  historyManager.execute(createAddNodeCommand(node));
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([node.id]) }));
+  toolManager.setActiveTool("select");
+}
+
 function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
 }
@@ -305,6 +355,7 @@ export function CanvasEditorPage() {
 
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [icons, setIcons] = useState<IconManifestEntry[] | null>(null);
   const [isExportingFrame, setIsExportingFrame] = useState(false);
   const [projectName, setProjectName] = useState("Untitled Project");
   const saveStatus = useSaveStatus();
@@ -382,6 +433,13 @@ export function CanvasEditorPage() {
     if (!projectId) return;
     await deleteAsset(projectId, assetId);
     setAssets((current) => current?.filter((asset) => asset.id !== assetId) ?? null);
+  }
+
+  // Triggered by the Icons tab's own onClick (a real user event, not a
+  // mount effect) the first time it's opened — loadIconManifest caches its
+  // own promise, so a later re-trigger is a cheap no-op, not a re-fetch.
+  function handleRequestIcons(): void {
+    loadIconManifest().then(setIcons);
   }
 
   // Only ever called while a Frame is the sole selection — see
@@ -484,6 +542,9 @@ export function CanvasEditorPage() {
         onUploadAsset={handleUploadAsset}
         onDeleteAsset={handleDeleteAsset}
         onInsertAsset={placeImageFromAsset}
+        icons={icons}
+        onRequestIcons={handleRequestIcons}
+        onInsertIcon={placeIconFromLibrary}
       />
       <div
         style={{

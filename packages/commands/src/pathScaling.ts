@@ -1,4 +1,4 @@
-import type { PathPoint } from "@open-canvas/schema";
+import type { PathPoint, PathSubpath } from "@open-canvas/schema";
 
 // Duplicated (not shared) from apps/web's canvas/tools/resizeMath.ts: that
 // file's other exports (resizeBBoxNode, resizeEndpointNode, ...) are
@@ -13,6 +13,13 @@ export function scalePathPoints(points: PathPoint[], scaleX: number, scaleY: num
     y: point.y * scaleY,
     handleIn: point.handleIn ? scalePoint(point.handleIn, scaleX, scaleY) : undefined,
     handleOut: point.handleOut ? scalePoint(point.handleOut, scaleX, scaleY) : undefined,
+  }));
+}
+
+export function scalePathSubpaths(subpaths: PathSubpath[], scaleX: number, scaleY: number): PathSubpath[] {
+  return subpaths.map((subpath) => ({
+    ...subpath,
+    points: scalePathPoints(subpath.points, scaleX, scaleY),
   }));
 }
 

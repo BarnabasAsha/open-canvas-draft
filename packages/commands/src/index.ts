@@ -6,6 +6,7 @@ export * from "./worldTransform";
 export * from "./graphMutations";
 export * from "./instanceVirtualId";
 export * from "./pathScaling";
+export * from "./svgPath";
 export * from "./componentTypes";
 export * from "./resolveInstance";
 export * from "./sceneCorners";

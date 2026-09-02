@@ -1,6 +1,8 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import type { Asset } from "../../../../lib/assets";
+import type { IconManifestEntry } from "../../../../lib/iconManifest";
+import { IconsTab } from "./IconsTab";
 import styles from "./ElementsPanel.module.css";
 
 type LibraryTab = "icons" | "photos" | "blocks";
@@ -17,14 +19,27 @@ interface ElementsPanelProps {
   onUpload: (file: File) => void;
   onDelete: (assetId: string) => void;
   onInsert: (asset: Asset) => void;
+  icons: IconManifestEntry[] | null;
+  onRequestIcons: () => void;
+  onInsertIcon: (icon: IconManifestEntry) => void;
 }
 
-// Icons/Blocks are their own future subsystem (search, licensing,
-// drag-to-canvas insertion) — none of that exists yet, so those two tabs
-// stay an honest "coming soon" rather than static demo content dressed up
-// as something real. Photos is different: it's backed by real uploaded
-// project assets, not a library to build later.
-export function ElementsPanel({ assets, isUploading, onUpload, onDelete, onInsert }: ElementsPanelProps) {
+// Blocks is its own future subsystem (search, licensing, drag-to-canvas
+// insertion) — none of that exists yet, so it stays an honest "coming soon"
+// rather than static demo content dressed up as something real. Photos and
+// Icons are both backed by real data (uploaded project assets, and the
+// bundled Phosphor icon manifest respectively), not a library to build
+// later.
+export function ElementsPanel({
+  assets,
+  isUploading,
+  onUpload,
+  onDelete,
+  onInsert,
+  icons,
+  onRequestIcons,
+  onInsertIcon,
+}: ElementsPanelProps) {
   const [tab, setTab] = useState<LibraryTab>("icons");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +47,11 @@ export function ElementsPanel({ assets, isUploading, onUpload, onDelete, onInser
     const file = e.target.files?.[0];
     e.target.value = "";
     if (file) onUpload(file);
+  }
+
+  function handleTabClick(value: LibraryTab): void {
+    setTab(value);
+    if (value === "icons") onRequestIcons();
   }
 
   return (
@@ -43,13 +63,15 @@ export function ElementsPanel({ assets, isUploading, onUpload, onDelete, onInser
             type="button"
             className={styles.subTab}
             data-active={tab === value || undefined}
-            onClick={() => setTab(value)}
+            onClick={() => handleTabClick(value)}
           >
             {label}
           </button>
         ))}
       </div>
-      {tab === "photos" ? (
+      {tab === "icons" ? (
+        <IconsTab icons={icons} onInsert={onInsertIcon} />
+      ) : tab === "photos" ? (
         <div className={styles.photos}>
           <input
             ref={fileInputRef}

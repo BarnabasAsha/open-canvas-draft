@@ -275,17 +275,57 @@ export const PathPointSchema = z.object({
 });
 export type PathPoint = z.infer<typeof PathPointSchema>;
 
+// A path node is one or more independent subpaths sharing one fill/stroke —
+// most real vector icons are built this way (an outer shape plus a smaller
+// inner one, forming a "hole" via fillRule), not the single continuous loop
+// this schema originally modeled.
+export const PathSubpathSchema = z.object({
+  points: z.array(PathPointSchema),
+  closed: z.boolean(),
+});
+export type PathSubpath = z.infer<typeof PathSubpathSchema>;
+
+export const FillRuleSchema = z.enum(["nonzero", "evenodd"]);
+export type FillRule = z.infer<typeof FillRuleSchema>;
+
 export const PathNodeSchema = z.object({
   ...baseNodeShape,
   type: z.literal("path"),
-  points: z.array(PathPointSchema),
-  closed: z.boolean(),
+  subpaths: z.array(PathSubpathSchema),
+  fillRule: FillRuleSchema,
   fill: z.string().nullable(),
   stroke: z.string().nullable(),
   strokeWidth: z.number(),
   strokeStyle: StrokeStyleSchema,
 });
 export type PathNode = RefineSemantics<z.infer<typeof PathNodeSchema>>;
+
+// Persisted scene graphs are trusted straight through as SceneGraph (see
+// pagesStore.ts's hydratePages) with no runtime Zod validation at that
+// boundary, so a PathNode saved before this schema change (flat
+// {points, closed}, no subpaths) wouldn't be caught by a parse — it would
+// just crash the first code that reads node.subpaths. Call this once, on
+// raw JSON, before it's treated as a SceneGraph.
+export function normalizeLegacyPathNodes(graph: unknown): unknown {
+  if (!graph || typeof graph !== "object" || !("nodes" in graph)) return graph;
+  const nodes = (graph as { nodes: unknown }).nodes;
+  if (!nodes || typeof nodes !== "object") return graph;
+
+  const normalizedNodes: Record<string, unknown> = {};
+  for (const [id, node] of Object.entries(nodes as Record<string, unknown>)) {
+    normalizedNodes[id] = normalizeLegacyPathNode(node);
+  }
+  return { ...(graph as object), nodes: normalizedNodes };
+}
+
+function normalizeLegacyPathNode(node: unknown): unknown {
+  if (!node || typeof node !== "object") return node;
+  const record = node as Record<string, unknown>;
+  if (record.type !== "path" || "subpaths" in record) return node;
+
+  const { points, closed, ...rest } = record;
+  return { ...rest, subpaths: [{ points: points ?? [], closed: closed ?? false }], fillRule: "nonzero" };
+}
 
 // Layout fields for a container that can arrange its own children —
 // Frame and Section only, since GroupNode is a pure authoring convenience

@@ -129,8 +129,8 @@ function buildPathNode(nodeId: NodeId, anchors: DraftAnchor[], name: string): Pa
     sizingHorizontal: "fixed",
     sizingVertical: "fixed",
     positioning: "flow",
-    points,
-    closed: false,
+    subpaths: [{ points, closed: false }],
+    fillRule: "nonzero",
     fill: null,
     stroke: "#111827",
     strokeWidth: 2,
@@ -151,7 +151,8 @@ function finishSession(closed: boolean): void {
     return;
   }
 
-  const node: PathNode = { ...buildPathNode(nodeId, anchors, name), closed };
+  const draft = buildPathNode(nodeId, anchors, name);
+  const node: PathNode = { ...draft, subpaths: [{ ...draft.subpaths[0], closed }] };
   sceneStore.update((scene) => ({ ...scene, nodes: { ...scene.nodes, [nodeId]: node } }));
 
   historyManager.execute(createAddNodeCommand(node));

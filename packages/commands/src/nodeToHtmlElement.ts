@@ -7,6 +7,7 @@ import type {
   LineNode,
   PathNode,
   PathPoint,
+  PathSubpath,
   RectNode,
   SceneNode,
   SectionNode,
@@ -45,7 +46,7 @@ export function escapeHtml(value: string): string {
 // one) — translated to SVG path commands instead of Path2D calls, since
 // Path2D is as browser-only as the DOMMatrix/DOMPoint APIs this exporter is
 // deliberately built to avoid needing server-side.
-function buildPathD(points: PathPoint[], closed: boolean): string {
+function buildSubpathD(points: PathPoint[], closed: boolean): string {
   if (points.length === 0) return "";
 
   const segment = (from: PathPoint, to: PathPoint): string => {
@@ -64,6 +65,14 @@ function buildPathD(points: PathPoint[], closed: boolean): string {
     commands.push("Z");
   }
   return commands.join(" ");
+}
+
+// One node, one fill/stroke, but possibly several independent subpaths —
+// concatenating each subpath's own "M ... Z" sequence into one `d` string is
+// exactly how SVG represents a compound shape (e.g. a ring, via two
+// oppositely-wound subpaths and fill-rule) natively, no extra markup needed.
+function buildPathD(subpaths: PathSubpath[]): string {
+  return subpaths.map((subpath) => buildSubpathD(subpath.points, subpath.closed)).join(" ");
 }
 
 // One entry per SceneNode variant except "instance" — an instance has no
@@ -116,14 +125,15 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   // fill/stroke would render as if the node were a plain rectangle, not the
   // actual bezier shape. Rendered as its own inline SVG instead of a div.
   path: (node: PathNode): HtmlElementSpec => {
-    const d = buildPathD(node.points, node.closed);
+    const d = buildPathD(node.subpaths);
     const fill = node.fill ?? "none";
     const stroke = node.stroke ?? "none";
+    const fillRuleAttr = node.fillRule === "evenodd" ? ` fill-rule="evenodd"` : "";
     return {
       tag: "svg",
       attrs: { viewBox: `0 0 ${node.width} ${node.height}` },
       extraCss: [],
-      innerHtml: `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${node.strokeWidth}"/>`,
+      innerHtml: `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${node.strokeWidth}"${fillRuleAttr}/>`,
     };
   },
   frame: containerElement,

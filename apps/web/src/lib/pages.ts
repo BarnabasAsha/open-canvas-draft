@@ -1,5 +1,5 @@
 import type { HistoryEntry } from "@open-canvas/commands";
-import type { SceneGraph } from "@open-canvas/schema";
+import { normalizeLegacyPathNodes, type SceneGraph } from "@open-canvas/schema";
 import { fetchJson } from "./api";
 
 export interface Page {
@@ -11,8 +11,17 @@ export interface Page {
   updatedAt: string;
 }
 
-export function listPages(projectId: string): Promise<Page[]> {
-  return fetchJson<Page[]>(`/api/projects/${projectId}/pages`);
+// Persisted pages are trusted straight through as Page[] with no runtime
+// validation (fetchJson just casts the response body) — normalize here, the
+// one place old-shape PathNode data (pre-dating the subpaths schema change)
+// would otherwise reach the rest of the app and crash the first thing that
+// reads node.subpaths.
+export async function listPages(projectId: string): Promise<Page[]> {
+  const pages = await fetchJson<Page[]>(`/api/projects/${projectId}/pages`);
+  return pages.map((page) => ({
+    ...page,
+    sceneGraph: normalizeLegacyPathNodes(page.sceneGraph) as SceneGraph,
+  }));
 }
 
 export function createPage(projectId: string, name: string, sceneGraph: SceneGraph): Promise<Page> {

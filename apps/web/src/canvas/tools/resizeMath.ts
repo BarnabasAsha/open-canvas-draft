@@ -1,5 +1,5 @@
 import { getWorldMatrix, transformPoint } from "@open-canvas/commands";
-import type { ArrowNode, LineNode, NodeId, PathPoint, SceneNode } from "@open-canvas/schema";
+import type { ArrowNode, LineNode, NodeId, PathPoint, PathSubpath, SceneNode } from "@open-canvas/schema";
 import type { Point } from "../../utils/coordinates";
 import type { BBoxHandleId, EndpointHandleId } from "./resizeHandles";
 
@@ -67,7 +67,7 @@ export function resizeBBoxNode(start: SceneNode, handleId: BBoxHandleId, localPo
       y: vertical.origin,
       width: horizontal.size,
       height: vertical.size,
-      points: scalePathPoints(start.points, scaleX, scaleY),
+      subpaths: scalePathSubpaths(start.subpaths, scaleX, scaleY),
     };
   }
 
@@ -80,6 +80,13 @@ export function scalePathPoints(points: PathPoint[], scaleX: number, scaleY: num
     y: point.y * scaleY,
     handleIn: point.handleIn ? scalePoint(point.handleIn, scaleX, scaleY) : undefined,
     handleOut: point.handleOut ? scalePoint(point.handleOut, scaleX, scaleY) : undefined,
+  }));
+}
+
+export function scalePathSubpaths(subpaths: PathSubpath[], scaleX: number, scaleY: number): PathSubpath[] {
+  return subpaths.map((subpath) => ({
+    ...subpath,
+    points: scalePathPoints(subpath.points, scaleX, scaleY),
   }));
 }
 
