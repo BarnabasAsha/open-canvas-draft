@@ -1,6 +1,7 @@
 import { addElementTool } from "./addElement";
 import { addIconTool } from "./addIcon";
 import { addImageTool } from "./addImage";
+import { addUnsplashPhotoTool } from "./addUnsplashPhoto";
 import { arrangeElementsTool } from "./arrangeElements";
 import { createPageTool } from "./createPage";
 import { deleteElementsTool } from "./deleteElements";
@@ -11,6 +12,7 @@ import { listAssetsTool } from "./listAssets";
 import { listPagesTool } from "./listPages";
 import { reorderElementsTool } from "./reorderElements";
 import { searchIconsTool } from "./searchIcons";
+import { searchUnsplashPhotosTool } from "./searchUnsplashPhotos";
 import { selectElementsTool } from "./selectElements";
 import { switchPageTool } from "./switchPage";
 import { ungroupElementTool } from "./ungroupElement";
@@ -27,6 +29,8 @@ export const ALL_TOOLS = [
   addImageTool,
   addIconTool,
   searchIconsTool,
+  addUnsplashPhotoTool,
+  searchUnsplashPhotosTool,
   updateElementTool,
   deleteElementsTool,
   duplicateElementsTool,
