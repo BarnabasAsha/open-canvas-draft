@@ -53,6 +53,7 @@ interface LeftSidebarProps {
   unsplashResults: UnsplashPhoto[] | null;
   isSearchingUnsplash: boolean;
   onSearchUnsplash: (query: string) => void;
+  onRequestDefaultUnsplashPhotos: () => void;
   onInsertUnsplashPhoto: (photo: UnsplashPhoto) => void;
 }
 
@@ -103,6 +104,7 @@ export function LeftSidebar({
   unsplashResults,
   isSearchingUnsplash,
   onSearchUnsplash,
+  onRequestDefaultUnsplashPhotos,
   onInsertUnsplashPhoto,
 }: LeftSidebarProps) {
   const [railTab, setRailTab] = useState<RailTab>("layers");
@@ -175,6 +177,7 @@ export function LeftSidebar({
           unsplashResults={unsplashResults}
           isSearchingUnsplash={isSearchingUnsplash}
           onSearchUnsplash={onSearchUnsplash}
+          onRequestDefaultUnsplashPhotos={onRequestDefaultUnsplashPhotos}
           onInsertUnsplashPhoto={onInsertUnsplashPhoto}
         />
       )}

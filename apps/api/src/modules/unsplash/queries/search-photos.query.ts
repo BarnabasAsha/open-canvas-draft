@@ -3,7 +3,10 @@ import { requireUserId, type RequestContext } from "../../../lib/request-context
 import type { UnsplashClient, UnsplashPhotoDTO } from "../../../lib/unsplash-client";
 
 export interface SearchPhotosInput {
-  query: string;
+  // Absent/empty — UnsplashTab's default view before the user has searched
+  // for anything — falls back to Unsplash's own editorial feed rather than
+  // an empty tab.
+  query?: string;
   page?: number;
 }
 
@@ -21,6 +24,6 @@ export class SearchPhotosQuery extends BaseQuery<SearchPhotosInput, UnsplashPhot
 
   async execute(input: SearchPhotosInput): Promise<UnsplashPhotoDTO[]> {
     requireUserId(this.requestContext);
-    return this.unsplashClient.search(input.query, input.page);
+    return input.query ? this.unsplashClient.search(input.query, input.page) : this.unsplashClient.list(input.page);
   }
 }

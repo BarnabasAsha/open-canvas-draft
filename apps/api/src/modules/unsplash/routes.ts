@@ -14,8 +14,9 @@ const trackDownloadSchema = z.object({ downloadLocation: z.string().url() });
 export const unsplashRoutes = new Hono<Env>()
   .use("*", requireAuth)
   .get("/search", async (c) => {
+    // No query — UnsplashTab's default view before a real search — falls
+    // through to SearchPhotosQuery's own editorial-feed fallback.
     const query = c.req.query("query");
-    if (!query) return c.json({ error: "query is required" }, 400);
     const page = c.req.query("page");
 
     const searchPhotosQuery = await c.var.di.getAsync("searchPhotosQuery");

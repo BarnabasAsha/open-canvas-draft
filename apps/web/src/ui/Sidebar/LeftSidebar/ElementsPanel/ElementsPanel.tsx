@@ -28,6 +28,7 @@ interface ElementsPanelProps {
   unsplashResults: UnsplashPhoto[] | null;
   isSearchingUnsplash: boolean;
   onSearchUnsplash: (query: string) => void;
+  onRequestDefaultUnsplashPhotos: () => void;
   onInsertUnsplashPhoto: (photo: UnsplashPhoto) => void;
 }
 
@@ -49,6 +50,7 @@ export function ElementsPanel({
   unsplashResults,
   isSearchingUnsplash,
   onSearchUnsplash,
+  onRequestDefaultUnsplashPhotos,
   onInsertUnsplashPhoto,
 }: ElementsPanelProps) {
   const [tab, setTab] = useState<LibraryTab>("icons");
@@ -63,6 +65,7 @@ export function ElementsPanel({
   function handleTabClick(value: LibraryTab): void {
     setTab(value);
     if (value === "icons") onRequestIcons();
+    if (value === "unsplash") onRequestDefaultUnsplashPhotos();
   }
 
   return (

@@ -12,8 +12,11 @@ export interface UnsplashPhoto {
   downloadLocation: string;
 }
 
-export function searchPhotos(query: string, page?: number): Promise<UnsplashPhoto[]> {
-  const params = new URLSearchParams({ query });
+// query omitted (or empty) falls back to Unsplash's own editorial feed —
+// UnsplashTab uses this for its default view before a real search.
+export function searchPhotos(query?: string, page?: number): Promise<UnsplashPhoto[]> {
+  const params = new URLSearchParams();
+  if (query) params.set("query", query);
   if (page) params.set("page", String(page));
   return fetchJson<UnsplashPhoto[]>(`/api/unsplash/search?${params}`);
 }

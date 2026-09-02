@@ -92,6 +92,25 @@ export class UnsplashClient {
     return body.results.map(toDto);
   }
 
+  // Unsplash's own editorial feed (GET /photos, not /search/photos) — used
+  // for the tab's default view before the user has searched for anything,
+  // so it isn't just empty. Its response is a bare array, unlike search's
+  // {results: [...]} wrapper.
+  async list(page = 1): Promise<UnsplashPhotoDTO[]> {
+    this.checkRateLimit();
+
+    const url = new URL("https://api.unsplash.com/photos");
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("per_page", "24");
+    url.searchParams.set("order_by", "popular");
+
+    const response = await fetch(url, { headers: { Authorization: `Client-ID ${this.accessKey}` } });
+    if (!response.ok) throw new Error(`Unsplash list failed: ${response.status} ${response.statusText}`);
+
+    const body = (await response.json()) as UnsplashApiPhoto[];
+    return body.map(toDto);
+  }
+
   // Unsplash requires this GET fired whenever a photo is actually used (not
   // just shown in search results) — separate from serving the image itself,
   // this is purely a usage-tracking ping. downloadLocation comes straight

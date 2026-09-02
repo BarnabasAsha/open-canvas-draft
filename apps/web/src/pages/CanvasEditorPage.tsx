@@ -498,16 +498,26 @@ export function CanvasEditorPage() {
     loadIconManifest().then(setIcons);
   }
 
-  // Triggered by UnsplashTab's own search-form submit, not a mount effect —
-  // this is a real network call against Unsplash's own rate limit, so
-  // nothing eager happens on tab-open the way icons' local manifest does.
-  async function handleSearchUnsplash(query: string): Promise<void> {
+  // Triggered by UnsplashTab's own search-form submit (query set) or by
+  // handleRequestDefaultUnsplashPhotos below (query omitted, falls back to
+  // Unsplash's own editorial feed).
+  async function handleSearchUnsplash(query?: string): Promise<void> {
     setIsSearchingUnsplash(true);
     try {
       setUnsplashResults(await searchPhotos(query));
     } finally {
       setIsSearchingUnsplash(false);
     }
+  }
+
+  // Triggered by ElementsPanel's own tab click the first time "Unsplash" is
+  // opened, mirroring handleRequestIcons — but unlike the icon manifest
+  // (a free local cache), this is a real network call against Unsplash's
+  // rate limit, so it's explicitly guarded to fire once, not on every
+  // revisit.
+  function handleRequestDefaultUnsplashPhotos(): void {
+    if (unsplashResults !== null) return;
+    handleSearchUnsplash();
   }
 
   // Only ever called while a Frame is the sole selection — see
@@ -616,6 +626,7 @@ export function CanvasEditorPage() {
         unsplashResults={unsplashResults}
         isSearchingUnsplash={isSearchingUnsplash}
         onSearchUnsplash={handleSearchUnsplash}
+        onRequestDefaultUnsplashPhotos={handleRequestDefaultUnsplashPhotos}
         onInsertUnsplashPhoto={placeUnsplashPhoto}
       />
       <div
