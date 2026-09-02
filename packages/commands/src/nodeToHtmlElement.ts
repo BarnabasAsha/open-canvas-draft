@@ -152,7 +152,7 @@ export const nodeToHtmlElement: NodeHtmlTable = {
     // own inline style — width/height/position stay on the outer <picture>
     // via the normal generateNodeCss/extraCss path, unaffected by this.
     const srcset = buildUnsplashResponsiveSrcset(node.src);
-    const source = srcset ? `<source srcset="${srcset}" sizes="100vw">` : "";
+    const source = srcset ? `<source srcset="${escapeHtml(srcset)}" sizes="100vw">` : "";
     const img = `<img src="${escapeHtml(node.src)}" alt="${escapeHtml(node.name)}" style="display: block; width: 100%; height: 100%; ${objectFitCss}">`;
     return { tag: "picture", attrs: {}, extraCss: [], innerHtml: `${source}${img}` };
   },
@@ -167,8 +167,14 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   // actual bezier shape. Rendered as its own inline SVG instead of a div.
   path: (node: PathNode): HtmlElementSpec => {
     const d = buildPathD(node.subpaths);
-    const fill = node.fill ?? "none";
-    const stroke = node.stroke ?? "none";
+    // Unlike every other attribute here (either auto-escaped via attrs, or
+    // this file's own escapeHtml calls elsewhere), fill/stroke were
+    // interpolated raw — harmless from the color picker (which validates
+    // hex input) but not from update_element's WebMCP tool, whose fill/
+    // stroke schema only constrains type, not format, and writes straight
+    // into the node with no sanitization.
+    const fill = escapeHtml(node.fill ?? "none");
+    const stroke = escapeHtml(node.stroke ?? "none");
     const fillRuleAttr = node.fillRule === "evenodd" ? ` fill-rule="evenodd"` : "";
     return {
       tag: "svg",

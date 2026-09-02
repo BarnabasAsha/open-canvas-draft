@@ -17,10 +17,19 @@ export const unsplashRoutes = new Hono<Env>()
     // No query — UnsplashTab's default view before a real search — falls
     // through to SearchPhotosQuery's own editorial-feed fallback.
     const query = c.req.query("query");
-    const page = c.req.query("page");
+    const rawPage = c.req.query("page");
+
+    let page: number | undefined;
+    if (rawPage !== undefined) {
+      page = Number(rawPage);
+      // Number("abc") is NaN, not a parse error — left unchecked this would
+      // reach Unsplash's API as the literal string "NaN" and surface as an
+      // opaque 500 instead of a clean 400 for bad client input.
+      if (!Number.isFinite(page)) return c.json({ error: "page must be a number" }, 400);
+    }
 
     const searchPhotosQuery = await c.var.di.getAsync("searchPhotosQuery");
-    const results = await searchPhotosQuery.execute({ query, page: page ? Number(page) : undefined });
+    const results = await searchPhotosQuery.execute({ query, page });
     return c.json(results);
   })
   .post("/track-download", zValidator("json", trackDownloadSchema), async (c) => {
