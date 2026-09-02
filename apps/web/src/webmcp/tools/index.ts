@@ -1,4 +1,5 @@
 import { addElementTool } from "./addElement";
+import { addIconTool } from "./addIcon";
 import { addImageTool } from "./addImage";
 import { arrangeElementsTool } from "./arrangeElements";
 import { createPageTool } from "./createPage";
@@ -9,6 +10,7 @@ import { groupElementsTool } from "./groupElements";
 import { listAssetsTool } from "./listAssets";
 import { listPagesTool } from "./listPages";
 import { reorderElementsTool } from "./reorderElements";
+import { searchIconsTool } from "./searchIcons";
 import { selectElementsTool } from "./selectElements";
 import { switchPageTool } from "./switchPage";
 import { ungroupElementTool } from "./ungroupElement";
@@ -23,6 +25,8 @@ export const ALL_TOOLS = [
   listPagesTool,
   addElementTool,
   addImageTool,
+  addIconTool,
+  searchIconsTool,
   updateElementTool,
   deleteElementsTool,
   duplicateElementsTool,
