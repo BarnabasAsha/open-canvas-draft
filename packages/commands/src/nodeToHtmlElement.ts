@@ -40,6 +40,31 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+const UNSPLASH_IMAGE_HOST = "images.unsplash.com";
+const UNSPLASH_RESPONSIVE_WIDTHS = [640, 1080, 1920];
+
+// Unsplash's image URLs are served through an image-resizing service that
+// honors a `w` query param on any of their hosted URLs — a real responsive
+// srcset is just a few width variants of the SAME url, no separate stored
+// sizes needed. An uploaded asset's src won't match this host, so it falls
+// through to null (no <source>, just the plain fallback <img> — see the
+// image case above).
+function buildUnsplashResponsiveSrcset(src: string): string | null {
+  let base: URL;
+  try {
+    base = new URL(src);
+  } catch {
+    return null;
+  }
+  if (base.hostname !== UNSPLASH_IMAGE_HOST) return null;
+
+  return UNSPLASH_RESPONSIVE_WIDTHS.map((width) => {
+    const variant = new URL(base);
+    variant.searchParams.set("w", String(width));
+    return `${variant.toString()} ${width}w`;
+  }).join(", ");
+}
+
 // Mirrors tracePathSegment in apps/web/src/canvas/renderer/shapes/drawPath.ts
 // exactly (same handle semantics: handleOut/handleIn are absolute control-
 // point positions, a curve segment exists only when either endpoint defines
@@ -110,11 +135,27 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   // beyond that.
   line: (node: LineNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
   arrow: (node: ArrowNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
-  image: (node: ImageNode): HtmlElementSpec => ({
-    tag: resolveSemanticTag(node),
-    attrs: { src: node.src, alt: escapeHtml(node.name) },
-    extraCss: [`object-fit: ${node.objectFit};`],
-  }),
+  image: (node: ImageNode): HtmlElementSpec => {
+    const tag = resolveSemanticTag(node);
+    const objectFitCss = `object-fit: ${node.objectFit};`;
+
+    // attrsToHtml (renderFrameToHtml.ts) already escapes every attrs value
+    // itself — node.name went through escapeHtml here too, double-escaping
+    // it (e.g. an apostrophe became &amp;#39; instead of &#39;).
+    if (tag !== "picture") {
+      return { tag, attrs: { src: node.src, alt: node.name }, extraCss: [objectFitCss] };
+    }
+
+    // object-fit only has an effect on a replaced element (img/video), not
+    // on <picture> itself, so it moves from extraCss (which the caller
+    // applies to whichever tag ends up outermost) onto the inner <img>'s
+    // own inline style — width/height/position stay on the outer <picture>
+    // via the normal generateNodeCss/extraCss path, unaffected by this.
+    const srcset = buildUnsplashResponsiveSrcset(node.src);
+    const source = srcset ? `<source srcset="${srcset}" sizes="100vw">` : "";
+    const img = `<img src="${escapeHtml(node.src)}" alt="${escapeHtml(node.name)}" style="display: block; width: 100%; height: 100%; ${objectFitCss}">`;
+    return { tag: "picture", attrs: {}, extraCss: [], innerHtml: `${source}${img}` };
+  },
   text: (node: TextNode): HtmlElementSpec => ({
     tag: resolveSemanticTag(node),
     attrs: {},

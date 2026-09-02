@@ -474,7 +474,7 @@ export const DEFAULT_SEMANTIC_TAG: Record<SceneNode["type"], SemanticTag> = {
   ellipse: "div",
   line: "div",
   arrow: "div",
-  image: "img",
+  image: "picture",
   text: "p",
   path: "div",
   frame: "div",
