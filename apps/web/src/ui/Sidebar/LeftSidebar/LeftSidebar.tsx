@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Asset } from "../../../lib/assets";
 import type { IconManifestEntry } from "../../../lib/iconManifest";
+import type { UnsplashPhoto } from "../../../lib/unsplash";
 import type { PageId } from "../../../store/pagesStore";
 import type { SaveStatus } from "../../../store/saveStatusStore";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
@@ -49,6 +50,10 @@ interface LeftSidebarProps {
   icons: IconManifestEntry[] | null;
   onRequestIcons: () => void;
   onInsertIcon: (icon: IconManifestEntry) => void;
+  unsplashResults: UnsplashPhoto[] | null;
+  isSearchingUnsplash: boolean;
+  onSearchUnsplash: (query: string) => void;
+  onInsertUnsplashPhoto: (photo: UnsplashPhoto) => void;
 }
 
 const SAVE_STATUS_LABEL: Record<SaveStatus, string | null> = {
@@ -95,6 +100,10 @@ export function LeftSidebar({
   icons,
   onRequestIcons,
   onInsertIcon,
+  unsplashResults,
+  isSearchingUnsplash,
+  onSearchUnsplash,
+  onInsertUnsplashPhoto,
 }: LeftSidebarProps) {
   const [railTab, setRailTab] = useState<RailTab>("layers");
 
@@ -163,6 +172,10 @@ export function LeftSidebar({
           icons={icons}
           onRequestIcons={onRequestIcons}
           onInsertIcon={onInsertIcon}
+          unsplashResults={unsplashResults}
+          isSearchingUnsplash={isSearchingUnsplash}
+          onSearchUnsplash={onSearchUnsplash}
+          onInsertUnsplashPhoto={onInsertUnsplashPhoto}
         />
       )}
     </div>

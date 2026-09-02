@@ -2,14 +2,17 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { TrashIcon, UploadSimpleIcon } from "@phosphor-icons/react";
 import type { Asset } from "../../../../lib/assets";
 import type { IconManifestEntry } from "../../../../lib/iconManifest";
+import type { UnsplashPhoto } from "../../../../lib/unsplash";
 import { IconsTab } from "./IconsTab";
+import { UnsplashTab } from "./UnsplashTab";
 import styles from "./ElementsPanel.module.css";
 
-type LibraryTab = "icons" | "photos" | "blocks";
+type LibraryTab = "icons" | "photos" | "unsplash" | "blocks";
 
 const TABS: { value: LibraryTab; label: string }[] = [
   { value: "icons", label: "Icons" },
   { value: "photos", label: "Photos" },
+  { value: "unsplash", label: "Unsplash" },
   { value: "blocks", label: "Blocks" },
 ];
 
@@ -22,6 +25,10 @@ interface ElementsPanelProps {
   icons: IconManifestEntry[] | null;
   onRequestIcons: () => void;
   onInsertIcon: (icon: IconManifestEntry) => void;
+  unsplashResults: UnsplashPhoto[] | null;
+  isSearchingUnsplash: boolean;
+  onSearchUnsplash: (query: string) => void;
+  onInsertUnsplashPhoto: (photo: UnsplashPhoto) => void;
 }
 
 // Blocks is its own future subsystem (search, licensing, drag-to-canvas
@@ -39,6 +46,10 @@ export function ElementsPanel({
   icons,
   onRequestIcons,
   onInsertIcon,
+  unsplashResults,
+  isSearchingUnsplash,
+  onSearchUnsplash,
+  onInsertUnsplashPhoto,
 }: ElementsPanelProps) {
   const [tab, setTab] = useState<LibraryTab>("icons");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +82,13 @@ export function ElementsPanel({
       </div>
       {tab === "icons" ? (
         <IconsTab icons={icons} onInsert={onInsertIcon} />
+      ) : tab === "unsplash" ? (
+        <UnsplashTab
+          results={unsplashResults}
+          isSearching={isSearchingUnsplash}
+          onSearch={onSearchUnsplash}
+          onInsert={onInsertUnsplashPhoto}
+        />
       ) : tab === "photos" ? (
         <div className={styles.photos}>
           <input
