@@ -18,7 +18,7 @@ export interface UpdateElementInput {
 export const updateElementTool: WebMcpTool<UpdateElementInput, SceneNode> = {
   name: "update_element",
   description:
-    "Patch fields on an existing element — fill, stroke, opacity, typography, corner radius, or (for a frame/section) its layout config. Only send the fields you're changing. Not every field applies to every node type; sending one that doesn't apply to this node is silently ignored.",
+    "Patch fields on an existing element — fill, stroke, opacity, typography, corner radius, semantics (the HTML tag/role/attributes it exports as, e.g. { tag: \"h1\" } or { tag: \"nav\" } — defaults to a generic div/p/img otherwise), or (for a frame/section) its layout config. Only send the fields you're changing. Not every field applies to every node type; sending one that doesn't apply to this node is silently ignored.",
   inputSchema: {
     type: "object",
     properties: {
