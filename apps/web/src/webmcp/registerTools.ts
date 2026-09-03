@@ -1,5 +1,37 @@
 import { DEFAULT_REGISTERED_TOOLS } from "./tools/index";
 
+// registerTool is async (see types.ts), but this function can't be — React
+// calls initWebMcpTools() from a useEffect and needs the teardown function
+// back synchronously, not a Promise. The actual registration runs as a
+// fire-and-forget task (void, started but not awaited here) instead.
+async function registerAll(modelContext: NonNullable<Document["modelContext"]>, controller: AbortController): Promise<void> {
+  const outcomes = await Promise.allSettled(
+    DEFAULT_REGISTERED_TOOLS.map((tool) => modelContext.registerTool(tool, { signal: controller.signal })),
+  );
+
+  const failures: { name: string; reason: unknown }[] = [];
+  outcomes.forEach((outcome, index) => {
+    if (outcome.status === "rejected") failures.push({ name: DEFAULT_REGISTERED_TOOLS[index].name, reason: outcome.reason });
+  });
+
+  if (failures.length > 0) {
+    // A partial registration is worse than none — an agent that sees some
+    // but not all tools has no reliable way to know which are missing.
+    // Aborting the shared controller unregisters whatever DID succeed,
+    // same mechanism teardown already relies on.
+    controller.abort();
+    for (const { name, reason } of failures) {
+      console.error(`[webmcp] failed to register tool "${name}":`, reason);
+    }
+    return;
+  }
+
+  console.info(
+    `[webmcp] registered ${DEFAULT_REGISTERED_TOOLS.length} tools:`,
+    DEFAULT_REGISTERED_TOOLS.map((tool) => tool.name),
+  );
+}
+
 // Feature-detected — a true no-op in every browser without WebMCP support
 // today, so this is safe to call unconditionally. One AbortController
 // covers every tool's registration; aborting it on teardown unregisters
@@ -7,7 +39,8 @@ import { DEFAULT_REGISTERED_TOOLS } from "./tools/index";
 // shape from the spec. Mirrors initPageAutosave/initPageEventLog's own
 // init-returns-teardown shape exactly (see CanvasEditorPage.tsx).
 export function initWebMcpTools(): () => void {
-  if (!document.modelContext) {
+  const modelContext = document.modelContext;
+  if (!modelContext) {
     console.warn(
       "[webmcp] document.modelContext is not present — this browser doesn't expose WebMCP (or the flag enabling it isn't on). No tools were registered.",
     );
@@ -15,12 +48,6 @@ export function initWebMcpTools(): () => void {
   }
 
   const controller = new AbortController();
-  for (const tool of DEFAULT_REGISTERED_TOOLS) {
-    document.modelContext.registerTool(tool, { signal: controller.signal });
-  }
-  console.info(
-    `[webmcp] registered ${DEFAULT_REGISTERED_TOOLS.length} tools:`,
-    DEFAULT_REGISTERED_TOOLS.map((tool) => tool.name),
-  );
+  void registerAll(modelContext, controller);
   return () => controller.abort();
 }

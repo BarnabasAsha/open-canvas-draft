@@ -40,7 +40,12 @@ declare global {
     // WebMcpTool's own `execute`, so no single concrete WebMcpTool<X, Y>
     // type could accept all of them at this call site anyway.
     modelContext?: {
-      registerTool: (tool: object, options?: { signal?: AbortSignal }) => void;
+      // Registration is asynchronous per the WebMCP spec — the browser may
+      // need real work (e.g. surfacing the tool to whatever agent/extension
+      // is listening) before it's confirmed. See registerTools.ts/
+      // registerProjectTools.ts for how callers await this without making
+      // their own init functions async.
+      registerTool: (tool: object, options?: { signal?: AbortSignal }) => Promise<void>;
     };
   }
 }
