@@ -2,6 +2,7 @@ import type { AsyncSpec, Module, SpecMap } from "@inferdi/inferdi";
 import type { Database } from "../../../db/client";
 import type { RequestContext } from "../../../lib/request-context";
 import type { ProjectRepository } from "../repositories/project.repository";
+import { DuplicateProjectCommand } from "../commands/duplicate-project.command";
 import { CreatePageCommand } from "./commands/create-page.command";
 import { DeletePageCommand } from "./commands/delete-page.command";
 import { RenamePageCommand } from "./commands/rename-page.command";
@@ -33,6 +34,11 @@ type PagesProvides = SpecMap<{ pageRepository: PageRepository; pageEventReposito
       appendPageEventsCommand: AppendPageEventsCommand;
       listPageEventsQuery: ListPageEventsQuery;
       exportFrameHtmlQuery: ExportFrameHtmlQuery;
+      // Registered here, not in projects.module.ts, despite being a
+      // project-level operation — it needs pageRepository too (copying a
+      // project means copying its pages), and container.ts only composes
+      // pagesModule after projectsModule, never the reverse.
+      duplicateProjectCommand: DuplicateProjectCommand;
     },
     "transient"
   >;
@@ -91,5 +97,11 @@ export const pagesModule: Module<PagesRequirements, PagesProvides> = (c) =>
       "exportFrameHtmlQuery",
       ExportFrameHtmlQuery,
       ["pageRepository", "projectRepository", "requestContext"],
+      "transient",
+    )
+    .registerClass(
+      "duplicateProjectCommand",
+      DuplicateProjectCommand,
+      ["projectRepository", "pageRepository", "requestContext"],
       "transient",
     );

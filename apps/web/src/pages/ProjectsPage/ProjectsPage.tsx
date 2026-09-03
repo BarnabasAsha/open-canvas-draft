@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
-import { fetchJson } from "../../lib/api";
+import { createProject, deleteProject, duplicateProject, listProjects, renameProject } from "../../lib/projects";
 import { Button } from "../../ui/primitives/Button/Button";
 import { useModal } from "../../ui/primitives/Modal/useModal";
 import { CreateProjectModal } from "../../ui/CreateProjectModal/CreateProjectModal";
@@ -16,8 +16,23 @@ export function ProjectsPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
-    fetchJson<Project[]>("/api/projects").then(setProjects);
+    listProjects().then(setProjects);
   }, []);
+
+  async function handleRename(project: Project, name: string): Promise<void> {
+    const updated = await renameProject(project.id, name);
+    setProjects((current) => current?.map((p) => (p.id === updated.id ? updated : p)) ?? current);
+  }
+
+  async function handleDuplicate(project: Project): Promise<void> {
+    const copy = await duplicateProject(project.id);
+    setProjects((current) => (current ? [copy, ...current] : current));
+  }
+
+  async function handleDelete(project: Project): Promise<void> {
+    await deleteProject(project.id);
+    setProjects((current) => current?.filter((p) => p.id !== project.id) ?? current);
+  }
 
   const filteredProjects = useMemo(() => {
     if (!projects) return [];
@@ -29,10 +44,7 @@ export function ProjectsPage() {
   async function handleCreate(name: string, description: string): Promise<void> {
     setIsCreating(true);
     try {
-      const project = await fetchJson<Project>("/api/projects", {
-        method: "POST",
-        body: JSON.stringify(description ? { name, description } : { name }),
-      });
+      const project = await createProject(name, description || undefined);
       navigate(`/design/${project.id}`);
     } finally {
       setIsCreating(false);
@@ -71,6 +83,9 @@ export function ProjectsPage() {
           projects={filteredProjects}
           hasUnfilteredProjects={projects.length > 0}
           onOpen={(project) => navigate(`/design/${project.id}`)}
+          onRename={handleRename}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
         />
       )}
       <CreateProjectModal

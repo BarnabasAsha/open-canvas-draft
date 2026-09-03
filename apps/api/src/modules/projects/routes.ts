@@ -58,5 +58,10 @@ export const projectRoutes = new Hono<Env>()
     await command.execute({ projectId: requireUuidParam(c.req.param("projectId"), "projectId") });
     return c.body(null, 204);
   })
+  .post("/:projectId/duplicate", async (c) => {
+    const command = await c.var.di.getAsync("duplicateProjectCommand");
+    const { data } = await command.execute({ projectId: requireUuidParam(c.req.param("projectId"), "projectId") });
+    return c.json(serializeProject(data), 201);
+  })
   .route("/:projectId/pages", pageRoutes)
   .route("/:projectId/assets", assetRoutes);
