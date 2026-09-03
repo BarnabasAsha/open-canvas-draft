@@ -25,18 +25,25 @@ function boundsOverlap(a: Bounds, b: Bounds): boolean {
   return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
 }
 
-// Top-level (rootIds) nodes only — matches how most design tools treat a
-// canvas-level marquee drag; selecting a specific child nested inside a
-// frame/section still goes through a direct click, same as before this
-// existed. Locked/invisible nodes are skipped, matching hitTestScene's own
-// rule for plain click-to-select.
+// Deliberately, permanently top-level (rootIds) only — this is the whole
+// contract of this function, not a gap: matches how most design tools
+// (Figma included) treat a canvas-level marquee drag. Selecting a specific
+// child nested inside a frame/section always goes through a direct click
+// instead — a marquee never reaches into a container's children, by
+// design, regardless of whether the drag rectangle visually overlaps them.
+//
+// Invisible nodes are skipped; locked nodes are NOT — a locked node must
+// still be selectable this way too (to inspect its properties), matching
+// hitTestScene's own rule. Whether a locked/effectively-locked node can
+// then actually be dragged is enforced separately, downstream in
+// selectTool.ts.
 export function marqueeSelectedIds(scene: SceneGraph, start: Point, end: Point): Set<NodeId> {
   const marqueeBounds = rectBounds(start, end);
   const result = new Set<NodeId>();
 
   for (const id of scene.rootIds) {
     const node = scene.nodes[id];
-    if (!node || !node.visible || node.locked) continue;
+    if (!node || !node.visible) continue;
 
     const bounds = nodeBounds(id, scene.nodes);
     if (bounds && boundsOverlap(marqueeBounds, bounds)) result.add(id);

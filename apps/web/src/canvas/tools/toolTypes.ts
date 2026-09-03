@@ -9,6 +9,13 @@ export interface Tool {
   onPointerDown(event: ToolPointerEvent): void;
   onPointerMove(event: ToolPointerEvent): void;
   onPointerUp(event: ToolPointerEvent): void;
+  // Optional: fires on pointercancel/lostpointercapture (a gesture the
+  // browser aborted, or that lost capture without a normal pointerup) —
+  // only selectTool currently implements this, restoring pre-drag state
+  // rather than committing whatever the last pointermove happened to
+  // write. A tool with no in-progress multi-event gesture has nothing to
+  // abort, so this is harmless to skip.
+  onPointerCancel?(): void;
   getCursor(): string;
   // Optional: only selectTool currently implements this (re-enter text
   // edit on a double-clicked text node). Other tools just ignore it — a

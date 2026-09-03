@@ -1,9 +1,24 @@
 import type { ContainerNode, NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
-import { getWorldMatrix } from "./worldTransform";
+import { getWorldMatrix, transformPoint } from "./worldTransform";
 
+// Mirrors removeNodeFromGraph's own symmetric logic (below) — a node whose
+// parentId is already set to a real container is inserted directly into
+// that container's children, not appended to rootIds regardless. Every
+// existing caller builds nodes with parentId: null (root-level placement),
+// so this is purely additive: nothing that already worked changes.
 export function addNodeToGraph(graph: SceneGraph, node: SceneNode): SceneGraph {
   if (graph.nodes[node.id]) return graph;
-  return { nodes: { ...graph.nodes, [node.id]: node }, rootIds: [...graph.rootIds, node.id] };
+  const nodes = { ...graph.nodes, [node.id]: node };
+
+  const container = getContainer(graph, node.parentId);
+  if (container) {
+    return {
+      nodes: { ...nodes, [container.id]: { ...container, children: [...container.children, node.id] } },
+      rootIds: graph.rootIds,
+    };
+  }
+
+  return { nodes, rootIds: node.parentId ? graph.rootIds : [...graph.rootIds, node.id] };
 }
 
 export function removeNodeFromGraph(graph: SceneGraph, nodeId: NodeId): SceneGraph {
@@ -74,26 +89,7 @@ export function reparentNodeInGraph(graph: SceneGraph, nodeId: NodeId, newParent
     rootIds = [...rootIds, nodeId];
   }
 
-  // x/y is relative to the parent, so switching parents changes what
-  // coordinate space they're read in — without this, the node would jump
-  // by however far apart the old and new parent's origins are. Translation
-  // only: assumes neither parent is rotated, which holds for every
-  // container this app can currently create (frameTool/sectionTool always
-  // draw at rotation 0).
-  const oldOrigin = getParentOrigin(graph, node.parentId);
-  const newOrigin = getParentOrigin(graph, newParentId);
-  const shiftX = oldOrigin.x - newOrigin.x;
-  const shiftY = oldOrigin.y - newOrigin.y;
-
-  // Line/arrow have a second point of their own (x2/y2, also parent-
-  // relative) that needs the exact same shift — missing this left it stale
-  // in the old parent's coordinate space, stretching the shape toward
-  // wherever that value happened to resolve to under the new parent.
-  nodes[nodeId] =
-    node.type === "line" || node.type === "arrow"
-      ? { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY, x2: node.x2 + shiftX, y2: node.y2 + shiftY }
-      : { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY };
-
+  nodes[nodeId] = reparentedNode(graph, node, newParentId);
   return { nodes, rootIds };
 }
 
@@ -139,20 +135,36 @@ export function reorderChildInGraph(graph: SceneGraph, nodeId: NodeId, newParent
 
   if (!parentChanged) return { nodes, rootIds };
 
-  // Same coordinate-space shift as reparentNodeInGraph — only needed when
-  // the parent actually changed; a same-parent reorder is a pure
-  // array-order change with no coordinate implications.
-  const oldOrigin = getParentOrigin(graph, node.parentId);
-  const newOrigin = getParentOrigin(graph, newParentId);
-  const shiftX = oldOrigin.x - newOrigin.x;
-  const shiftY = oldOrigin.y - newOrigin.y;
-
-  nodes[nodeId] =
-    node.type === "line" || node.type === "arrow"
-      ? { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY, x2: node.x2 + shiftX, y2: node.y2 + shiftY }
-      : { ...node, parentId: newParentId, x: node.x + shiftX, y: node.y + shiftY };
-
+  // Same coordinate-space re-expression as reparentNodeInGraph — only
+  // needed when the parent actually changed; a same-parent reorder is a
+  // pure array-order change with no coordinate implications.
+  nodes[nodeId] = reparentedNode(graph, node, newParentId);
   return { nodes, rootIds };
+}
+
+// Re-expresses a node's own anchor (and, for line/arrow, its second
+// endpoint) in the new parent's local coordinate space via a full
+// world-matrix round-trip — old-parent-local -> world -> new-parent-local
+// — rather than a plain origin-point subtraction. The old approach only
+// accounted for translation between the two parents' origins; this is
+// exact even when either parent is rotated, composing through
+// getWorldMatrix's own rotate-around-center chain the same way rendering
+// already does. `graph` (not the in-progress `nodes` map being built by
+// the caller) is used for both matrix lookups so a parent's own
+// rotation/position is read from its pre-mutation state — correct, since
+// neither the old nor new container's own transform is what's changing
+// here, only which one owns this node.
+function reparentedNode(graph: SceneGraph, node: SceneNode, newParentId: NodeId | null): SceneNode {
+  const oldMatrix = node.parentId ? getWorldMatrix(node.parentId, graph.nodes) : new DOMMatrix();
+  const newMatrix = newParentId ? getWorldMatrix(newParentId, graph.nodes) : new DOMMatrix();
+  const toNewLocal = newMatrix.inverse().multiply(oldMatrix);
+
+  const anchor = transformPoint(toNewLocal, { x: node.x, y: node.y });
+  if (node.type === "line" || node.type === "arrow") {
+    const endpoint = transformPoint(toNewLocal, { x: node.x2, y: node.y2 });
+    return { ...node, parentId: newParentId, x: anchor.x, y: anchor.y, x2: endpoint.x, y2: endpoint.y };
+  }
+  return { ...node, parentId: newParentId, x: anchor.x, y: anchor.y };
 }
 
 function clampIndex(index: number | undefined, length: number): number {
@@ -192,6 +204,24 @@ function getContainer(graph: SceneGraph, id: NodeId | null): ContainerNode | nul
   if (!id) return null;
   const node = graph.nodes[id];
   return node && isContainer(node) ? node : null;
+}
+
+// A node is effectively locked if it — or any ancestor — is locked, even
+// though only the ancestor's own `locked` field is actually set to true.
+// A derived check, never written back onto the descendant's own node (so
+// a child doesn't need to stay in sync with its container's lock state):
+// used wherever a lock needs to block an action (move/resize/reparent-into)
+// on a node whose container is locked, without that container's lock
+// being selectable/inspectable-only in the same way its own lock already is.
+export function isEffectivelyLocked(graph: SceneGraph, nodeId: NodeId): boolean {
+  let current: NodeId | null = nodeId;
+  while (current) {
+    const node: SceneNode | undefined = graph.nodes[current];
+    if (!node) return false;
+    if (node.locked) return true;
+    current = node.parentId;
+  }
+  return false;
 }
 
 export function isAncestor(graph: SceneGraph, candidateAncestorId: NodeId, nodeId: NodeId): boolean {
