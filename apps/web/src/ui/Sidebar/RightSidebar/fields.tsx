@@ -100,6 +100,36 @@ export function NumberField({ label, value, onFocus, onChange, onCommit, min, ma
   );
 }
 
+interface TextFieldProps {
+  label: ReactNode;
+  value: string;
+  placeholder?: string;
+  onFocus: () => void;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+}
+
+// Single-line sibling to NumberField, same field-box shell and
+// onFocus/onChange/onCommit contract — TextAreaField below is a
+// <textarea> built for a text node's own (possibly multi-line) content,
+// the wrong shape for a short value like an HTML tag name or attribute.
+export function TextField({ label, value, placeholder, onFocus, onChange, onCommit }: TextFieldProps) {
+  return (
+    <label className="field-box">
+      <span className="field-box-label">{label}</span>
+      <input
+        type="text"
+        className="text-field-input"
+        value={value}
+        placeholder={placeholder}
+        onFocus={onFocus}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onCommit}
+      />
+    </label>
+  );
+}
+
 interface SliderFieldProps {
   label: string;
   value: number;
