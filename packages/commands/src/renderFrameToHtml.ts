@@ -202,17 +202,27 @@ export function renderFrameToHtml(
     fontLink ? `<link rel="stylesheet" href="${fontLink}">` : "",
     // The frame's own width/height is already the literal pixel size
     // authored on the canvas (a fixed-size artboard, not a fluid
-    // container) — this only strips the browser's own default margins/box
-    // model, which would otherwise add extra spacing on top of that rather
-    // than actually making the page responsive. Margin is reset on every
-    // element, not just body: every node's own spacing is already fully
-    // explicit (gap/padding/position), so a UA default margin on whatever
-    // element a node resolves to — most commonly <p> for text, but
-    // semantics.tag can be authored as any tag — would only ever add
-    // unwanted extra space, never a wanted one. (Caught exactly this: a
-    // text node's default tag became <p> once DEFAULT_SEMANTIC_TAG shipped,
-    // and its default 1em margin pushed it outside its parent's bounds.)
-    "<style>\n* { margin: 0; box-sizing: border-box; }\n</style>",
+    // container) — the `* {}` reset only strips the browser's own default
+    // margins/box model, which would otherwise add extra spacing on top of
+    // that rather than actually making the page responsive. Margin is
+    // reset on every element, not just body: every node's own spacing is
+    // already fully explicit (gap/padding/position), so a UA default
+    // margin on whatever element a node resolves to — most commonly <p>
+    // for text, but semantics.tag can be authored as any tag — would only
+    // ever add unwanted extra space, never a wanted one. (Caught exactly
+    // this: a text node's default tag became <p> once DEFAULT_SEMANTIC_TAG
+    // shipped, and its default 1em margin pushed it outside its parent's
+    // bounds.)
+    //
+    // The `body {}` rule centers that fixed-width artboard on the page
+    // instead of leaving it flush left — without it, a browser viewport
+    // wider than the frame's own authored width left the excess as bare,
+    // unstyled <html> background (plain white, since body only ever
+    // shrink-wraps its one child) rather than any part of the design.
+    // align-items: flex-start (not the flex default, stretch) keeps the
+    // frame at its own authored height instead of being stretched to fill
+    // the viewport's.
+    "<style>\n* { margin: 0; box-sizing: border-box; }\nbody { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; background: oklch(97% 0.003 265); }\n</style>",
     `<style>\n${ctx.classes.css}\n</style>`,
     "</head>",
     `<body>\n${body}\n</body>`,
