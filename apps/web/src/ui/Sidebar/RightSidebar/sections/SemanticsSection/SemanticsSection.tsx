@@ -1,6 +1,6 @@
 import type { SceneNode, Semantics } from "@open-canvas/schema";
 import { resolveSemanticTag } from "@open-canvas/schema";
-import { PanelSection, TextField } from "../../fields";
+import { PanelSection, SelectField, TextField } from "../../fields";
 import { SemanticsAttributesEditor } from "./SemanticsAttributesEditor";
 import styles from "./SemanticsSection.module.css";
 
@@ -9,6 +9,58 @@ interface SemanticsSectionProps {
   onFocus: () => void;
   onChange: (patch: Record<string, unknown>) => void;
   onCommit: () => void;
+}
+
+// Closed list, not free text (v1 decision) — this app's export goal is
+// accessible, semantically meaningful HTML for a visual design tool, not
+// arbitrary custom elements/web components, which is a code-tool workflow
+// this product doesn't target. Covers what a design tool's export
+// realistically needs: headings, sectioning/landmarks, basic text
+// semantics, and the interactive/media/list/form tags that already have a
+// canvas counterpart (UiPrimitiveKind's button/input/label/link, image,
+// etc.) — not the full ~150-element HTML5 set.
+const TAG_OPTIONS = [
+  "div",
+  "span",
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "nav",
+  "main",
+  "section",
+  "article",
+  "aside",
+  "footer",
+  "strong",
+  "em",
+  "button",
+  "a",
+  "img",
+  "video",
+  "ul",
+  "ol",
+  "li",
+  "form",
+  "input",
+  "label",
+].map((tag) => ({ value: tag, label: tag }));
+
+// A tag set via WebMCP's update_element (unconstrained there — an agent
+// isn't limited to this curated list) can fall outside it. SelectField's
+// own trigger already falls back to displaying the raw value verbatim
+// when it isn't among `options`, so this stays correctly visible instead
+// of silently disappearing — just also listed as a real, selectable
+// option so re-selecting the same value (e.g. after picking something
+// else and coming back) works the same as any other entry.
+function tagOptionsFor(currentTag: string): typeof TAG_OPTIONS {
+  return TAG_OPTIONS.some((option) => option.value === currentTag)
+    ? TAG_OPTIONS
+    : [...TAG_OPTIONS, { value: currentTag, label: currentTag }];
 }
 
 // Every edit path builds on this, not node.semantics directly — `tag` is
@@ -29,18 +81,11 @@ function withoutRole(semantics: Semantics): Semantics {
 export function SemanticsSection({ node, onFocus, onChange, onCommit }: SemanticsSectionProps) {
   const isExplicit = node.semantics !== null;
 
-  function handleTagChange(value: string): void {
+  // Discrete choice, not live-preview-then-commit — same as every other
+  // SelectField call site (e.g. LayoutSection's direction/align pickers).
+  function handleTagSelect(value: string): void {
+    onFocus();
     onChange({ semantics: { ...currentSemantics(node), tag: value } });
-  }
-
-  // Clearing the field is a second way to reach the same outcome as the
-  // reset button below — resolveSemanticTag returns the live (possibly
-  // just-typed-empty) tag verbatim here, since `??` only falls back on
-  // null/undefined, never on "".
-  function handleTagCommit(): void {
-    if (resolveSemanticTag(node).trim() === "") {
-      onChange({ semantics: null });
-    }
     onCommit();
   }
 
@@ -69,7 +114,7 @@ export function SemanticsSection({ node, onFocus, onChange, onCommit }: Semantic
   return (
     <PanelSection title="Semantics">
       <div className={styles.tagRow}>
-        <TextField label="Tag" value={resolveSemanticTag(node)} onFocus={onFocus} onChange={handleTagChange} onCommit={handleTagCommit} />
+        <SelectField label="Tag" value={resolveSemanticTag(node)} options={tagOptionsFor(resolveSemanticTag(node))} onChange={handleTagSelect} />
         {isExplicit && (
           <button type="button" className={styles.resetButton} onClick={resetToDefault}>
             Reset
