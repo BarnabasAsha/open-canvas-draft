@@ -19,9 +19,9 @@ import { switchPageTool } from "./switchPage";
 import { ungroupElementTool } from "./ungroupElement";
 import { updateElementTool } from "./updateElement";
 
-// Every tool built for this pass — always kept complete, even the ones not
-// currently registered by default (see DEFAULT_REGISTERED_TOOLS), so
-// widening what's exposed later is a one-line change here, not new code.
+// Every tool built so far — kept as its own list separate from
+// DEFAULT_REGISTERED_TOOLS below so a future tool can be held back from
+// registration (as delete_elements originally was) without deleting it.
 export const ALL_TOOLS = [
   getCanvasStateTool,
   listAssetsTool,
@@ -45,9 +45,9 @@ export const ALL_TOOLS = [
   createPageTool,
 ];
 
-// What actually gets registered via document.modelContext — everything
-// except delete_elements, kept out for now per the "keep destructive ops
-// out of v1" note from the hackathon prep (undo still reverses it either
-// way; this is about not exposing it to an agent by default, not about it
-// being unsafe).
-export const DEFAULT_REGISTERED_TOOLS = ALL_TOOLS.filter((tool) => tool.name !== "delete_elements");
+// What actually gets registered via document.modelContext — every tool,
+// delete_elements included. It was held back from the initial pass per the
+// hackathon prep's "keep destructive ops out of v1" note, but it's exactly
+// as undoable (Cmd+Z, historyManager) as every other mutating tool here —
+// exposed now on request.
+export const DEFAULT_REGISTERED_TOOLS = ALL_TOOLS;

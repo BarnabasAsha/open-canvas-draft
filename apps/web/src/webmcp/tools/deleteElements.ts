@@ -8,9 +8,8 @@ export interface DeleteElementsInput {
   nodeIds: NodeId[];
 }
 
-// Not registered by default — see webmcp/tools/index.ts. Built so it's a
-// one-line change to enable once wanted; undo (Cmd+Z) already reverses it
-// the same as any other command either way.
+// Registered like every other tool (see webmcp/tools/index.ts) — undo
+// (Cmd+Z) reverses it the same as any other command here.
 export const deleteElementsTool: WebMcpTool<DeleteElementsInput, { deletedIds: NodeId[] }> = {
   name: "delete_elements",
   description: "Delete one or more elements (and their children) by id.",
