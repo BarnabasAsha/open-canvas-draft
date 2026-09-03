@@ -18,7 +18,7 @@ export interface UpdateElementInput {
 export const updateElementTool: WebMcpTool<UpdateElementInput, SceneNode> = {
   name: "update_element",
   description:
-    "Patch fields on an existing element — fill, stroke, opacity, typography, corner radius, semantics (the HTML tag/role/attributes it exports as, e.g. { tag: \"h1\" } or { tag: \"nav\" } — defaults to a generic div/p/img otherwise), x/y/width/height (x/y/x2/y2 for line/arrow) to move or resize it, or (for a frame/section) its layout config. To move an element into or out of a frame/section/group, use reparent_elements instead — parentId isn't settable here. Only send the fields you're changing. Not every field applies to every node type; sending one that doesn't apply to this node is silently ignored.",
+    "Patch fields on an existing element — fill, stroke, opacity, typography, corner radius, semantics (the HTML tag/role/attributes it exports as, e.g. { tag: \"h1\" } or { tag: \"nav\" } — defaults to a generic div/p/img otherwise, and is worth setting explicitly to a real landmark/heading tag for better exported HTML), x/y/width/height (x/y/x2/y2 for line/arrow) to move or resize it, or (for a frame/section) its layout config. To move an element into or out of a frame/section/group, use reparent_elements instead — parentId isn't settable here (add_element accepts it directly at creation time). Only send the fields you're changing. Not every field applies to every node type; sending one that doesn't apply to this node is silently ignored.",
   inputSchema: {
     type: "object",
     properties: {

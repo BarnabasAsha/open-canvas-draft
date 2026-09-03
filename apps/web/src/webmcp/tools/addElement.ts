@@ -1,5 +1,5 @@
 import { createAddNodeCommand, generateId, nextDefaultName } from "@open-canvas/commands";
-import type { ArrowNode, EllipseNode, LineNode, RectNode, SceneNode, SectionNode, TextNode } from "@open-canvas/schema";
+import type { ArrowNode, EllipseNode, LineNode, NodeId, RectNode, SceneNode, SectionNode, TextNode } from "@open-canvas/schema";
 import { buildFrameNode } from "../../canvas/tools/buildFrameNode";
 import { historyManager } from "../../store/historyManager";
 import { sceneStore } from "../../store/sceneStore";
@@ -24,6 +24,13 @@ import { fail, ok, type WebMcpTool } from "../types";
 
 interface AddElementBase {
   name?: string;
+  // Places the new element directly inside an existing frame/section/group
+  // instead of at the page's root — x/y are interpreted as local
+  // coordinates within that parent (a brand-new node has no prior position
+  // to preserve the way reparenting an existing one does, so no coordinate
+  // shift is needed here, just a direct insert). Omit or null for today's
+  // root-level behavior.
+  parentId?: NodeId | null;
 }
 
 // A real discriminated union, not a loose bag — `properties` is typed
@@ -39,7 +46,6 @@ export type AddElementInput =
   | (AddElementBase & { type: "frame"; x: number; y: number; width: number; height: number; properties?: FrameProperties });
 
 const baseFields = {
-  parentId: null,
   rotation: 0,
   opacity: 1,
   visible: true,
@@ -59,7 +65,7 @@ const baseFields = {
 // `input.properties` last is fully type-safe here — TypeScript narrows it
 // to exactly that type's own Properties type per case, which structurally
 // cannot contain id/type/parentId/children, so there's nothing to strip.
-function buildNode(id: string, name: string, input: AddElementInput): SceneNode {
+function buildNode(id: string, name: string, parentId: NodeId | null, input: AddElementInput): SceneNode {
   switch (input.type) {
     case "rect":
       return {
@@ -67,6 +73,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         id,
         type: "rect",
         name,
+        parentId,
         x: input.x,
         y: input.y,
         width: input.width,
@@ -84,6 +91,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         id,
         type: "ellipse",
         name,
+        parentId,
         x: input.x,
         y: input.y,
         width: input.width,
@@ -100,6 +108,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         id,
         type: "line",
         name,
+        parentId,
         x: input.x,
         y: input.y,
         x2: input.x2,
@@ -117,6 +126,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         id,
         type: "arrow",
         name,
+        parentId,
         x: input.x,
         y: input.y,
         x2: input.x2,
@@ -135,6 +145,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         id,
         type: "text",
         name,
+        parentId,
         x: input.x,
         y: input.y,
         width: input.width,
@@ -157,6 +168,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         id,
         type: "section",
         name,
+        parentId,
         x: input.x,
         y: input.y,
         width: input.width,
@@ -172,7 +184,7 @@ function buildNode(id: string, name: string, input: AddElementInput): SceneNode 
         ...input.properties,
       } satisfies SectionNode;
     case "frame":
-      return { ...buildFrameNode(id, name, input.x, input.y, input.width, input.height), ...input.properties };
+      return { ...buildFrameNode(id, name, input.x, input.y, input.width, input.height), parentId, ...input.properties };
   }
 }
 
@@ -191,6 +203,7 @@ function branchSchema(type: string, propertySchema: object) {
       type: { const: type },
       ...geometryProperties(type),
       name: { type: "string" },
+      parentId: { type: ["string", "null"] },
       properties: { type: "object", properties: propertySchema, additionalProperties: false },
     },
     required: type === "line" || type === "arrow" ? ["type", "x", "y", "x2", "y2"] : ["type", "x", "y", "width", "height"],
@@ -201,7 +214,7 @@ function branchSchema(type: string, propertySchema: object) {
 export const addElementTool: WebMcpTool<AddElementInput, SceneNode> = {
   name: "add_element",
   description:
-    "Add a new element to the current page. Pick one of the seven types — each has its own shape (line/arrow use x2/y2 instead of width/height) and its own set of `properties` you can set at creation time.",
+    'Add a new element to the current page. Pick one of the seven types — each has its own shape (line/arrow use x2/y2 instead of width/height) and its own set of `properties` you can set at creation time. Pass parentId (an existing frame/section/group\'s id) to place it directly inside that container instead of at the page root — the natural way to build real structure: create a root frame with layoutMode:"flex" first, then add each child with parentId set to that frame, rather than leaving everything as flat root-level siblings. Setting properties.semantics.tag to a real landmark/heading tag (e.g. "header", "main", "nav", "article", "h1") on the way in produces much better exported HTML than the generic per-type default.',
   inputSchema: {
     oneOf: [
       branchSchema("rect", RECT_PROPERTY_SCHEMA),
@@ -214,9 +227,21 @@ export const addElementTool: WebMcpTool<AddElementInput, SceneNode> = {
     ],
   },
   async execute(input) {
+    const scene = sceneStore.getState();
+
+    let parentId: NodeId | null = null;
+    if (input.parentId) {
+      const parent = scene.nodes[input.parentId];
+      if (!parent) return fail(`No element with id ${input.parentId}.`);
+      if (parent.type !== "frame" && parent.type !== "section" && parent.type !== "group") {
+        return fail(`${input.parentId} is not a container — parentId must be a frame, section, or group.`);
+      }
+      parentId = input.parentId;
+    }
+
     const id = generateId();
-    const name = input.name ?? nextDefaultName(sceneStore.getState(), input.type[0].toUpperCase() + input.type.slice(1));
-    const node = buildNode(id, name, input);
+    const name = input.name ?? nextDefaultName(scene, input.type[0].toUpperCase() + input.type.slice(1));
+    const node = buildNode(id, name, parentId, input);
 
     historyManager.execute(createAddNodeCommand(node));
     selectionStore.update((state) => ({ ...state, selectedIds: new Set([node.id]) }));
