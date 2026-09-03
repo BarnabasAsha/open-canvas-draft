@@ -13,6 +13,8 @@ export * from "./componentMutations";
 export * from "./flexLayout";
 export * from "./imageFilters";
 export * from "./generateNodeCss";
+export * from "./googleFonts";
+export * from "./renderFrameToHtml";
 
 export * from "./commands/Command";
 export * from "./commands/AddNodeCommand";

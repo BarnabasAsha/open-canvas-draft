@@ -417,3 +417,32 @@ export const SceneGraphSchema = z.object({
 export type SceneGraph = Omit<z.infer<typeof SceneGraphSchema>, "nodes"> & {
   nodes: Record<NodeId, SceneNode>;
 };
+
+// A mapped type over the discriminant, not a plain object literal type —
+// same reasoning as the exhaustive per-node-type tables elsewhere in this
+// codebase (e.g. the canvas renderer's nodeKinds.ts): TypeScript requires
+// every SceneNode variant to have an entry, so a new node type without one
+// is a compile error rather than a silently-missing default. `semantics`
+// stays `null` by default on every node (see baseNodeShape above) — this
+// table is deliberately NOT written into stored node data at creation
+// time, only consulted as a fallback wherever a resolved tag is actually
+// needed (the HTML exporter, the properties panel's Semantics section),
+// so `semantics !== null` keeps meaning "someone explicitly set this,"
+// not "this happens to match the generic default."
+export const DEFAULT_SEMANTIC_TAG: Record<SceneNode["type"], SemanticTag> = {
+  rect: "div",
+  ellipse: "div",
+  line: "div",
+  arrow: "div",
+  image: "img",
+  text: "p",
+  path: "div",
+  frame: "div",
+  section: "div",
+  group: "div",
+  instance: "div",
+};
+
+export function resolveSemanticTag(node: SceneNode): SemanticTag {
+  return node.semantics?.tag ?? DEFAULT_SEMANTIC_TAG[node.type];
+}

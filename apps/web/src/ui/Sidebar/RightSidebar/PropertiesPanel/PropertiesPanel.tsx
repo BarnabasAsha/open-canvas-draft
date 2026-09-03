@@ -1,18 +1,16 @@
 import { isAlignableContainer } from "../../../../canvas/tools/alignment";
 import type { AlignKind } from "../../../../canvas/tools/alignment";
-import type { ArrowNode, EllipseNode, FrameNode, LineNode, PathNode, RectNode, SceneNode, SectionNode } from "@open-canvas/schema";
+import type { ArrowNode, EllipseNode, FrameNode, ImageNode, LineNode, PathNode, RectNode, SceneNode, SectionNode } from "@open-canvas/schema";
 import { AlignmentToolbar } from "../AlignmentToolbar";
 import { PanelSection } from "../fields";
 import { AppearanceSection } from "../sections/AppearanceSection";
-import { CornerRadiusSection } from "../sections/CornerRadiusSection";
 import { CssSection } from "../sections/CssSection/CssSection";
 import { DocumentSection } from "../sections/DocumentSection/DocumentSection";
-import { EffectsSection } from "../sections/EffectsSection";
+import { ExportSection } from "../sections/ExportSection/ExportSection";
 import { FlexChildSection } from "../sections/FlexChildSection";
 import { LayoutSection } from "../sections/LayoutSection";
 import { PositionSection } from "../sections/PositionSection";
 import { SemanticsSection } from "../sections/SemanticsSection";
-import { StrokeSection } from "../sections/StrokeSection";
 import { TextContentSection } from "../sections/TextContentSection";
 import { TypographySection } from "../sections/TypographySection";
 import styles from "./PropertiesPanel.module.css";
@@ -59,6 +57,10 @@ interface PropertiesPanelProps {
   onSharedFieldChange: (patch: Record<string, unknown>) => void;
   onSharedFieldCommit: () => void;
   onAlign: (kind: AlignKind) => void;
+  // Only ever invoked when `node` is a Frame — see ExportSection, shown
+  // for that case alone.
+  onExportFrame: () => void;
+  isExportingFrame: boolean;
 }
 
 type FillNode = RectNode | EllipseNode | PathNode | FrameNode;
@@ -81,6 +83,10 @@ function asStrokeNode(node: SceneNode): StrokeNode | null {
 
 function asCornerRadiusNode(node: SceneNode): RectNode | FrameNode | null {
   return node.type === "rect" || node.type === "frame" ? node : null;
+}
+
+function asImageNode(node: SceneNode): ImageNode | null {
+  return node.type === "image" ? node : null;
 }
 
 function asLayoutContainerNode(node: SceneNode): FrameNode | SectionNode | null {
@@ -125,6 +131,8 @@ export function PropertiesPanel({
   onSharedFieldChange,
   onSharedFieldCommit,
   onAlign,
+  onExportFrame,
+  isExportingFrame,
 }: PropertiesPanelProps) {
   return (
     <div className={styles.root}>
@@ -151,6 +159,8 @@ export function PropertiesPanel({
             onFocus={onFieldFocus}
             onChange={onFieldChange}
             onCommit={onFieldCommit}
+            onExportFrame={onExportFrame}
+            isExportingFrame={isExportingFrame}
           />
         </>
       ) : (
@@ -188,10 +198,18 @@ function PropertySections({
   onFocus,
   onChange,
   onCommit,
-}: PropertySectionsProps & { parentNode: SceneNode | null; isInstanceChild: boolean }) {
+  onExportFrame,
+  isExportingFrame,
+}: PropertySectionsProps & {
+  parentNode: SceneNode | null;
+  isInstanceChild: boolean;
+  onExportFrame: () => void;
+  isExportingFrame: boolean;
+}) {
   const fillNode = asFillNode(node);
   const strokeNode = asStrokeNode(node);
   const cornerRadiusNode = asCornerRadiusNode(node);
+  const imageNode = asImageNode(node);
   // Neither section is wired up for a virtual (instance-child) selection —
   // component definitions never run through the flex reconciliation
   // pipeline (they're not backed by a real sceneStore), so toggling auto
@@ -200,7 +218,6 @@ function PropertySections({
   const parentLayoutContainer = !isInstanceChild && parentNode ? asLayoutContainerNode(parentNode) : null;
   const showFlexChildSection = parentLayoutContainer?.layoutMode === "flex";
   const isText = node.type === "text";
-  const isImage = node.type === "image";
 
   return (
     <>
@@ -211,16 +228,21 @@ function PropertySections({
       {layoutContainerNode && (
         <LayoutSection node={layoutContainerNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
-      {node.semantics && <SemanticsSection semantics={node.semantics} />}
+      <SemanticsSection node={node} />
       {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
-      {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      {cornerRadiusNode && (
-        <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
-      )}
+      <AppearanceSection
+        node={node}
+        cornerRadiusNode={cornerRadiusNode}
+        fillNode={fillNode}
+        strokeNode={strokeNode}
+        imageNode={imageNode}
+        onFocus={onFocus}
+        onChange={onChange}
+        onCommit={onCommit}
+      />
       {isText && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      {isImage && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <CssSection node={node} parentNode={parentNode} />
+      {node.type === "frame" && <ExportSection onExport={onExportFrame} isExporting={isExportingFrame} />}
     </>
   );
 }
@@ -232,20 +254,24 @@ function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertyS
   const fillNode = asFillNode(node);
   const strokeNode = asStrokeNode(node);
   const cornerRadiusNode = asCornerRadiusNode(node);
+  const imageNode = asImageNode(node);
   const isText = node.type === "text";
-  const isImage = node.type === "image";
 
   return (
     <>
-      {node.semantics && <SemanticsSection semantics={node.semantics} />}
+      <SemanticsSection node={node} />
       {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      <AppearanceSection node={node} fillNode={fillNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
-      {strokeNode && <StrokeSection node={strokeNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      {cornerRadiusNode && (
-        <CornerRadiusSection node={cornerRadiusNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
-      )}
+      <AppearanceSection
+        node={node}
+        cornerRadiusNode={cornerRadiusNode}
+        fillNode={fillNode}
+        strokeNode={strokeNode}
+        imageNode={imageNode}
+        onFocus={onFocus}
+        onChange={onChange}
+        onCommit={onCommit}
+      />
       {isText && <TypographySection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
-      {isImage && <EffectsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
     </>
   );
 }

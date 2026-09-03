@@ -632,11 +632,27 @@ button.panel-section-title:hover {
   color: var(--text);
 }
 
-/* Only the real Collapsible.Trigger button gets a pointer cursor — the
-   plain "Contents" divider div reuses this class for visual consistency
-   but isn't actually clickable. */
+/* Only the real Collapsible.Trigger button gets a pointer cursor. */
 button.panel-section-title {
   cursor: pointer;
+}
+
+/* A plain, non-collapsible label for grouping a few fields WITHIN an
+   already-open PanelSection's own fields list (see StrokeSection/
+   EffectsSection, both rendered inside AppearanceSection's one
+   PanelSection rather than owning one each) — same typography as
+   .panel-section-title, but deliberately no margin-bottom of its own:
+   .panel-section-fields' flex `gap` already spaces every sibling
+   evenly, and margin stacking on top of that gap (rather than
+   collapsing into it, the way block-flow margins would) is exactly what
+   made the gap below a reused .panel-section-title read roughly double
+   the gap above it. */
+.field-group-title {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .panel-section-fields {

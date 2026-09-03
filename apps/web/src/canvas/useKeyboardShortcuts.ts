@@ -82,9 +82,10 @@ export function useKeyboardShortcuts(): void {
 
       // The toolbar covers most of these too now — mnemonics match Figma's
       // own (V select, F frame, Shift+S section, R rectangle, Shift+R
-      // ruler, O ellipse, L line, A arrow, P pen, T text). No dedicated
-      // shortcut for image — placing one needs a file picker anyway, so the
-      // toolbar button is enough.
+      // ruler, O ellipse, L line, A arrow, T text). No dedicated shortcut
+      // for image — placing one needs a file picker anyway, so the toolbar
+      // button is enough. No "P" for pen either — see Toolbar.tsx's own
+      // comment on why the tool is temporarily unreachable from the UI.
       switch (e.key.toLowerCase()) {
         case "v":
           toolManager.setActiveTool("select");
@@ -110,9 +111,6 @@ export function useKeyboardShortcuts(): void {
           break;
         case "a":
           toolManager.setActiveTool("arrow");
-          break;
-        case "p":
-          toolManager.setActiveTool("pen");
           break;
         case "t":
           toolManager.setActiveTool("text");

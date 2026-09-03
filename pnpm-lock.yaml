@@ -47,6 +47,9 @@ importers:
       '@inferdi/inferdi':
         specifier: ^6.0.2
         version: 6.0.2
+      '@open-canvas/commands':
+        specifier: workspace:*
+        version: link:../../packages/commands
       '@open-canvas/schema':
         specifier: workspace:*
         version: link:../../packages/schema
