@@ -262,6 +262,7 @@ function placeImageFromAsset(asset: Asset): void {
     sizingVertical: "fixed",
     positioning: "flow",
     src: asset.url,
+    alt: null,
     objectFit: "cover",
     filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
   };
@@ -335,10 +336,6 @@ function placeUnsplashPhoto(photo: UnsplashPhoto): void {
   const node: ImageNode = {
     id: generateId(),
     type: "image",
-    // Composed into the exported <img>'s alt attribute via the existing
-    // alt={escapeHtml(node.name)} wiring — carries Unsplash's required
-    // photographer attribution through to wherever the image ends up,
-    // without a dedicated schema field for it.
     name: nextDefaultName(graph, `Photo by ${photo.photographerName} on Unsplash`),
     parentId: null,
     x: sceneCenter.x - width / 2,
@@ -355,6 +352,11 @@ function placeUnsplashPhoto(photo: UnsplashPhoto): void {
     sizingVertical: "fixed",
     positioning: "flow",
     src: photo.regularUrl,
+    // Explicit, not left to fall back on `name` — name gets a deduped " 2",
+    // " 3" suffix from nextDefaultName for a repeated insert, which would
+    // read oddly as literal alt text. Carries Unsplash's required
+    // photographer attribution through to wherever the image ends up.
+    alt: `Photo by ${photo.photographerName} on Unsplash`,
     objectFit: "cover",
     filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
   };

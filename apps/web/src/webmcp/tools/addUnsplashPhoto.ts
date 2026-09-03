@@ -76,6 +76,11 @@ export const addUnsplashPhotoTool: WebMcpTool<AddUnsplashPhotoInput, ImageNode> 
       sizingVertical: "fixed",
       positioning: "flow",
       src: regularUrl,
+      // Explicit, not left to fall back on `name` — name gets a deduped
+      // " 2", " 3" suffix from nextDefaultName, which would read oddly as
+      // literal alt text. Carries Unsplash's required photographer
+      // attribution through to wherever the image ends up.
+      alt: `Photo by ${photographerName} on Unsplash`,
       objectFit: "cover",
       filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
       ...properties,

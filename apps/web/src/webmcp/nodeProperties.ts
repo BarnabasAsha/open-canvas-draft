@@ -99,7 +99,7 @@ export type FrameProperties = BaseProperties &
 export type SectionProperties = BaseProperties &
   GeometryProperties &
   Partial<Pick<SectionNode, "layoutMode" | "direction" | "gap" | "padding" | "primaryAxisAlign" | "crossAxisAlign">>;
-export type ImageProperties = BaseProperties & GeometryProperties & Partial<Pick<ImageNode, "objectFit" | "filters">>;
+export type ImageProperties = BaseProperties & GeometryProperties & Partial<Pick<ImageNode, "objectFit" | "filters" | "alt">>;
 // Not fill/stroke/etc. of a rect (those are already Partial-optional, so
 // they're not "the same" by accident) — a path's actual shape (`points`,
 // `closed`) is deliberately excluded: editing bezier points via a flat
@@ -261,6 +261,10 @@ export const SECTION_PROPERTY_SCHEMA = {
 export const IMAGE_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
   ...GEOMETRY_SCHEMA,
+  alt: {
+    type: ["string", "null"],
+    description: "Exported <img> alt text. Falls back to the node's own name when null — set this explicitly for a more descriptive alt than the layer name.",
+  },
   objectFit: { type: "string", enum: ["fill", "contain", "cover"] },
   filters: {
     type: "object",

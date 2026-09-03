@@ -138,12 +138,17 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   image: (node: ImageNode): HtmlElementSpec => {
     const tag = resolveSemanticTag(node);
     const objectFitCss = `object-fit: ${node.objectFit};`;
+    // Explicit alt, when set, beats the layer name — a name can carry a
+    // dedup suffix ("Photo by X on Unsplash 2") that reads oddly as literal
+    // alt text, and a plain upload's generic default ("Image 1") is weak
+    // alt text regardless.
+    const alt = node.alt ?? node.name;
 
     // attrsToHtml (renderFrameToHtml.ts) already escapes every attrs value
-    // itself — node.name went through escapeHtml here too, double-escaping
-    // it (e.g. an apostrophe became &amp;#39; instead of &#39;).
+    // itself — escaping it again here would double-escape it (e.g. an
+    // apostrophe becoming &amp;#39; instead of &#39;).
     if (tag !== "picture") {
-      return { tag, attrs: { src: node.src, alt: node.name }, extraCss: [objectFitCss] };
+      return { tag, attrs: { src: node.src, alt }, extraCss: [objectFitCss] };
     }
 
     // object-fit only has an effect on a replaced element (img/video), not
@@ -153,7 +158,7 @@ export const nodeToHtmlElement: NodeHtmlTable = {
     // via the normal generateNodeCss/extraCss path, unaffected by this.
     const srcset = buildUnsplashResponsiveSrcset(node.src);
     const source = srcset ? `<source srcset="${escapeHtml(srcset)}" sizes="100vw">` : "";
-    const img = `<img src="${escapeHtml(node.src)}" alt="${escapeHtml(node.name)}" style="display: block; width: 100%; height: 100%; ${objectFitCss}">`;
+    const img = `<img src="${escapeHtml(node.src)}" alt="${escapeHtml(alt)}" style="display: block; width: 100%; height: 100%; ${objectFitCss}">`;
     return { tag: "picture", attrs: {}, extraCss: [], innerHtml: `${source}${img}` };
   },
   text: (node: TextNode): HtmlElementSpec => ({
