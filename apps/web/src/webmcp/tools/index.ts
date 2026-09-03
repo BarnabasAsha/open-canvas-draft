@@ -11,6 +11,7 @@ import { groupElementsTool } from "./groupElements";
 import { listAssetsTool } from "./listAssets";
 import { listPagesTool } from "./listPages";
 import { reorderElementsTool } from "./reorderElements";
+import { reparentElementsTool } from "./reparentElements";
 import { searchIconsTool } from "./searchIcons";
 import { searchUnsplashPhotosTool } from "./searchUnsplashPhotos";
 import { selectElementsTool } from "./selectElements";
@@ -38,6 +39,7 @@ export const ALL_TOOLS = [
   ungroupElementTool,
   arrangeElementsTool,
   reorderElementsTool,
+  reparentElementsTool,
   selectElementsTool,
   switchPageTool,
   createPageTool,
