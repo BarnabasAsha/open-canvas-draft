@@ -4,9 +4,11 @@ import { db } from "../db/client";
 import { logger } from "../lib/logger";
 import { createR2ClientFromEnv } from "../lib/r2-client";
 import type { RequestContext } from "../lib/request-context";
+import { createUnsplashClientFromEnv } from "../lib/unsplash-client";
 import { projectsModule } from "../modules/projects/projects.module";
 import { pagesModule } from "../modules/projects/pages/pages.module";
 import { assetsModule } from "../modules/projects/assets/assets.module";
+import { unsplashModule } from "../modules/unsplash/unsplash.module";
 import type { ScopeInput } from "./request-scope";
 
 // Cross-cutting registrations only — db, logger, and the lazily-resolved
@@ -32,6 +34,10 @@ export function buildRootContainer() {
     // ENTIRE api on startup (auth, projects, everything), not just asset
     // uploads. It only throws once something actually resolves it.
     .registerFactory("r2Client", () => createR2ClientFromEnv())
+    // Same lazy-factory reasoning as r2Client — a missing
+    // UNSPLASH_ACCESS_KEY shouldn't crash the whole api at boot, only once
+    // something actually resolves this (the unsplash routes).
+    .registerFactory("unsplashClient", () => createUnsplashClientFromEnv())
     .declareScopeInputs<{ request: ScopeInput }>()
     // Lazy: only actually resolves (and pays the session-lookup DB round
     // trip) when something downstream asks for it — requireAuth
@@ -51,7 +57,8 @@ export function buildRootContainer() {
     // so this order matters — projectsModule must register first.
     .use(projectsModule)
     .use(pagesModule)
-    .use(assetsModule);
+    .use(assetsModule)
+    .use(unsplashModule);
 }
 
 export type RootContainer = ReturnType<typeof buildRootContainer>;

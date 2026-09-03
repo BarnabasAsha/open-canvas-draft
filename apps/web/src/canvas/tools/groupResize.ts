@@ -2,7 +2,7 @@ import { getParentOrigin } from "@open-canvas/commands";
 import type { NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
 import type { Point } from "../../utils/coordinates";
 import { getSceneCorners } from "../selectionBounds";
-import { HANDLE_AXES, MIN_SIZE, resizeAxis, scalePathPoints } from "./resizeMath";
+import { HANDLE_AXES, MIN_SIZE, resizeAxis, scalePathSubpaths } from "./resizeMath";
 import { getLocalHandlePoints, HANDLE_HIT_RADIUS } from "./resizeHandles";
 import type { BBoxHandleId, Handle } from "./resizeHandles";
 
@@ -139,7 +139,7 @@ function scaleNodeByAnchor(node: SceneNode, scale: GroupScale, graph: SceneGraph
   const height = Math.max(node.height * scale.scaleY, MIN_SIZE);
 
   if (node.type === "path") {
-    return { ...node, x: origin.x, y: origin.y, width, height, points: scalePathPoints(node.points, scale.scaleX, scale.scaleY) };
+    return { ...node, x: origin.x, y: origin.y, width, height, subpaths: scalePathSubpaths(node.subpaths, scale.scaleX, scale.scaleY) };
   }
   return { ...node, x: origin.x, y: origin.y, width, height };
 }
@@ -165,7 +165,7 @@ function scaleNodeLocally(node: SceneNode, scale: GroupScale): SceneNode {
   const height = Math.max(node.height * scale.scaleY, MIN_SIZE);
 
   if (node.type === "path") {
-    return { ...node, x, y, width, height, points: scalePathPoints(node.points, scale.scaleX, scale.scaleY) };
+    return { ...node, x, y, width, height, subpaths: scalePathSubpaths(node.subpaths, scale.scaleX, scale.scaleY) };
   }
   return { ...node, x, y, width, height };
 }

@@ -73,9 +73,11 @@ export const nodeKinds: NodeKindTable = {
     draw: drawPath,
     hitTestOwnBody: (ctx, node, x, y) => {
       const geometry = buildPathGeometry(node);
-      // A closed path reads as an enclosed region even with no explicit
-      // fill color — unlike an open squiggle, which has no real "inside".
-      if ((node.fill || node.closed) && ctx.isPointInPath(geometry, x, y)) return true;
+      // A path with any closed subpath reads as an enclosed region even with
+      // no explicit fill color — unlike an open squiggle, which has no real
+      // "inside".
+      const hasClosedSubpath = node.subpaths.some((subpath) => subpath.closed);
+      if ((node.fill || hasClosedSubpath) && ctx.isPointInPath(geometry, x, y)) return true;
       if (node.stroke) return strokeHit(ctx, geometry, node.strokeWidth, x, y);
       return false;
     },

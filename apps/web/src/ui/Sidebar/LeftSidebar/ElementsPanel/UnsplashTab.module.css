@@ -1,0 +1,92 @@
+.root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.search {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-panel);
+  color: var(--text);
+  font-size: 11.5px;
+  font-family: var(--font-ui);
+}
+
+.search::placeholder {
+  color: var(--text-muted);
+}
+
+.status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-disabled);
+  font-size: 12px;
+  padding: 0 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-panel-active);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.credit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 6px;
+  background: linear-gradient(to top, rgb(0 0 0 / 60%), transparent);
+  color: white;
+  font-size: 10px;
+  font-family: var(--font-ui);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thumb:hover .credit {
+  opacity: 1;
+}
+
+.poweredBy {
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-family: var(--font-ui);
+  text-decoration: none;
+}
+
+.poweredBy:hover {
+  color: var(--text);
+}

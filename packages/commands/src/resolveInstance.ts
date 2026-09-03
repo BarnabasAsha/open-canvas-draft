@@ -1,6 +1,6 @@
 import type { ComponentDefinition } from "./componentTypes";
 import { makeVirtualId } from "./instanceVirtualId";
-import { scalePathPoints } from "./pathScaling";
+import { scalePathSubpaths } from "./pathScaling";
 import type { InstanceNode, NodeId, SceneNode } from "@open-canvas/schema";
 
 export interface ResolvedSubtree {
@@ -63,5 +63,5 @@ function scaleChild(node: SceneNode, scaleX: number, scaleY: number): SceneNode 
   }
 
   const scaled = { ...node, x: node.x * scaleX, y: node.y * scaleY, width: node.width * scaleX, height: node.height * scaleY };
-  return scaled.type === "path" ? { ...scaled, points: scalePathPoints(scaled.points, scaleX, scaleY) } : scaled;
+  return scaled.type === "path" ? { ...scaled, subpaths: scalePathSubpaths(scaled.subpaths, scaleX, scaleY) } : scaled;
 }

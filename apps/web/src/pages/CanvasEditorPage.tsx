@@ -4,9 +4,12 @@ import { authClient } from "../lib/authClient";
 import { fetchJson } from "../lib/api";
 import { type Asset, deleteAsset, listAssets, uploadAsset } from "../lib/assets";
 import { downloadTextFile } from "../lib/downloadFile";
+import { type IconManifestEntry, loadIconManifest } from "../lib/iconManifest";
 import { createPage as createPageOnServer, exportFrameToHtml, listPages } from "../lib/pages";
+import { searchPhotos, trackDownload, type UnsplashPhoto } from "../lib/unsplash";
 import { initPageAutosave } from "../store/pageAutosave";
 import { initPageEventLog } from "../store/pageEventLog";
+import { initWebMcpTools } from "../webmcp/registerTools";
 import { setThemePreference } from "../store/themeStore";
 import { useTheme } from "../store/useTheme";
 import { useSaveStatus } from "../store/useSaveStatus";
@@ -23,7 +26,7 @@ import { computeAlignedNodes, computeAlignedToContainer } from "../canvas/tools/
 import type { UiPrimitiveKind } from "../canvas/primitives/builtInComponents";
 import { BUILT_IN_COMPONENT_IDS } from "../canvas/primitives/builtInComponents";
 import type { FramePreset } from "../canvas/tools/framePresets";
-import { buildFrameNode } from "../canvas/tools/frameTool";
+import { buildFrameNode } from "../canvas/tools/buildFrameNode";
 import { toolManager } from "../canvas/tools/toolManager";
 import { useActiveTool } from "../canvas/useActiveTool";
 import { useKeyboardShortcuts } from "../canvas/useKeyboardShortcuts";
@@ -40,7 +43,9 @@ import {
   createSetNodeCommand,
   generateId,
   nextDefaultName,
+  parseSvgPath,
   parseVirtualId,
+  scalePathSubpaths,
   type VirtualId,
 } from "@open-canvas/commands";
 import { documentStore } from "../store/documentStore";
@@ -59,7 +64,7 @@ import { reconcileGroupBounds } from "../store/reconcileGroupBounds";
 import { sceneStore } from "../store/sceneStore";
 import { selectionStore } from "../store/selectionStore";
 import { viewportStore } from "../store/viewportStore";
-import type { ImageNode, NodeId, SceneGraph, SceneNode } from "@open-canvas/schema";
+import type { ImageNode, NodeId, PathNode, SceneGraph, SceneNode } from "@open-canvas/schema";
 import { INITIAL_VIEWPORT, screenToScene } from "../utils/coordinates";
 import { LeftSidebar } from "../ui/Sidebar/LeftSidebar/LeftSidebar";
 import { PropertiesPanel } from "../ui/Sidebar/RightSidebar/PropertiesPanel/PropertiesPanel";
@@ -266,6 +271,106 @@ function placeImageFromAsset(asset: Asset): void {
   toolManager.setActiveTool("select");
 }
 
+// A fixed, standard icon size to insert at — the manifest's native viewBox
+// (typically 256x256) would look huge on the canvas, so every icon's
+// subpaths are scaled down to fit this box, the same way placeImageFromAsset
+// above picks a fixed insertion size rather than probing native dimensions.
+const DEFAULT_ICON_SIZE = 48;
+
+function placeIconFromLibrary(icon: IconManifestEntry): void {
+  const { width: canvasWidth, height: canvasHeight } = canvasSizeStore.getState();
+  const sceneCenter = screenToScene({ x: canvasWidth / 2, y: canvasHeight / 2 }, viewportStore.getState());
+  const graph = sceneStore.getState();
+
+  const [, , viewBoxWidth, viewBoxHeight] = icon.viewBox.split(/\s+/).map(Number);
+  const scaleX = viewBoxWidth === 0 ? 1 : DEFAULT_ICON_SIZE / viewBoxWidth;
+  const scaleY = viewBoxHeight === 0 ? 1 : DEFAULT_ICON_SIZE / viewBoxHeight;
+  const subpaths = scalePathSubpaths(parseSvgPath(icon.d), scaleX, scaleY);
+
+  const node: PathNode = {
+    id: generateId(),
+    type: "path",
+    name: nextDefaultName(graph, icon.pascalName),
+    parentId: null,
+    x: sceneCenter.x - DEFAULT_ICON_SIZE / 2,
+    y: sceneCenter.y - DEFAULT_ICON_SIZE / 2,
+    width: DEFAULT_ICON_SIZE,
+    height: DEFAULT_ICON_SIZE,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    semantics: null,
+    interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
+    subpaths,
+    fillRule: "nonzero",
+    fill: "#111827",
+    stroke: null,
+    strokeWidth: 0,
+    strokeStyle: "solid",
+  };
+
+  historyManager.execute(createAddNodeCommand(node));
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([node.id]) }));
+  toolManager.setActiveTool("select");
+}
+
+// Unlike icons (square glyphs) or the fixed-square asset-image default, a
+// photo has a real aspect ratio worth preserving — scaled to fit within a
+// max dimension rather than forced into a fixed box.
+const MAX_UNSPLASH_PHOTO_DIMENSION = 320;
+
+function placeUnsplashPhoto(photo: UnsplashPhoto): void {
+  const { width: canvasWidth, height: canvasHeight } = canvasSizeStore.getState();
+  const sceneCenter = screenToScene({ x: canvasWidth / 2, y: canvasHeight / 2 }, viewportStore.getState());
+  const graph = sceneStore.getState();
+
+  const scale = Math.min(1, MAX_UNSPLASH_PHOTO_DIMENSION / Math.max(photo.width, photo.height));
+  const width = photo.width * scale;
+  const height = photo.height * scale;
+
+  const node: ImageNode = {
+    id: generateId(),
+    type: "image",
+    // Composed into the exported <img>'s alt attribute via the existing
+    // alt={escapeHtml(node.name)} wiring — carries Unsplash's required
+    // photographer attribution through to wherever the image ends up,
+    // without a dedicated schema field for it.
+    name: nextDefaultName(graph, `Photo by ${photo.photographerName} on Unsplash`),
+    parentId: null,
+    x: sceneCenter.x - width / 2,
+    y: sceneCenter.y - height / 2,
+    width,
+    height,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    semantics: null,
+    interactions: [],
+    sizingHorizontal: "fixed",
+    sizingVertical: "fixed",
+    positioning: "flow",
+    src: photo.regularUrl,
+    objectFit: "cover",
+    filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
+  };
+
+  historyManager.execute(createAddNodeCommand(node));
+  selectionStore.update((state) => ({ ...state, selectedIds: new Set([node.id]) }));
+  toolManager.setActiveTool("select");
+
+  // Fire-and-forget: Unsplash's API guidelines require this ping when a
+  // photo is actually used, not just searched — a failure here shouldn't
+  // block or undo the insert itself.
+  trackDownload(photo.downloadLocation).catch((err) => {
+    console.error("Failed to notify Unsplash of photo use:", err);
+  });
+}
+
 function resetViewport(): void {
   viewportStore.update(() => INITIAL_VIEWPORT);
 }
@@ -304,6 +409,9 @@ export function CanvasEditorPage() {
 
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [icons, setIcons] = useState<IconManifestEntry[] | null>(null);
+  const [unsplashResults, setUnsplashResults] = useState<UnsplashPhoto[] | null>(null);
+  const [isSearchingUnsplash, setIsSearchingUnsplash] = useState(false);
   const [isExportingFrame, setIsExportingFrame] = useState(false);
   const [projectName, setProjectName] = useState("Untitled Project");
   const saveStatus = useSaveStatus();
@@ -335,6 +443,7 @@ export function CanvasEditorPage() {
     let cancelled = false;
     let teardownAutosave: (() => void) | null = null;
     let teardownEventLog: (() => void) | null = null;
+    let teardownWebMcp: (() => void) | null = null;
 
     async function load(): Promise<void> {
       const [project, existingPages] = await Promise.all([fetchJson<Project>(`/api/projects/${id}`), listPages(id)]);
@@ -347,6 +456,7 @@ export function CanvasEditorPage() {
       hydratePages(pages);
       teardownAutosave = initPageAutosave(id);
       teardownEventLog = initPageEventLog(id);
+      teardownWebMcp = initWebMcpTools();
     }
 
     // A project that doesn't exist (or isn't yours — both collapse to the
@@ -360,6 +470,7 @@ export function CanvasEditorPage() {
       cancelled = true;
       teardownAutosave?.();
       teardownEventLog?.();
+      teardownWebMcp?.();
     };
   }, [projectId, navigate]);
 
@@ -378,6 +489,35 @@ export function CanvasEditorPage() {
     if (!projectId) return;
     await deleteAsset(projectId, assetId);
     setAssets((current) => current?.filter((asset) => asset.id !== assetId) ?? null);
+  }
+
+  // Triggered by the Icons tab's own onClick (a real user event, not a
+  // mount effect) the first time it's opened — loadIconManifest caches its
+  // own promise, so a later re-trigger is a cheap no-op, not a re-fetch.
+  function handleRequestIcons(): void {
+    loadIconManifest().then(setIcons);
+  }
+
+  // Triggered by UnsplashTab's own search-form submit (query set) or by
+  // handleRequestDefaultUnsplashPhotos below (query omitted, falls back to
+  // Unsplash's own editorial feed).
+  async function handleSearchUnsplash(query?: string): Promise<void> {
+    setIsSearchingUnsplash(true);
+    try {
+      setUnsplashResults(await searchPhotos(query));
+    } finally {
+      setIsSearchingUnsplash(false);
+    }
+  }
+
+  // Triggered by ElementsPanel's own tab click the first time "Unsplash" is
+  // opened, mirroring handleRequestIcons — but unlike the icon manifest
+  // (a free local cache), this is a real network call against Unsplash's
+  // rate limit, so it's explicitly guarded to fire once, not on every
+  // revisit.
+  function handleRequestDefaultUnsplashPhotos(): void {
+    if (unsplashResults !== null) return;
+    handleSearchUnsplash();
   }
 
   // Only ever called while a Frame is the sole selection — see
@@ -480,6 +620,14 @@ export function CanvasEditorPage() {
         onUploadAsset={handleUploadAsset}
         onDeleteAsset={handleDeleteAsset}
         onInsertAsset={placeImageFromAsset}
+        icons={icons}
+        onRequestIcons={handleRequestIcons}
+        onInsertIcon={placeIconFromLibrary}
+        unsplashResults={unsplashResults}
+        isSearchingUnsplash={isSearchingUnsplash}
+        onSearchUnsplash={handleSearchUnsplash}
+        onRequestDefaultUnsplashPhotos={handleRequestDefaultUnsplashPhotos}
+        onInsertUnsplashPhoto={placeUnsplashPhoto}
       />
       <div
         style={{

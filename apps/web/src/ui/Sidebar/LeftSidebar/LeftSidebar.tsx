@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Asset } from "../../../lib/assets";
+import type { IconManifestEntry } from "../../../lib/iconManifest";
+import type { UnsplashPhoto } from "../../../lib/unsplash";
 import type { PageId } from "../../../store/pagesStore";
 import type { SaveStatus } from "../../../store/saveStatusStore";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
@@ -45,6 +47,14 @@ interface LeftSidebarProps {
   onUploadAsset: (file: File) => void;
   onDeleteAsset: (assetId: string) => void;
   onInsertAsset: (asset: Asset) => void;
+  icons: IconManifestEntry[] | null;
+  onRequestIcons: () => void;
+  onInsertIcon: (icon: IconManifestEntry) => void;
+  unsplashResults: UnsplashPhoto[] | null;
+  isSearchingUnsplash: boolean;
+  onSearchUnsplash: (query: string) => void;
+  onRequestDefaultUnsplashPhotos: () => void;
+  onInsertUnsplashPhoto: (photo: UnsplashPhoto) => void;
 }
 
 const SAVE_STATUS_LABEL: Record<SaveStatus, string | null> = {
@@ -88,8 +98,26 @@ export function LeftSidebar({
   onUploadAsset,
   onDeleteAsset,
   onInsertAsset,
+  icons,
+  onRequestIcons,
+  onInsertIcon,
+  unsplashResults,
+  isSearchingUnsplash,
+  onSearchUnsplash,
+  onRequestDefaultUnsplashPhotos,
+  onInsertUnsplashPhoto,
 }: LeftSidebarProps) {
   const [railTab, setRailTab] = useState<RailTab>("layers");
+
+  // ElementsPanel's own default sub-tab is "icons" (see LibraryTab there),
+  // so switching the rail to "elements" — not a click inside ElementsPanel
+  // itself — is the real first-open moment for most users. onRequestIcons
+  // is idempotent (loadIconManifest caches its promise), so re-triggering
+  // on every switch back is a harmless no-op, not a re-fetch.
+  function handleRailTabChange(tab: RailTab): void {
+    setRailTab(tab);
+    if (tab === "elements") onRequestIcons();
+  }
 
   return (
     <div className={styles.root}>
@@ -125,7 +153,7 @@ export function LeftSidebar({
         onRename={onRenamePage}
         onDelete={onDeletePage}
       />
-      <RailTabs value={railTab} onChange={setRailTab} />
+      <RailTabs value={railTab} onChange={handleRailTabChange} />
       {railTab === "layers" ? (
         <LayersPanel
           scene={scene}
@@ -143,6 +171,14 @@ export function LeftSidebar({
           onUpload={onUploadAsset}
           onDelete={onDeleteAsset}
           onInsert={onInsertAsset}
+          icons={icons}
+          onRequestIcons={onRequestIcons}
+          onInsertIcon={onInsertIcon}
+          unsplashResults={unsplashResults}
+          isSearchingUnsplash={isSearchingUnsplash}
+          onSearchUnsplash={onSearchUnsplash}
+          onRequestDefaultUnsplashPhotos={onRequestDefaultUnsplashPhotos}
+          onInsertUnsplashPhoto={onInsertUnsplashPhoto}
         />
       )}
     </div>

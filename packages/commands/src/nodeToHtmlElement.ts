@@ -7,6 +7,7 @@ import type {
   LineNode,
   PathNode,
   PathPoint,
+  PathSubpath,
   RectNode,
   SceneNode,
   SectionNode,
@@ -39,13 +40,38 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+const UNSPLASH_IMAGE_HOST = "images.unsplash.com";
+const UNSPLASH_RESPONSIVE_WIDTHS = [640, 1080, 1920];
+
+// Unsplash's image URLs are served through an image-resizing service that
+// honors a `w` query param on any of their hosted URLs — a real responsive
+// srcset is just a few width variants of the SAME url, no separate stored
+// sizes needed. An uploaded asset's src won't match this host, so it falls
+// through to null (no <source>, just the plain fallback <img> — see the
+// image case above).
+function buildUnsplashResponsiveSrcset(src: string): string | null {
+  let base: URL;
+  try {
+    base = new URL(src);
+  } catch {
+    return null;
+  }
+  if (base.hostname !== UNSPLASH_IMAGE_HOST) return null;
+
+  return UNSPLASH_RESPONSIVE_WIDTHS.map((width) => {
+    const variant = new URL(base);
+    variant.searchParams.set("w", String(width));
+    return `${variant.toString()} ${width}w`;
+  }).join(", ");
+}
+
 // Mirrors tracePathSegment in apps/web/src/canvas/renderer/shapes/drawPath.ts
 // exactly (same handle semantics: handleOut/handleIn are absolute control-
 // point positions, a curve segment exists only when either endpoint defines
 // one) — translated to SVG path commands instead of Path2D calls, since
 // Path2D is as browser-only as the DOMMatrix/DOMPoint APIs this exporter is
 // deliberately built to avoid needing server-side.
-function buildPathD(points: PathPoint[], closed: boolean): string {
+function buildSubpathD(points: PathPoint[], closed: boolean): string {
   if (points.length === 0) return "";
 
   const segment = (from: PathPoint, to: PathPoint): string => {
@@ -64,6 +90,14 @@ function buildPathD(points: PathPoint[], closed: boolean): string {
     commands.push("Z");
   }
   return commands.join(" ");
+}
+
+// One node, one fill/stroke, but possibly several independent subpaths —
+// concatenating each subpath's own "M ... Z" sequence into one `d` string is
+// exactly how SVG represents a compound shape (e.g. a ring, via two
+// oppositely-wound subpaths and fill-rule) natively, no extra markup needed.
+function buildPathD(subpaths: PathSubpath[]): string {
+  return subpaths.map((subpath) => buildSubpathD(subpath.points, subpath.closed)).join(" ");
 }
 
 // One entry per SceneNode variant except "instance" — an instance has no
@@ -101,11 +135,27 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   // beyond that.
   line: (node: LineNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
   arrow: (node: ArrowNode): HtmlElementSpec => ({ tag: resolveSemanticTag(node), attrs: {}, extraCss: [] }),
-  image: (node: ImageNode): HtmlElementSpec => ({
-    tag: resolveSemanticTag(node),
-    attrs: { src: node.src, alt: escapeHtml(node.name) },
-    extraCss: [`object-fit: ${node.objectFit};`],
-  }),
+  image: (node: ImageNode): HtmlElementSpec => {
+    const tag = resolveSemanticTag(node);
+    const objectFitCss = `object-fit: ${node.objectFit};`;
+
+    // attrsToHtml (renderFrameToHtml.ts) already escapes every attrs value
+    // itself — node.name went through escapeHtml here too, double-escaping
+    // it (e.g. an apostrophe became &amp;#39; instead of &#39;).
+    if (tag !== "picture") {
+      return { tag, attrs: { src: node.src, alt: node.name }, extraCss: [objectFitCss] };
+    }
+
+    // object-fit only has an effect on a replaced element (img/video), not
+    // on <picture> itself, so it moves from extraCss (which the caller
+    // applies to whichever tag ends up outermost) onto the inner <img>'s
+    // own inline style — width/height/position stay on the outer <picture>
+    // via the normal generateNodeCss/extraCss path, unaffected by this.
+    const srcset = buildUnsplashResponsiveSrcset(node.src);
+    const source = srcset ? `<source srcset="${escapeHtml(srcset)}" sizes="100vw">` : "";
+    const img = `<img src="${escapeHtml(node.src)}" alt="${escapeHtml(node.name)}" style="display: block; width: 100%; height: 100%; ${objectFitCss}">`;
+    return { tag: "picture", attrs: {}, extraCss: [], innerHtml: `${source}${img}` };
+  },
   text: (node: TextNode): HtmlElementSpec => ({
     tag: resolveSemanticTag(node),
     attrs: {},
@@ -116,14 +166,21 @@ export const nodeToHtmlElement: NodeHtmlTable = {
   // fill/stroke would render as if the node were a plain rectangle, not the
   // actual bezier shape. Rendered as its own inline SVG instead of a div.
   path: (node: PathNode): HtmlElementSpec => {
-    const d = buildPathD(node.points, node.closed);
-    const fill = node.fill ?? "none";
-    const stroke = node.stroke ?? "none";
+    const d = buildPathD(node.subpaths);
+    // Unlike every other attribute here (either auto-escaped via attrs, or
+    // this file's own escapeHtml calls elsewhere), fill/stroke were
+    // interpolated raw — harmless from the color picker (which validates
+    // hex input) but not from update_element's WebMCP tool, whose fill/
+    // stroke schema only constrains type, not format, and writes straight
+    // into the node with no sanitization.
+    const fill = escapeHtml(node.fill ?? "none");
+    const stroke = escapeHtml(node.stroke ?? "none");
+    const fillRuleAttr = node.fillRule === "evenodd" ? ` fill-rule="evenodd"` : "";
     return {
       tag: "svg",
       attrs: { viewBox: `0 0 ${node.width} ${node.height}` },
       extraCss: [],
-      innerHtml: `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${node.strokeWidth}"/>`,
+      innerHtml: `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${node.strokeWidth}"${fillRuleAttr}/>`,
     };
   },
   frame: containerElement,
