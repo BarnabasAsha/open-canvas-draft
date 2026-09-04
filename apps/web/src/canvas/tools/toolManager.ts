@@ -65,6 +65,10 @@ function onPointerUp(event: ToolPointerEvent): void {
   activeTool().onPointerUp(event);
 }
 
+function onPointerCancel(): void {
+  activeTool().onPointerCancel?.();
+}
+
 function getCursor(): string {
   return activeTool().getCursor();
 }
@@ -83,6 +87,7 @@ export const toolManager = {
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerCancel,
   onDoubleClick,
   onKeyDown,
   getCursor,

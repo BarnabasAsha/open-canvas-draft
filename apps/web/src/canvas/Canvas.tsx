@@ -134,6 +134,15 @@ export function Canvas() {
     applyCursor(e.currentTarget);
   };
 
+  // pointercancel (the browser aborting the gesture) and lostpointercapture
+  // (capture released some other way without a normal pointerup) both mean
+  // the in-progress drag can no longer be trusted to end normally — routed
+  // to the same handler, which aborts rather than commits whatever the
+  // last pointermove wrote.
+  const handlePointerCancel = () => {
+    toolManager.onPointerCancel();
+  };
+
   // A separate native "dblclick" handler rather than reading .detail off
   // pointerdown — PointerEvent.detail isn't reliable for click-counting
   // the way MouseEvent's is, but dblclick is the browser's own correctly-
@@ -168,6 +177,8 @@ export function Canvas() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onLostPointerCapture={handlePointerCancel}
         onDoubleClick={handleDoubleClick}
       />
     </NodeContextMenu>

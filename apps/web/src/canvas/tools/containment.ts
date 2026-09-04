@@ -1,3 +1,4 @@
+import { isEffectivelyLocked } from "@open-canvas/commands";
 import type { NodeId, SceneGraph } from "@open-canvas/schema";
 import { getSceneCorners } from "../selectionBounds";
 
@@ -14,22 +15,34 @@ interface Bounds {
 // reverse order so the last-drawn/topmost candidate wins — so "what would
 // this land inside if dropped here" agrees with "what would a click here
 // select".
-export function findContainerAt(nodeId: NodeId, scene: SceneGraph): NodeId | null {
+//
+// `excludeIds` covers every node currently being dragged in the same
+// gesture, not just this one — excluding only `nodeId` itself still (as a
+// side effect of the recursion never entering an excluded container's own
+// children) correctly prevents a node from landing inside its own
+// descendants, but a multi-selection drag needs the OTHER dragged nodes
+// excluded too, or one moved node can be reparented into another moved
+// node mid-gesture.
+export function findContainerAt(nodeId: NodeId, scene: SceneGraph, excludeIds: ReadonlySet<NodeId>): NodeId | null {
   const nodeBounds = getBounds(nodeId, scene);
   if (!nodeBounds) return null;
 
-  return searchSiblings(scene, [...scene.rootIds].reverse(), nodeId, nodeBounds);
+  return searchSiblings(scene, [...scene.rootIds].reverse(), excludeIds, nodeBounds);
 }
 
-function searchSiblings(scene: SceneGraph, ids: NodeId[], excludeId: NodeId, nodeBounds: Bounds): NodeId | null {
+function searchSiblings(scene: SceneGraph, ids: NodeId[], excludeIds: ReadonlySet<NodeId>, nodeBounds: Bounds): NodeId | null {
   for (const id of ids) {
-    if (id === excludeId) continue;
+    if (excludeIds.has(id)) continue;
 
     const candidate = scene.nodes[id];
     if (!candidate || !candidate.visible) continue;
     if (candidate.type !== "frame" && candidate.type !== "section" && candidate.type !== "group") continue;
+    // A locked container (or one nested inside a locked ancestor) can't
+    // accept a drop — dragging an unlocked node over it must not reparent
+    // into it.
+    if (isEffectivelyLocked(scene, id)) continue;
 
-    const childMatch = searchSiblings(scene, [...candidate.children].reverse(), excludeId, nodeBounds);
+    const childMatch = searchSiblings(scene, [...candidate.children].reverse(), excludeIds, nodeBounds);
     if (childMatch) return childMatch;
 
     const containerBounds = getBounds(id, scene);

@@ -35,12 +35,33 @@ type BaseProperties = Partial<
   >
 >;
 
-export type RectProperties = BaseProperties & Partial<Pick<RectNode, "fill" | "stroke" | "strokeWidth" | "strokeStyle" | "cornerRadius">>;
-export type EllipseProperties = BaseProperties & Partial<Pick<EllipseNode, "fill" | "stroke" | "strokeWidth" | "strokeStyle">>;
-export type LineProperties = BaseProperties & Partial<Pick<LineNode, "stroke" | "strokeWidth" | "strokeStyle">>;
+// update_element-only (add_element already takes x/y/width/height as
+// explicit top-level params at creation time, per type). A node's position/
+// size can change after creation too — via update_element's `properties`
+// bag, not a separate top-level param, keeping that tool's input shape as
+// one flat bag. Excluded from GroupProperties (bounds are derived from
+// children via reconcileGroupBounds, never settable directly) and from
+// Line/ArrowProperties (width/height there are derived from x/y/x2/y2, see
+// LineGeometryProperties below and updateElement.ts's own recompute step).
+type GeometryProperties = Partial<Pick<BaseNode, "x" | "y" | "width" | "height">>;
+// x/y/x2/y2 only — not width/height directly, matching add_element's own
+// line/arrow shape (buildNode derives width/height from the endpoints;
+// letting a patch set them directly would desync the node's stored bbox
+// from where it actually renders).
+type LineGeometryProperties = Partial<Pick<LineNode, "x" | "y" | "x2" | "y2">>;
+
+export type RectProperties = BaseProperties &
+  GeometryProperties &
+  Partial<Pick<RectNode, "fill" | "stroke" | "strokeWidth" | "strokeStyle" | "cornerRadius">>;
+export type EllipseProperties = BaseProperties &
+  GeometryProperties &
+  Partial<Pick<EllipseNode, "fill" | "stroke" | "strokeWidth" | "strokeStyle">>;
+export type LineProperties = BaseProperties & LineGeometryProperties & Partial<Pick<LineNode, "stroke" | "strokeWidth" | "strokeStyle">>;
 export type ArrowProperties = BaseProperties &
+  LineGeometryProperties &
   Partial<Pick<ArrowNode, "stroke" | "strokeWidth" | "strokeStyle" | "arrowheadSize">>;
 export type TextProperties = BaseProperties &
+  GeometryProperties &
   Partial<
     Pick<
       TextNode,
@@ -57,6 +78,7 @@ export type TextProperties = BaseProperties &
     >
   >;
 export type FrameProperties = BaseProperties &
+  GeometryProperties &
   Partial<
     Pick<
       FrameNode,
@@ -75,20 +97,26 @@ export type FrameProperties = BaseProperties &
     >
   >;
 export type SectionProperties = BaseProperties &
+  GeometryProperties &
   Partial<Pick<SectionNode, "layoutMode" | "direction" | "gap" | "padding" | "primaryAxisAlign" | "crossAxisAlign">>;
-export type ImageProperties = BaseProperties & Partial<Pick<ImageNode, "objectFit" | "filters">>;
+export type ImageProperties = BaseProperties & GeometryProperties & Partial<Pick<ImageNode, "objectFit" | "filters" | "alt">>;
 // Not fill/stroke/etc. of a rect (those are already Partial-optional, so
 // they're not "the same" by accident) — a path's actual shape (`points`,
 // `closed`) is deliberately excluded: editing bezier points via a flat
 // merge isn't safe the way a scalar field patch is, and no tool this pass
 // authors path geometry (add_element doesn't offer "path" as a type).
-export type PathProperties = BaseProperties & Partial<Pick<PathNode, "fill" | "stroke" | "strokeWidth" | "strokeStyle">>;
-// group/instance have no type-specific fields safe for a flat patch —
-// a group's own bounds are derived from its children (reconcileGroupBounds),
-// not settable directly, and an instance's `overrides`/`componentId` are
-// structural, not simple scalar fields. Only the fields every node has.
+export type PathProperties = BaseProperties &
+  GeometryProperties &
+  Partial<Pick<PathNode, "fill" | "stroke" | "strokeWidth" | "strokeStyle">>;
+// group has no type-specific fields safe for a flat patch — its bounds are
+// derived from its children (reconcileGroupBounds), not settable directly,
+// including geometry. Only the fields every node has.
 export type GroupProperties = BaseProperties;
-export type InstanceProperties = BaseProperties;
+// Unlike group, an instance's width/height are real, already-settable
+// geometry — they directly drive resolveInstance.ts's uniform scaling of
+// its resolved definition, the same way dragging its resize handles
+// already works.
+export type InstanceProperties = BaseProperties & GeometryProperties;
 
 // update_element doesn't know its target's type at the type-signature level
 // (the node id is looked up at runtime) — every one of the per-type bags
@@ -132,6 +160,21 @@ const BASE_PROPERTY_SCHEMA = {
 
 const STROKE_STYLE = { type: "string", enum: ["solid", "dashed", "dotted"] } as const;
 const NULLABLE_COLOR = { type: ["string", "null"], description: 'A CSS color, or null for "none".' } as const;
+// update_element-only — see GeometryProperties/LineGeometryProperties above
+// for why this is excluded from group and folded into x/y/x2/y2 (not
+// width/height) for line/arrow.
+const GEOMETRY_SCHEMA = {
+  x: { type: "number" },
+  y: { type: "number" },
+  width: { type: "number" },
+  height: { type: "number" },
+} as const;
+const LINE_GEOMETRY_SCHEMA = {
+  x: { type: "number" },
+  y: { type: "number" },
+  x2: { type: "number" },
+  y2: { type: "number" },
+} as const;
 const LAYOUT_FIELDS = {
   layoutMode: { type: "string", enum: ["none", "flex"] },
   direction: { type: "string", enum: ["row", "column"] },
@@ -152,6 +195,7 @@ const LAYOUT_FIELDS = {
 
 export const RECT_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
   fill: NULLABLE_COLOR,
   stroke: NULLABLE_COLOR,
   strokeWidth: { type: "number" },
@@ -161,6 +205,7 @@ export const RECT_PROPERTY_SCHEMA = {
 
 export const ELLIPSE_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
   fill: NULLABLE_COLOR,
   stroke: NULLABLE_COLOR,
   strokeWidth: { type: "number" },
@@ -169,6 +214,7 @@ export const ELLIPSE_PROPERTY_SCHEMA = {
 
 export const LINE_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...LINE_GEOMETRY_SCHEMA,
   stroke: { type: "string" },
   strokeWidth: { type: "number" },
   strokeStyle: STROKE_STYLE,
@@ -181,6 +227,7 @@ export const ARROW_PROPERTY_SCHEMA = {
 
 export const TEXT_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
   content: { type: "string" },
   fontSize: { type: "number" },
   fontFamily: { type: "string" },
@@ -195,6 +242,7 @@ export const TEXT_PROPERTY_SCHEMA = {
 
 export const FRAME_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
   fill: NULLABLE_COLOR,
   stroke: NULLABLE_COLOR,
   strokeWidth: { type: "number" },
@@ -206,11 +254,17 @@ export const FRAME_PROPERTY_SCHEMA = {
 
 export const SECTION_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
   ...LAYOUT_FIELDS,
 } as const;
 
 export const IMAGE_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
+  alt: {
+    type: ["string", "null"],
+    description: "Exported <img> alt text. Falls back to the node's own name when null — set this explicitly for a more descriptive alt than the layer name.",
+  },
   objectFit: { type: "string", enum: ["fill", "contain", "cover"] },
   filters: {
     type: "object",
@@ -228,6 +282,7 @@ export const IMAGE_PROPERTY_SCHEMA = {
 
 export const PATH_PROPERTY_SCHEMA = {
   ...BASE_PROPERTY_SCHEMA,
+  ...GEOMETRY_SCHEMA,
   fill: NULLABLE_COLOR,
   stroke: NULLABLE_COLOR,
   strokeWidth: { type: "number" },
@@ -235,7 +290,7 @@ export const PATH_PROPERTY_SCHEMA = {
 } as const;
 
 export const GROUP_PROPERTY_SCHEMA = { ...BASE_PROPERTY_SCHEMA } as const;
-export const INSTANCE_PROPERTY_SCHEMA = { ...BASE_PROPERTY_SCHEMA } as const;
+export const INSTANCE_PROPERTY_SCHEMA = { ...BASE_PROPERTY_SCHEMA, ...GEOMETRY_SCHEMA } as const;
 
 // The flat union of every field above, for update_element's own schema — it
 // can't declare a discriminated oneOf the way add_element does, since the

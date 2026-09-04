@@ -10,7 +10,7 @@ import { ExportSection } from "../sections/ExportSection/ExportSection";
 import { FlexChildSection } from "../sections/FlexChildSection";
 import { LayoutSection } from "../sections/LayoutSection";
 import { PositionSection } from "../sections/PositionSection";
-import { SemanticsSection } from "../sections/SemanticsSection";
+import { SemanticsSection } from "../sections/SemanticsSection/SemanticsSection";
 import { TextContentSection } from "../sections/TextContentSection";
 import { TypographySection } from "../sections/TypographySection";
 import styles from "./PropertiesPanel.module.css";
@@ -228,7 +228,7 @@ function PropertySections({
       {layoutContainerNode && (
         <LayoutSection node={layoutContainerNode} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       )}
-      <SemanticsSection node={node} />
+      <SemanticsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection
         node={node}
@@ -259,7 +259,7 @@ function SharedPropertySections({ node, onFocus, onChange, onCommit }: PropertyS
 
   return (
     <>
-      <SemanticsSection node={node} />
+      <SemanticsSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />
       {isText && <TextContentSection node={node} onFocus={onFocus} onChange={onChange} onCommit={onCommit} />}
       <AppearanceSection
         node={node}

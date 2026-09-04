@@ -281,17 +281,25 @@
   outline: none;
 }
 
-.semantics-value {
+/* Plain single-line text input inside a .field-box — TextField's own
+   input, and reused by SemanticsAttributesEditor's key/value inputs.
+   Left-aligned and UI-font, unlike .number-field-input's right-aligned
+   tabular numerals — this holds arbitrary text (a tag name, an attribute
+   key/value), not a number. */
+.text-field-input {
   flex: 1;
   min-width: 0;
+  width: 100%;
   padding: 8px 8px 8px 0;
   font-size: 12px;
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   color: var(--text);
-  text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: transparent;
+  border: none;
+}
+
+.text-field-input:focus {
+  outline: none;
 }
 
 .field-box.select-trigger {

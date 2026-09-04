@@ -65,9 +65,18 @@
 }
 
 .tileKebab {
-  display: flex;
   flex-shrink: 0;
   color: var(--text-disabled);
+}
+
+/* .layer-row-name-input assumes a row flex container (flex: 1 grows
+   horizontally there) -- .tileInfo is a column, so pin width/flex back
+   down rather than letting it stretch along the column's main axis. */
+.tileNameInput {
+  flex: none;
+  width: 100%;
+  font-size: 13.5px;
+  font-weight: 580;
 }
 
 .empty {

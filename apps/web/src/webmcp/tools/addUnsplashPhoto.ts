@@ -7,8 +7,11 @@ import { selectionStore } from "../../store/selectionStore";
 import { IMAGE_PROPERTY_SCHEMA, type ImageProperties } from "../nodeProperties";
 import { fail, ok, type WebMcpTool } from "../types";
 
-// Same fixed max dimension CanvasEditorPage.tsx's placeUnsplashPhoto uses.
-const MAX_UNSPLASH_PHOTO_DIMENSION = 320;
+// Same default max dimension CanvasEditorPage.tsx's placeUnsplashPhoto
+// uses — overridable here (unlike the human UI, which has no control for
+// it) since an agent composing a specific layout needs to size a photo to
+// fit it, not just get something reasonably visible.
+const DEFAULT_MAX_UNSPLASH_PHOTO_DIMENSION = 320;
 
 export interface AddUnsplashPhotoInput {
   regularUrl: string;
@@ -18,6 +21,7 @@ export interface AddUnsplashPhotoInput {
   downloadLocation: string;
   x: number;
   y: number;
+  maxDimension?: number;
   properties?: ImageProperties;
 }
 
@@ -31,7 +35,7 @@ export interface AddUnsplashPhotoInput {
 export const addUnsplashPhotoTool: WebMcpTool<AddUnsplashPhotoInput, ImageNode> = {
   name: "add_unsplash_photo",
   description:
-    "Insert an Unsplash photo (fields from search_unsplash_photos) onto the page at x/y, as a real image node. Fires Unsplash's required usage-tracking ping.",
+    'Insert an Unsplash photo (fields from search_unsplash_photos) onto the page at x/y, as a real image node, scaled to fit within maxDimension (default 320) on its longer edge while keeping its real aspect ratio. Fires Unsplash\'s required usage-tracking ping.',
   inputSchema: {
     type: "object",
     properties: {
@@ -42,13 +46,14 @@ export const addUnsplashPhotoTool: WebMcpTool<AddUnsplashPhotoInput, ImageNode> 
       downloadLocation: { type: "string" },
       x: { type: "number" },
       y: { type: "number" },
+      maxDimension: { type: "number", description: "Longer-edge cap in px, aspect ratio preserved. Defaults to 320." },
       properties: { type: "object", properties: IMAGE_PROPERTY_SCHEMA, additionalProperties: false },
     },
     required: ["regularUrl", "width", "height", "photographerName", "downloadLocation", "x", "y"],
     additionalProperties: false,
   },
-  async execute({ regularUrl, width: photoWidth, height: photoHeight, photographerName, downloadLocation, x, y, properties }) {
-    const scale = Math.min(1, MAX_UNSPLASH_PHOTO_DIMENSION / Math.max(photoWidth, photoHeight));
+  async execute({ regularUrl, width: photoWidth, height: photoHeight, photographerName, downloadLocation, x, y, maxDimension, properties }) {
+    const scale = Math.min(1, (maxDimension ?? DEFAULT_MAX_UNSPLASH_PHOTO_DIMENSION) / Math.max(photoWidth, photoHeight));
     const width = photoWidth * scale;
     const height = photoHeight * scale;
 
@@ -71,6 +76,11 @@ export const addUnsplashPhotoTool: WebMcpTool<AddUnsplashPhotoInput, ImageNode> 
       sizingVertical: "fixed",
       positioning: "flow",
       src: regularUrl,
+      // Explicit, not left to fall back on `name` — name gets a deduped
+      // " 2", " 3" suffix from nextDefaultName, which would read oddly as
+      // literal alt text. Carries Unsplash's required photographer
+      // attribution through to wherever the image ends up.
+      alt: `Photo by ${photographerName} on Unsplash`,
       objectFit: "cover",
       filters: { blur: 0, brightness: 1, contrast: 1, grayscale: 0, saturate: 1, sepia: 0, hueRotate: 0 },
       ...properties,

@@ -18,7 +18,7 @@ export interface UpdateElementInput {
 export const updateElementTool: WebMcpTool<UpdateElementInput, SceneNode> = {
   name: "update_element",
   description:
-    "Patch fields on an existing element — fill, stroke, opacity, typography, corner radius, or (for a frame/section) its layout config. Only send the fields you're changing. Not every field applies to every node type; sending one that doesn't apply to this node is silently ignored.",
+    "Patch fields on an existing element — fill, stroke, opacity, typography, corner radius, semantics (the HTML tag/role/attributes it exports as, e.g. { tag: \"h1\" } or { tag: \"nav\" } — defaults to a generic div/p/img otherwise, and is worth setting explicitly to a real landmark/heading tag for better exported HTML), x/y/width/height (x/y/x2/y2 for line/arrow) to move or resize it, or (for a frame/section) its layout config. To move an element into or out of a frame/section/group, use reparent_elements instead — parentId isn't settable here (add_element accepts it directly at creation time). Only send the fields you're changing. Not every field applies to every node type; sending one that doesn't apply to this node is silently ignored.",
   inputSchema: {
     type: "object",
     properties: {
@@ -40,6 +40,19 @@ export const updateElementTool: WebMcpTool<UpdateElementInput, SceneNode> = {
     const patch: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(properties)) {
       if (allowedKeys.has(key)) patch[key] = value;
+    }
+
+    // A line/arrow's width/height are derived from its endpoints, never
+    // settable directly (same as add_element's buildNode) — recompute them
+    // whenever a patch touches x/y/x2/y2, or the node's stored bbox would
+    // desync from where it actually renders.
+    if ((target.type === "line" || target.type === "arrow") && ["x", "y", "x2", "y2"].some((key) => key in patch)) {
+      const x = (patch.x as number | undefined) ?? target.x;
+      const y = (patch.y as number | undefined) ?? target.y;
+      const x2 = (patch.x2 as number | undefined) ?? target.x2;
+      const y2 = (patch.y2 as number | undefined) ?? target.y2;
+      patch.width = Math.abs(x2 - x);
+      patch.height = Math.abs(y2 - y);
     }
 
     sceneStore.update((graph) => ({ ...graph, nodes: { ...graph.nodes, [nodeId]: { ...graph.nodes[nodeId], ...patch } } }));

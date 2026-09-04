@@ -18,11 +18,14 @@ export function hitTestScene(scenePoint: Point, scene: SceneGraph): NodeId | nul
 
 // Reversed order: later-drawn (topmost) siblings are tested first, and we
 // return on the first hit — equivalent to "topmost wins" without needing a
-// flat z-order list.
+// flat z-order list. Locked nodes are NOT skipped here — a locked node
+// must still be selectable (to inspect its properties), just not
+// draggable/resizable, which is enforced separately wherever a drag
+// actually starts (selectTool.ts's isEffectivelyLocked checks).
 function hitTestSiblings(scenePoint: Point, scene: SceneGraph, ids: NodeId[]): NodeId | null {
   for (const id of ids) {
     const node = scene.nodes[id];
-    if (!node || !node.visible || node.locked) continue;
+    if (!node || !node.visible) continue;
 
     scratchCtx.save();
     applyNodeTransform(scratchCtx, node);
@@ -36,8 +39,18 @@ function hitTestSiblings(scenePoint: Point, scene: SceneGraph, ids: NodeId[]): N
 
 function hitTestNode(scenePoint: Point, node: SceneNode, scene: SceneGraph): NodeId | null {
   if (node.type === "frame" || node.type === "section" || node.type === "group") {
-    const childHit = hitTestSiblings(scenePoint, scene, [...node.children].reverse());
-    if (childHit) return childHit;
+    // A clipping frame's children are only visible where they fall within
+    // the frame's own bounds — drawFrame.ts enforces this at render time
+    // via ctx.clip(). Recursing into children regardless would let a click
+    // "hit" a child positioned outside that clip region even though it's
+    // actually invisible there — checking the frame's own body first (the
+    // exact same geometry the clip path uses) keeps hit-testing agreeing
+    // with what's actually rendered.
+    const clips = node.type === "frame" && node.clipsContent;
+    if (!clips || hitTestOwnBody(scenePoint, node)) {
+      const childHit = hitTestSiblings(scenePoint, scene, [...node.children].reverse());
+      if (childHit) return childHit;
+    }
   }
 
   return hitTestOwnBody(scenePoint, node) ? node.id : null;

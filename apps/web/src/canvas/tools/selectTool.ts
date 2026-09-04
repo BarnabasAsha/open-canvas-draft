@@ -2,7 +2,9 @@ import {
   collectWithDescendants,
   createMoveNodeCommand,
   createSetNodeCommand,
-  getParentOrigin,
+  getWorldMatrix,
+  isEffectivelyLocked,
+  transformPoint,
   type MoveSnapshot,
 } from "@open-canvas/commands";
 import { historyManager } from "../../store/historyManager";
@@ -152,7 +154,13 @@ function onPointerDown({ scenePoint, shiftKey }: ToolPointerEvent): void {
     selectionStore.update((state) => ({ ...state, selectedIds: nextSelectedIds }));
   }
 
-  startMoveDrag(scenePoint);
+  // A shift-click only ever adjusts the selection — arming a move-drag on
+  // the same pointerdown would let a small subsequent pointermove silently
+  // move whatever was just toggled, when the user's evident intent was
+  // purely to change the selection. A plain click still arms a drag
+  // exactly as before, whether it's selecting something new or continuing
+  // to drag an already-selected multi-selection.
+  if (!shiftKey) startMoveDrag(scenePoint);
 }
 
 // PointerEvent.detail isn't reliable for click-counting (unlike
@@ -165,7 +173,7 @@ function onDoubleClick({ scenePoint }: ToolPointerEvent): void {
   if (!hitId) return;
 
   const node = scene.nodes[hitId];
-  if (node && node.type === "text" && !node.locked) {
+  if (node && node.type === "text" && !isEffectivelyLocked(scene, hitId)) {
     enterTextEdit(node, false);
   }
 }
@@ -211,6 +219,48 @@ function onPointerUp({ scenePoint }: ToolPointerEvent): void {
   if (dragState) commitDrag(dragState);
   dragState = null;
   flexInsertionStore.update(() => null);
+}
+
+// Fires on pointercancel (the browser aborting the gesture — e.g. a
+// system gesture taking over, or the tab losing focus mid-drag) and on
+// lostpointercapture (capture released some other way without a normal
+// pointerup). Either way the drag can no longer be trusted to end
+// normally: unlike onPointerUp, this must NOT commit whatever the last
+// pointermove happened to write — every intermediate frame of a move/
+// resize already writes straight to sceneStore for live feedback (see
+// applyMove/applyResize/applyGroupResize), so leaving dragState as-is
+// would strand that in the scene with no undo entry ever recorded for it.
+function onPointerCancel(): void {
+  if (!dragState) return;
+  abortDrag(dragState);
+  dragState = null;
+  flexInsertionStore.update(() => null);
+}
+
+// Reverts the scene to exactly its pre-drag state — the inverse of what
+// commitDrag would have gathered, applied directly instead of wrapped in
+// an undoable command (there's nothing to undo: the drag never happened
+// as far as history is concerned).
+function abortDrag(drag: DragState): void {
+  if (drag.kind === "move") {
+    sceneStore.update((scene) => {
+      const nodes = { ...scene.nodes };
+      for (const [id, snapshot] of drag.snapshots) nodes[id] = snapshot;
+      for (const [id, snapshot] of drag.touchedContainers) nodes[id] = snapshot;
+      return { nodes, rootIds: drag.startRootIds };
+    });
+  } else if (drag.kind === "resize") {
+    sceneStore.update((scene) => ({ ...scene, nodes: { ...scene.nodes, [drag.nodeId]: drag.startNode } }));
+  } else if (drag.kind === "group-resize") {
+    sceneStore.update((scene) => {
+      const nodes = { ...scene.nodes };
+      for (const [id, snapshot] of drag.snapshots) nodes[id] = snapshot;
+      return { nodes, rootIds: drag.startRootIds };
+    });
+  } else if (drag.kind === "marquee") {
+    selectionStore.update((state) => ({ ...state, selectedIds: drag.baseSelectedIds }));
+    marqueeStore.update(() => null);
+  }
 }
 
 function didMove(drag: MoveDrag, scenePoint: Point): boolean {
@@ -389,13 +439,15 @@ function toggleId(ids: Set<NodeId>, id: NodeId): Set<NodeId> {
 }
 
 function startMoveDrag(scenePoint: Point): void {
-  const { nodes, rootIds } = sceneStore.getState();
+  const scene = sceneStore.getState();
+  const { nodes, rootIds } = scene;
   const { selectedIds } = selectionStore.getState();
+  const topLevelIds = topLevelSelectedIds(selectedIds, nodes);
 
   const snapshots = new Map<NodeId, SceneNode>();
-  for (const id of selectedIds) {
+  for (const id of topLevelIds) {
     const node = nodes[id];
-    if (node && !node.locked) snapshots.set(id, node);
+    if (node && !isEffectivelyLocked(scene, id)) snapshots.set(id, node);
   }
 
   const flexOverrides = new Set<NodeId>();
@@ -415,6 +467,28 @@ function startMoveDrag(scenePoint: Point): void {
     flexOverridesApplied: false,
     hasCrossedThreshold: false,
   };
+}
+
+// Excludes any selected id whose ancestor is ALSO selected — a child's
+// local x/y is already relative to its parent, so if both a container and
+// one of its own descendants are selected and dragged together, applying
+// the same delta to both would double the descendant's effective
+// on-screen displacement (the parent moving already carries it along).
+function topLevelSelectedIds(selectedIds: Set<NodeId>, nodes: Record<NodeId, SceneNode>): Set<NodeId> {
+  const result = new Set<NodeId>();
+  for (const id of selectedIds) {
+    let hasSelectedAncestor = false;
+    let current = nodes[id]?.parentId ?? null;
+    while (current) {
+      if (selectedIds.has(current)) {
+        hasSelectedAncestor = true;
+        break;
+      }
+      current = nodes[current]?.parentId ?? null;
+    }
+    if (!hasSelectedAncestor) result.add(id);
+  }
+  return result;
 }
 
 function isFlexModeParent(parentId: NodeId | null, nodes: Record<NodeId, SceneNode>): boolean {
@@ -476,7 +550,10 @@ function reparentDraggedNodes(drag: MoveDrag, scenePoint: Point): void {
     const node = scene.nodes[id];
     if (!node) continue;
 
-    const targetParentId = findContainerAt(id, scene);
+    // Excludes every currently-dragged node, not just this one — otherwise
+    // two nodes dragged together could have one reparented into the other
+    // mid-gesture the instant their bounds happened to overlap.
+    const targetParentId = findContainerAt(id, scene, draggedIds);
     const found = targetParentId ? findFlexInsertionIndex(scenePoint, targetParentId, scene, draggedIds) : null;
 
     if (found) {
@@ -500,30 +577,31 @@ function reparentDraggedNodes(drag: MoveDrag, scenePoint: Point): void {
 // change mid-drag now that reparenting happens live — so position can't
 // just be "drag-start value + total delta" (that assumes a parent that
 // never changes). Instead: recover the node's absolute scene position at
-// drag start (start's local position + its start-time parent's origin),
-// add the total delta, then re-express that in whatever parent the node is
-// CURRENTLY in. Translation-only, same assumption as reparentNodeInGraph's
-// own position fix (no rotated containers exist yet).
+// drag start via the start-time parent's full world matrix, add the total
+// delta in scene space, then re-express that back through the inverse of
+// whatever parent the node is CURRENTLY in — a full matrix round-trip, not
+// a plain origin-point subtraction, so dragging stays correct (the node
+// moves in the same screen direction as the pointer) even if either parent
+// is rotated. Matches getAncestorLocalPoint/getBBoxLocalPoint's own
+// world-matrix approach already used for resize — move was the one path
+// still doing translation-only math.
 function translateNode(scene: SceneGraph, start: SceneNode, current: SceneNode, dx: number, dy: number): SceneNode {
-  const startOrigin = getParentOrigin(scene, start.parentId);
-  const currentOrigin = getParentOrigin(scene, current.parentId);
-  const shiftX = startOrigin.x - currentOrigin.x + dx;
-  const shiftY = startOrigin.y - currentOrigin.y + dy;
+  const startMatrix = start.parentId ? getWorldMatrix(start.parentId, scene.nodes) : new DOMMatrix();
+  const toCurrentLocal = (current.parentId ? getWorldMatrix(current.parentId, scene.nodes) : new DOMMatrix()).inverse();
+
+  const anchorWorld = transformPoint(startMatrix, { x: start.x, y: start.y });
+  const anchor = transformPoint(toCurrentLocal, { x: anchorWorld.x + dx, y: anchorWorld.y + dy });
 
   if (current.type === "line" || current.type === "arrow") {
     // start and current are the same node at different points in the same
     // gesture, so they always share a type — this cast just tells
     // TypeScript what the runtime already guarantees.
     const startEndpoint = start as LineNode | ArrowNode;
-    return {
-      ...current,
-      x: start.x + shiftX,
-      y: start.y + shiftY,
-      x2: startEndpoint.x2 + shiftX,
-      y2: startEndpoint.y2 + shiftY,
-    };
+    const endpointWorld = transformPoint(startMatrix, { x: startEndpoint.x2, y: startEndpoint.y2 });
+    const endpoint = transformPoint(toCurrentLocal, { x: endpointWorld.x + dx, y: endpointWorld.y + dy });
+    return { ...current, x: anchor.x, y: anchor.y, x2: endpoint.x, y2: endpoint.y };
   }
-  return { ...current, x: start.x + shiftX, y: start.y + shiftY };
+  return { ...current, x: anchor.x, y: anchor.y };
 }
 
 function startMarqueeDrag(scenePoint: Point, additive: boolean, currentSelectedIds: Set<NodeId>): void {
@@ -549,8 +627,9 @@ function applyMarqueeSelection(drag: MarqueeDrag, scenePoint: Point): void {
 }
 
 function startResizeDrag(nodeId: NodeId, handleId: HandleId): void {
-  const node = sceneStore.getState().nodes[nodeId];
-  if (!node || node.locked) return;
+  const scene = sceneStore.getState();
+  const node = scene.nodes[nodeId];
+  if (!node || isEffectivelyLocked(scene, nodeId)) return;
   dragState = { kind: "resize", nodeId, handleId, startNode: node, resizeBaseNode: fixedSizingForHandle(node, handleId) };
 }
 
@@ -580,11 +659,12 @@ function fixedSizingForHandle(node: SceneNode, handleId: HandleId): SceneNode {
 }
 
 function startGroupResizeDrag(selectedIds: Set<NodeId>, startBounds: Bounds, handleId: BBoxHandleId): void {
-  const { nodes, rootIds } = sceneStore.getState();
+  const scene = sceneStore.getState();
+  const { nodes, rootIds } = scene;
   const snapshots = new Map<NodeId, SceneNode>();
   for (const id of selectedIds) {
     const node = nodes[id];
-    if (node && !node.locked) snapshots.set(id, node);
+    if (node && !isEffectivelyLocked(scene, id)) snapshots.set(id, node);
   }
   if (snapshots.size === 0) return;
 
@@ -633,4 +713,4 @@ function applyResize(drag: ResizeDrag, scenePoint: Point): void {
   sceneStore.update((scene) => ({ ...scene, nodes: { ...scene.nodes, [nodeId]: resized } }));
 }
 
-export const selectTool: Tool = { onPointerDown, onPointerMove, onPointerUp, getCursor, onDoubleClick };
+export const selectTool: Tool = { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, getCursor, onDoubleClick };

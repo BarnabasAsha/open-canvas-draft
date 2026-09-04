@@ -246,6 +246,13 @@ export const ImageNodeSchema = z.object({
   ...baseNodeShape,
   type: z.literal("image"),
   src: z.string(),
+  // Optional, distinct from `name` — the exported alt attribute falls back
+  // to `name` when this is null (nodeToHtmlElement.ts), which is fine for
+  // an already-descriptive name (e.g. an Unsplash insert's "Photo by X on
+  // Unsplash") but weak for a plain upload's generic default ("Image 1").
+  // This gives an explicit way to set real alt text without renaming the
+  // layer to match.
+  alt: z.string().nullable(),
   objectFit: z.enum(["fill", "contain", "cover"]),
   filters: ImageFiltersSchema,
 });
